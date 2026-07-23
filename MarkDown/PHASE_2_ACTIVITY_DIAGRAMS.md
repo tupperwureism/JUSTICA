@@ -217,6 +217,7 @@ endif
 :Tampilkan instruksi forensik:\n"Ambil foto setengah badan.\nTangan kiri memegang KTP.\nTangan kanan memegang\nLaptop/Device yang menampilkan\nlayar TTD Final.";
 
 |Klien|
+--> (UPLOAD_FOTO)
 :Ambil & unggah foto\npembuktian forensik;
 
 |Sistem UI|
@@ -231,41 +232,36 @@ endif
 :Kirim hasil analisis\nke Supabase BaaS;
 
 |Supabase BaaS|
-repeat
-  :Validasi kecocokan data OCR KTP\ndengan Database Dukcapil/Pemerintah;
+:Validasi kecocokan data OCR KTP\ndengan Database Dukcapil/Pemerintah;
 
-  if (Verifikasi forensik sukses?\n— Liveness OK, bukan editan\n— KTP cocok Dukcapil\n— Layar & TTD terdeteksi) then (Gagal:\nKTP beda / foto editan /\nilegal terdeteksi)
-    :Catat percobaan gagal;
-    :Increment counter percobaan;
+if (Verifikasi forensik sukses?\n— Liveness OK, bukan editan\n— KTP cocok Dukcapil\n— Layar & TTD terdeteksi) then (Gagal:\nKTP beda / foto editan /\nilegal terdeteksi)
 
-    if (percobaan == 3?) then (Ya)
-      :Global Broadcast:\nProses Gagal\n(Pihak Ilegal Terdeteksi);
-      stop
-    else (percobaan < 3)
-      |Sistem UI|
-      :Minta Klien foto ulang\nsesuai instruksi forensik;
-      |Klien|
-      :Foto ulang & unggah\npembuktian forensik;
-      |Sistem UI|
-      :Terima upload foto ulang;
-      :Kirim foto ke CV AI\nuntuk analisis forensik;
-      |CV AI (Computer Vision)|
-      :Verifikasi liveness, OCR KTP,\ndeteksi layar & TTD;
-      :Kirim hasil analisis\nke Supabase BaaS;
-      |Supabase BaaS|
-      note right
-        Loop forensik:
-        maksimal 3 kali percobaan
-      end note
-    endif
-  else (Sukses — Validasi Cocok)
-    break
+  if (retry_count == 3?) then (Ya — Limit habis)
+    :Global Broadcast:\nProses Gagal\n(Pihak Ilegal Terdeteksi);
+    stop
+  else (Tidak — Sisa percobaan < 3)
+    :Increment variabel\n(retry_count + 1);
+    |Sistem UI|
+    :Minta Klien foto ulang\nsesuai instruksi forensik;
+    note right
+      Loop kembali ke UPLOAD_FOTO.
+      Maksimal 3 kali percobaan.
+      Blok CV AI & Supabase BaaS
+      dieksekusi ulang dari atas.
+    end note
+    |Klien|
+    --> (UPLOAD_FOTO)
+    detach
   endif
-repeat while (Masih gagal & percobaan < 3?) is (Ya) not (Tidak)
+
+else (Sukses — Validasi Cocok)
+endif
 
 :Kunci status KYC pihak ini\n-> Hijau (GREEN);
 :Simpan ekyc_verification_logs\n(reference_id, digest SHA-256,\ntimestamp — TANPA media mentah);
 :Update signing_envelope_parties:\nkyc_status = GREEN;
+
+--> (CEK_MULTI_PARTY)
 
 |Supabase BaaS|
 :Cek: Apakah SEMUA pihak\ntransaksi sudah berstatus Hijau?;
@@ -273,14 +269,18 @@ repeat while (Masih gagal & percobaan < 3?) is (Ya) not (Tidak)
 if (Semua pihak Hijau?) then (Belum)
   :Menunggu pihak lain\nmenyelesaikan KYC forensik;
   note right
-    Sinkronisasi multi-party
-    Jual Beli Tanah
+    Loop: Supabase BaaS menunggu
+    event/notification hingga
+    semua pihak berstatus GREEN.
+    Kembali ke CEK_MULTI_PARTY.
   end note
-  stop
+  --> (CEK_MULTI_PARTY)
+  detach
 else (Ya — Semua Hijau)
-  :Proses e-KYC forensik\nselesai untuk seluruh pihak;
-  stop
 endif
+
+:Proses e-KYC forensik\nselesai untuk seluruh pihak;
+stop
 
 @enduml
 ```

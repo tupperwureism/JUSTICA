@@ -66,6 +66,7 @@ participant "Sistem UI" as UI
 participant "CV AI" as CV
 database "Supabase BaaS" as DB
 
+activate Klien
 Klien -> UI: Akses tautan email (Auto-login)
 activate UI
 UI -> UI: Basic liveness check
@@ -75,7 +76,7 @@ Klien -> UI: Baca & setujui e-kertas (1..n),\nTTD final e-kertas
 UI -> Klien: Tampilkan instruksi foto\n(KTP kiri + Laptop/TTD Final kanan)
 Klien -> UI: Upload foto forensik
 
-loop Max 3 percobaan forensik
+loop Max 3 Percobaan
   UI -> CV: Request analisis gambar (foto)
   activate CV
   CV -> CV: Verifikasi liveness\nOCR KTP\nDeteksi layar & TTD
@@ -85,7 +86,14 @@ loop Max 3 percobaan forensik
   activate DB
   DB -> DB: Validasi vs Database Dukcapil/Pemerintah
 
-  alt Sukses (Validasi Cocok)
+  alt Validasi Gagal (KTP beda / foto editan / ilegal)\ndan percobaan < 3
+    DB -> DB: Increment retry_count
+    DB --> UI: Verifikasi gagal — minta foto ulang
+    deactivate DB
+    UI --> Klien: Instruksi foto ulang\n(sesuai forensik)
+    Klien -> UI: Upload foto forensik (ulang)
+
+  else Validasi Sukses
     DB -> DB: Lock status KYC pihak -> Hijau (GREEN)
     DB -> DB: Simpan ekyc_verification_logs\n(reference_id, digest SHA-256 — TANPA media)
     DB -> DB: Cek: semua pihak sudah berstatus Hijau?
@@ -99,21 +107,17 @@ loop Max 3 percobaan forensik
     deactivate DB
     UI --> Klien: Proses verifikasi selesai
     break
-  else Gagal Total (Limit Habis — percobaan == 3)
+
+  else Percobaan == 3 Habis
     DB -> DB: Global Broadcast:\nProses Gagal (Pihak Ilegal Terdeteksi)
     note over DB: Stop — case terminal
     deactivate DB
     break
-  else Gagal (KTP beda / foto editan / ilegal)\ndan percobaan < 3
-    DB -> DB: Catat percobaan gagal,\nincrement counter
-    DB --> UI: Verifikasi gagal — minta foto ulang
-    deactivate DB
-    UI --> Klien: Instruksi foto ulang\n(sesuai forensik)
-    Klien -> UI: Upload foto forensik (ulang)
   end
 end
 
 deactivate UI
+deactivate Klien
 
 @enduml
 ```
