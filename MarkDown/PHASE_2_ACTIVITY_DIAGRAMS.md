@@ -174,154 +174,114 @@ stop
 
 ---
 
-## AD-P2-02: Alur Bisnis e-KYC AI & Multi-Party Signing
+## AD-P2-02: High-Stakes Property Transaction — e-KYC Forensik Computer Vision (Jual Beli Tanah)
 
-*Diagram alur bisnis verifikasi identitas biometrik AI (liveness check), pencatatan status KYC, pemantauan dasbor advokat, **pencairan dana escrow sebagai prasyarat**, hingga rilis dokumen final. Derived dari SD: "Alur e-KYC AI dan Multi-Party Signing" di `PHASE_2_USE_CASES_AND_DIAGRAMS.md`.*
+*Diagram alur bisnis transaksi jual beli tanah berisiko tinggi: auto-login via email, consent e-kertas multi-halaman, TTD final, verifikasi forensik Computer Vision (foto setengah badan + KTP + layar TTD), validasi Dukcapil via Supabase BaaS, percabangan retry maksimal 3 kali, dan sinkronisasi status KYC multi-pihak. **Tidak mencakup alur escrow pembayaran** — fokus eksklusif pada forensik identitas.*
 
 **Referensi domain:**
 - `EKYC_AND_MULTIPARTY_SIGNING_LEGAL_MATRIX.md` — Alur Minimum & Kontrol Kegagalan (Bab 4)
-- Zero Raw Biometric Storage (Bab 3): Justica **DILARANG** menyimpan foto/selfie/video/template biometrik
-- `PAYMENT_ESCROW_AND_BIFAST_SECURITY_MATRIX.md` — Escrow Legal Buffer, Zero Double-Payout
-- Tabel: `ekyc_verification_logs`, `signing_envelopes`, `signing_envelope_parties`, `escrow_transactions`, `payout_idempotency_keys`, `document_integrity_anchors`, `audit_logs_worm`
+- Zero Raw Biometric Storage (Bab 3): Justica **DILARANG** menyimpan foto/selfie/video/template biometrik mentah
+- Forensik CV: liveness anti-editan, OCR KTP, deteksi layar device + TTD final
+- Tabel: `ekyc_verification_logs`, `signing_envelopes`, `signing_envelope_parties`, `property_transaction_parties`, `audit_logs_worm`
 
 ```plantuml
 @startuml
-title AD-P2-02: Alur Bisnis e-KYC AI & Multi-Party Signing
+title AD-P2-02: High-Stakes Property Transaction — e-KYC Forensik Computer Vision (Jual Beli Tanah)
 
-|Klien (Signer)|
+|Klien|
 start
-:Buka amplop dokumen\n(signing envelope)\nuntuk ditandatangani;
+:Klik tautan dari Email\n(Auto-Login);
 
-|eKYC Engine|
-:Tampilkan notice:\n— Tujuan verifikasi\n— Provider e-KYC\n— Versi notice & consent;
-:Minta tindakan afirmatif\n(consent) dari Klien;
+|Sistem UI|
+:Terima sesi Auto-Login;
+:Paksa Basic Liveness Check\ndi awal sesi;
 
-|Klien (Signer)|
-:Baca notice & berikan\nconsent verifikasi;
+|Klien|
+:Selesaikan Basic Liveness Check;
 
-|eKYC Engine|
-:Buat sesi provider satu kali\n(session token);
-:Paksa liveness check\nsebelum lanjut;
-:Arahkan ke SDK/halaman\nprovider (browser redirect);
-note right
-  Media TIDAK melewati
-  API atau storage Justica.
-  Zero Raw Biometric Storage.
-end note
-
-|Klien (Signer)|
-:Foto wajah / liveness capture\ndi SDK provider;
-
-|AI Provider|
-:Terima capture dari SDK;
-:Proses biometrik:\n— Anti-spoofing\n— Face match\n— Liveness detection;
-:Hitung skor kepercayaan;
-
-if (Apakah skor biometrik\nmemenuhi threshold?) then (Skor Rendah — REJECTED)
-  :Kirim callback: REJECTED;
-  |eKYC Engine|
-  :Verifikasi signature &\ntimestamp callback;
-  :Catat status REJECTED\ndi ekyc_verification_logs\n(reference_id, digest SHA-256,\ntimestamp — TANPA media);
-  |Klien (Signer)|
-  :Tampilkan pesan:\n"Verifikasi gagal,\nsilakan coba lagi";
-  if (Apakah retry tersisa?) then (Ya)
-    :Foto wajah ulang;
-    |AI Provider|
-    :Proses ulang biometrik;
-    note right
-      Loop retry terbatas.
-      Jika habis ->
-      REQUIRES_MANUAL_REVIEW
-    end note
-  else (Tidak — Retry habis)
-    |eKYC Engine|
-    :Set status:\nREQUIRES_MANUAL_REVIEW;
-    |Supabase BaaS|
-    :Simpan ekyc_verification_logs\n(status: REQUIRES_MANUAL_REVIEW);
-    :Kirim notifikasi ke Advokat\nuntuk review manual;
-    |Klien (Signer)|
-    :Tampilkan pesan:\n"Menunggu review manual";
-    stop
-  endif
+|Sistem UI|
+if (Basic Liveness Check lulus?) then (Tidak)
+  :Tampilkan pesan error;
+  |Klien|
+  :Ulangi Basic Liveness Check;
+  |Sistem UI|
 endif
 
-|AI Provider|
-:(Skor Tinggi — PASSED)\nKirim callback HTTPS:\nstatus PASSED + audit bundle;
+|Klien|
+:Baca halaman e-kertas (1..n);
+:Tekan "Setuju" pada\ntiap halaman e-kertas;
+:Baca final e-kertas;
+:Bubuhkan Tanda Tangan (TTD)\npada final e-kertas;
 
-|eKYC Engine|
-:Verifikasi signature,\ntimestamp, nonce /\nidempotency key callback;
-:Cegah replay attack;
+|Sistem UI|
+:Tampilkan instruksi forensik:\n"Ambil foto setengah badan.\nTangan kiri memegang KTP.\nTangan kanan memegang\nLaptop/Device yang menampilkan\nlayar TTD Final.";
+
+|Klien|
+:Ambil & unggah foto\npembuktian forensik;
+
+|Sistem UI|
+:Terima upload foto pembuktian;
+:Kirim foto ke CV AI\nuntuk analisis forensik;
+
+|CV AI (Computer Vision)|
+:Verifikasi liveness foto\n(bukan editan/manipulasi);
+:OCR KTP\n(NIK, nama, tanggal lahir);
+:Deteksi layar laptop/device;
+:Deteksi TTD Final di layar;
+:Kirim hasil analisis\nke Supabase BaaS;
 
 |Supabase BaaS|
-:Simpan ekyc_verification_logs:\n— verification_id, user_id\n— provider_reference_id\n— status: PASSED\n— digest SHA-256 audit bundle\n— timestamp\n(TANPA foto/selfie/template);
-:Update signing_envelope_parties:\nKlien ini -> kyc_status = GREEN;
-:Return: Status KYC tersimpan;
+repeat
+  :Validasi kecocokan data OCR KTP\ndengan Database Dukcapil/Pemerintah;
 
-|eKYC Engine|
-:Tampilkan ke Klien:\n"Verifikasi KYC selesai ✓";
+  if (Verifikasi forensik sukses?\n— Liveness OK, bukan editan\n— KTP cocok Dukcapil\n— Layar & TTD terdeteksi) then (Gagal:\nKTP beda / foto editan /\nilegal terdeteksi)
+    :Catat percobaan gagal;
+    :Increment counter percobaan;
 
-|Klien (Signer)|
-:Lihat status KYC Hijau;
+    if (percobaan == 3?) then (Ya)
+      :Global Broadcast:\nProses Gagal\n(Pihak Ilegal Terdeteksi);
+      stop
+    else (percobaan < 3)
+      |Sistem UI|
+      :Minta Klien foto ulang\nsesuai instruksi forensik;
+      |Klien|
+      :Foto ulang & unggah\npembuktian forensik;
+      |Sistem UI|
+      :Terima upload foto ulang;
+      :Kirim foto ke CV AI\nuntuk analisis forensik;
+      |CV AI (Computer Vision)|
+      :Verifikasi liveness, OCR KTP,\ndeteksi layar & TTD;
+      :Kirim hasil analisis\nke Supabase BaaS;
+      |Supabase BaaS|
+      note right
+        Loop forensik:
+        maksimal 3 kali percobaan
+      end note
+    endif
+  else (Sukses — Validasi Cocok)
+    break
+  endif
+repeat while (Masih gagal & percobaan < 3?) is (Ya) not (Tidak)
 
-|Advokat|
-:Buka dasbor Multi-Party\nSigning Monitor;
-:Pantau status KYC\nseluruh pihak penandatangan;
+:Kunci status KYC pihak ini\n-> Hijau (GREEN);
+:Simpan ekyc_verification_logs\n(reference_id, digest SHA-256,\ntimestamp — TANPA media mentah);
+:Update signing_envelope_parties:\nkyc_status = GREEN;
 
 |Supabase BaaS|
-:Query signing_envelope_parties\nWHERE envelope_id = target;
-:Return: daftar pihak\n& status KYC masing-masing;
+:Cek: Apakah SEMUA pihak\ntransaksi sudah berstatus Hijau?;
 
-|Advokat|
-if (Apakah SEMUA pihak\nberstatus KYC Hijau?) then (Belum Semua Hijau)
-  :Tampilkan status:\n"Menunggu pihak lain\nmenyelesaikan KYC";
-  :Tunggu notifikasi update;
+if (Semua pihak Hijau?) then (Belum)
+  :Menunggu pihak lain\nmenyelesaikan KYC forensik;
   note right
-    Advokat menunggu hingga
-    semua signing_envelope_parties
-    berstatus kyc_status = GREEN
+    Sinkronisasi multi-party
+    Jual Beli Tanah
   end note
   stop
 else (Ya — Semua Hijau)
+  :Proses e-KYC forensik\nselesai untuk seluruh pihak;
+  stop
 endif
 
-|Advokat|
-:Konfirmasi: Semua pihak\nterverifikasi KYC Hijau;
-:Bekukan digest dokumen\n(freeze document hash);
-
-|Supabase BaaS|
-:Simpan document_integrity_anchors\n(SHA-256 dokumen final,\nappend-only WORM);
-
-|Supabase BaaS|
-:=== ESCROW RELEASE PAYOUT ===;
-note right
-  Pencairan dana escrow adalah
-  PRASYARAT WAJIB sebelum
-  dokumen final di-unlock.
-end note
-:fn_release_escrow_to_advocate_mutex:\n— Validasi semua KYC GREEN\n— Validasi milestone/evidence\n— idempotency_key =\n  SHA256(order_id + milestone_id\n  + timestamp);
-:Update escrow_transactions\nstatus -> RELEASED;
-:Catat payout_idempotency_keys\n(status: INITIATED -> SUCCESS);
-:Catat audit_logs_worm\n(append-only);
-
-|Supabase BaaS|
-:=== UNLOCK DOKUMEN FINAL ===;
-:Update signing_envelopes\nstatus -> COMPLETED (terminal);
-:Buka akses dokumen final\nuntuk semua pihak penandatangan;
-note right
-  Dokumen baru terbuka SETELAH
-  escrow release berhasil.
-  Urutan: KYC -> Freeze Hash
-  -> Escrow Release -> Unlock
-end note
-
-|Advokat|
-:Terima konfirmasi:\n"Dana escrow dicairkan\nke rekening Anda";
-:Konfirmasi ke semua pihak:\n"Dokumen ditandatangani &\ndana escrow dicairkan";
-
-|Klien (Signer)|
-:Terima notifikasi:\n"Penandatanganan selesai,\ndokumen & dana tersedia";
-:Akses dokumen final\ndi vault;
-stop
 @enduml
 ```
 
@@ -337,10 +297,10 @@ stop
 
 3. **Kepatuhan Domain:**
    - **AD-P2-01:** Mengikuti state machine `DRAFT -> PAID_ESCROW_LOCKED -> SUBMITTED -> APPROVED` dan `REJECTED -> DRAFT (revisi eksplisit)` dari `NOTARY_AND_KEMENKUMHAM_LEGAL_MATRIX.md`. Klien hanya menerima status netral (`CUSTOMER_ACTION_REQUIRED`), tidak pernah menerima detail PMPJ/compliance (anti-tipping-off). Escrow release menggunakan `fn_release_escrow_to_advocate_mutex` dengan idempotency key unik (zero double-payout).
-   - **AD-P2-02:** Mematuhi Zero Raw Biometric Storage — hanya menyimpan `reference_id`, status, digest SHA-256, dan timestamp. Status `REJECTED` tidak sepenuhnya otomatis (ada retry + jalur `REQUIRES_MANUAL_REVIEW`). **Pencairan escrow adalah prasyarat wajib sebelum dokumen final di-unlock** (urutan: KYC → Freeze Hash → Escrow Release → Unlock Dokumen). Status `COMPLETED` bersifat terminal/append-only.
+   - **AD-P2-02:** Mematuhi Zero Raw Biometric Storage — hanya menyimpan `reference_id`, status, digest SHA-256, dan timestamp (TANPA foto/selfie/template mentah). Forensik CV: liveness anti-editan, OCR KTP, deteksi layar device + TTD final, validasi Dukcapil. Percabangan kegagalan: retry maksimal 3 kali; percobaan ke-3 memicu **Global Broadcast: Proses Gagal (Pihak Ilegal Terdeteksi)**. Sinkronisasi multi-pihak: proses selesai hanya jika semua pihak berstatus KYC Hijau. **Tidak mencakup alur escrow pembayaran.**
 
 4. **Tabel Database Terkait:**
    | Diagram | Tabel Utama |
    |---|---|
    | AD-P2-01 | `corporate_service_cases`, `corporate_parties`, `beneficial_owners`, `service_orders`, `service_fee_lines`, `payment_milestones`, `escrow_transactions`, `payout_idempotency_keys`, `government_submission_jobs`, `document_integrity_anchors`, `audit_logs_worm`, `user_notifications` |
-   | AD-P2-02 | `ekyc_verification_logs`, `signing_envelopes`, `signing_envelope_parties`, `escrow_transactions`, `payout_idempotency_keys`, `document_integrity_anchors`, `audit_logs_worm` |
+   | AD-P2-02 | `ekyc_verification_logs`, `signing_envelopes`, `signing_envelope_parties`, `property_transaction_parties`, `audit_logs_worm` |
