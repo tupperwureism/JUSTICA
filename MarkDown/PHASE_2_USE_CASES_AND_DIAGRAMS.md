@@ -53,37 +53,67 @@ deactivate UI
 @enduml
 ```
 
-### Alur e-KYC AI dan Multi-Party Signing
+### Alur e-KYC Forensik Computer Vision — High-Stakes Property Transaction (Jual Beli Tanah)
+
+*Sequence Diagram 1-to-1 dengan AD-P2-02 di `PHASE_2_ACTIVITY_DIAGRAMS.md`. Fokus forensik identitas multi-pihak; **tidak mencakup alur escrow pembayaran**.*
 
 ```plantuml
 @startuml
-actor Klien
-participant "eKYC Wizard" as UI
-participant "AI Provider" as AI
-database "Supabase DB" as DB
-actor Advokat
+title SD-P2-02: High-Stakes Property Transaction — e-KYC Forensik Computer Vision (Jual Beli Tanah)
 
-Klien -> UI: Scan wajah
+actor Klien
+participant "Sistem UI" as UI
+participant "CV AI" as CV
+database "Supabase BaaS" as DB
+
+Klien -> UI: Akses tautan email (Auto-login)
 activate UI
-UI -> AI: Verifikasi biometrik
-activate AI
-AI --> UI: Hasil biometrik valid
-deactivate AI
-UI -> DB: Simpan status KYC Hijau
-activate DB
-DB --> UI: Status KYC tersimpan
-deactivate DB
-UI --> Klien: Verifikasi KYC selesai
+UI -> UI: Basic liveness check
+
+Klien -> UI: Baca & setujui e-kertas (1..n),\nTTD final e-kertas
+
+UI -> Klien: Tampilkan instruksi foto\n(KTP kiri + Laptop/TTD Final kanan)
+Klien -> UI: Upload foto forensik
+
+loop Max 3 percobaan forensik
+  UI -> CV: Request analisis gambar (foto)
+  activate CV
+  CV -> CV: Verifikasi liveness\nOCR KTP\nDeteksi layar & TTD
+  CV -> DB: Kirim hasil ekstraksi data
+  deactivate CV
+
+  activate DB
+  DB -> DB: Validasi vs Database Dukcapil/Pemerintah
+
+  alt Sukses (Validasi Cocok)
+    DB -> DB: Lock status KYC pihak -> Hijau (GREEN)
+    DB -> DB: Simpan ekyc_verification_logs\n(reference_id, digest SHA-256 — TANPA media)
+    DB -> DB: Cek: semua pihak sudah berstatus Hijau?
+    alt Belum semua pihak Hijau
+      DB -> DB: Menunggu pihak lain\nmenyelesaikan KYC forensik
+      note over DB: Sinkronisasi multi-party\nJual Beli Tanah
+    else Semua pihak Hijau
+      DB -> DB: Case e-KYC forensik selesai\nuntuk seluruh pihak
+    end
+    DB --> UI: Status sinkronisasi KYC
+    deactivate DB
+    UI --> Klien: Proses verifikasi selesai
+    break
+  else Gagal Total (Limit Habis — percobaan == 3)
+    DB -> DB: Global Broadcast:\nProses Gagal (Pihak Ilegal Terdeteksi)
+    note over DB: Stop — case terminal
+    deactivate DB
+    break
+  else Gagal (KTP beda / foto editan / ilegal)\ndan percobaan < 3
+    DB -> DB: Catat percobaan gagal,\nincrement counter
+    DB --> UI: Verifikasi gagal — minta foto ulang
+    deactivate DB
+    UI --> Klien: Instruksi foto ulang\n(sesuai forensik)
+    Klien -> UI: Upload foto forensik (ulang)
+  end
+end
+
 deactivate UI
 
-Advokat -> DB: Pantau status multi-party signing
-activate DB
-DB --> Advokat: Semua pihak KYC Hijau
-deactivate DB
-
-Advokat -> DB: Trigger pencairan escrow dan unlock dokumen
-activate DB
-DB --> Advokat: Escrow cair dan dokumen terbuka
-deactivate DB
 @enduml
 ```
