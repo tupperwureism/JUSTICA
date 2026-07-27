@@ -382,6 +382,17 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
+# External callbacks authenticate with timestamped HMAC signatures. The sweeper
+# authenticates with a dedicated x-cron-secret populated from Supabase Vault.
+[functions.payment-webhook]
+verify_jwt = false
+
+[functions.ekyc-callback]
+verify_jwt = false
+
+[functions.cron-ttl-sweeper]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

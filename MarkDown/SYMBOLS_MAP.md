@@ -7,7 +7,7 @@
 
 - 186 source files dipindai.
 - 239 exported TypeScript symbols dalam 155 files.
-- 95 core PostgreSQL objects dari 333 deklarasi migrasi.
+- 97 core PostgreSQL objects dari 335 deklarasi migrasi.
 - 134 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 - Migrasi `supabase/` diprioritaskan di atas salinan `database/`; peta deklarasi ini bukan rekonstruksi state database setelah seluruh migrasi.
@@ -200,6 +200,8 @@
 | function | public.fn_mutate_wallet_balance_mutex( p_wallet_id UUID, p_amount NUMERIC, p_mutation_typ… | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L92 +3 |
 | function | public.fn_prevent_worm_mutation() | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L9 +5 |
 | function | public.fn_lock_corporate_escrow_atomic( p_case_id UUID, p_escrow_id UUID, p_expected_amou… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L617 |
+| function | public.fn_lock_corporate_escrow_webhook_atomic( p_order_id UUID, p_case_id UUID, p_escrow… | S/20260722000024_p2_b5c_pg_cron_ttl_scheduler.sql:L10 |
+| function | public.fn_process_ekyc_callback_atomic( p_envelope_id UUID, p_party_id UUID, p_user_id UU… | S/20260722000024_p2_b5c_pg_cron_ttl_scheduler.sql:L65 |
 | function | public.fn_protect_accepted_service_fee_line() | S/20260722000016_p2_b3_service_orders_expand_only.sql:L383 |
 | function | public.fn_protect_payment_milestone_terms() | S/20260722000016_p2_b3_service_orders_expand_only.sql:L406 |
 | function | public.fn_record_immutable_audit_log( p_actor_user_id UUID, p_actor_type VARCHAR, p_actio… | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L212 +3 |
