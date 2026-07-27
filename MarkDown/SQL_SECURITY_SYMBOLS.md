@@ -3,7 +3,7 @@
 > GENERATED FILE — jangan edit manual. Baca file ini secara on-demand setelah `SYMBOLS_MAP.md` mengarahkan ke area database.
 > Perbarui/verifikasi bersama peta utama memakai `node Tools/generate_symbol_map.mjs [--check]`.
 
-- 131 canonical policies/triggers.
+- 134 canonical policies/triggers.
 - Lokasi memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 
 | Kind | Symbol/relation | Deklarasi pilihan/terbaru |
@@ -112,6 +112,9 @@
 | policy | rls_users_client_self_update ON public.users_client | S/20260721000010_align_frontend_schema_contracts.sql:L281 |
 | policy | rls_wallet_balances_self_read ON wallet_balances | S/20260715000003_domain3_escrow_tax_ledgers_acid.sql:L90 +1 |
 | trigger | trg_assert_completed_envelope_anchor ON public.signing_envelopes | S/20260722000021_phase2_holistic_security_hardening.sql:L75 |
+| trigger | trg_audit_corporate_escrow_lock ON public.corporate_service_cases | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L238 |
+| trigger | trg_audit_escrow_state_transition ON public.escrow_transactions | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L242 |
+| trigger | trg_audit_signing_global_transition ON public.signing_envelopes | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L246 |
 | trigger | trg_guard_corporate_case_stage_mutation ON public.corporate_service_cases | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L320 |
 | trigger | trg_guard_ekyc_log_mutation ON public.ekyc_verification_logs | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L253 |
 | trigger | trg_guard_signing_envelope_mutation ON public.signing_envelopes | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L256 |

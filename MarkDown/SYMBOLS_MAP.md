@@ -5,10 +5,10 @@
 
 ## Cakupan
 
-- 185 source files dipindai.
+- 186 source files dipindai.
 - 239 exported TypeScript symbols dalam 155 files.
-- 86 core PostgreSQL objects dari 320 deklarasi migrasi.
-- 131 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
+- 95 core PostgreSQL objects dari 333 deklarasi migrasi.
+- 134 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 - Migrasi `supabase/` diprioritaskan di atas salinan `database/`; peta deklarasi ini bukan rekonstruksi state database setelah seluruh migrasi.
 - Indeks SQL sengaja tidak dimuat agar peta tetap ringkas; cari dengan `rg "CREATE .*INDEX" database supabase` bila diperlukan.
@@ -179,18 +179,27 @@
 
 | Kind | Symbol/signature | Deklarasi pilihan/terbaru |
 | --- | --- | --- |
+| function | public.fn_append_compliance_workflow_event( p_corporate_case_id UUID, p_escrow_id UUID, p… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L30 |
 | function | public.fn_assert_completed_envelope_anchor() | S/20260722000021_phase2_holistic_security_hardening.sql:L55 |
 | function | public.fn_assert_service_order_financial_reconciliation() | S/20260722000016_p2_b3_service_orders_expand_only.sql:L439 |
+| function | public.fn_audit_corporate_escrow_lock() | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L138 |
+| function | public.fn_audit_escrow_state_transition() | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L162 |
+| function | public.fn_audit_signing_global_transition() | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L200 |
 | function | public.fn_book_consultation_slot_mutex( p_slot_id UUID, p_case_summary TEXT, p_booking_ty… | S/20260722000016_p2_b3_service_orders_expand_only.sql:L11 +4 |
 | function | public.fn_can_read_signing_envelope(p_envelope_id UUID) | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L263 |
 | function | public.fn_client_checkout_consultation_mutex( p_slot_id UUID, p_case_summary TEXT, p_book… | S/20260721000012_add_authenticated_checkout_rpc_facade.sql:L1 |
 | function | public.fn_guard_corporate_case_stage_mutation() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L306 |
+| function | public.fn_confirm_party_illegal_atomic( p_envelope_id UUID, p_party_id UUID, p_verificati… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L858 |
+| function | public.fn_create_corporate_intake_atomic( p_order_id UUID, p_entity_type VARCHAR, p_propo… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L261 |
+| function | public.fn_current_compliance_event_actor() | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L9 |
+| function | public.fn_global_halt_ekyc_and_refund_atomic( p_envelope_id UUID, p_party_id UUID, p_veri… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L961 |
 | function | public.fn_guard_ekyc_log_mutation() | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L136 |
 | function | public.fn_guard_signing_envelope_mutation() | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L161 |
 | function | public.fn_guard_signing_party_mutation() | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L206 |
 | function | public.fn_is_verified_advocate(p_advocate_id UUID) | S/20260721000015_harden_verified_advocate_rls_helper.sql:L1 |
 | function | public.fn_mutate_wallet_balance_mutex( p_wallet_id UUID, p_amount NUMERIC, p_mutation_typ… | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L92 +3 |
 | function | public.fn_prevent_worm_mutation() | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L9 +5 |
+| function | public.fn_lock_corporate_escrow_atomic( p_case_id UUID, p_escrow_id UUID, p_expected_amou… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L617 |
 | function | public.fn_protect_accepted_service_fee_line() | S/20260722000016_p2_b3_service_orders_expand_only.sql:L383 |
 | function | public.fn_protect_payment_milestone_terms() | S/20260722000016_p2_b3_service_orders_expand_only.sql:L406 |
 | function | public.fn_record_immutable_audit_log( p_actor_user_id UUID, p_actor_type VARCHAR, p_actio… | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L212 +3 |
@@ -198,7 +207,7 @@
 | function | public.fn_release_escrow_to_advocate_mutex(p_escrow_id UUID) | S/20260721000013_add_realtime_room_and_client_release.sql:L42 +3 |
 | function | public.fn_sync_notary_submission_contract() | S/20260722000020_p2_b8_notary_workspace_and_kemenkumham_seams.sql:L56 |
 | function | public.fn_touch_corporate_record_updated_at() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L279 |
-| function | public.fn_transition_corporate_service_case( p_case_id UUID, p_expected_stage VARCHAR, p_… | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L324 |
+| function | public.fn_transition_corporate_service_case( p_case_id UUID, p_expected_stage VARCHAR, p_… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L748 +1 |
 | function | public.fn_validate_corporate_service_case_order() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L250 |
 | function | public.fn_validate_document_integrity_anchor() | S/20260722000021_phase2_holistic_security_hardening.sql:L20 |
 | function | public.fn_validate_signing_envelope_case() | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L117 |
