@@ -5,10 +5,10 @@
 
 ## Cakupan
 
-- 184 source files dipindai.
+- 185 source files dipindai.
 - 239 exported TypeScript symbols dalam 155 files.
-- 83 core PostgreSQL objects dari 314 deklarasi migrasi.
-- 128 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
+- 86 core PostgreSQL objects dari 320 deklarasi migrasi.
+- 131 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 - Migrasi `supabase/` diprioritaskan di atas salinan `database/`; peta deklarasi ini bukan rekonstruksi state database setelah seluruh migrasi.
 - Indeks SQL sengaja tidak dimuat agar peta tetap ringkas; cari dengan `rg "CREATE .*INDEX" database supabase` bila diperlukan.
@@ -231,6 +231,7 @@
 | table | public.government_submission_jobs | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L189 |
 | table | public.payment_milestones | S/20260722000016_p2_b3_service_orders_expand_only.sql:L317 |
 | table | public.payout_idempotency_keys | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L26 |
+| table | public.compliance_workflow_events_worm | S/20260722000022_p2_b5a_ekyc_and_escrow_schema.sql:L233 |
 | table | public.provider_webhook_events | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L9 |
 | table | public.service_fee_lines | S/20260722000016_p2_b3_service_orders_expand_only.sql:L287 |
 | table | public.service_orders | S/20260722000016_p2_b3_service_orders_expand_only.sql:L246 |
@@ -252,6 +253,8 @@
 | type | public.notary_submission_target_system | S/20260722000020_p2_b8_notary_workspace_and_kemenkumham_seams.sql:L4 |
 | type | public.payout_channel | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L5 |
 | type | public.payout_idempotency_status | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L6 |
+| type | public.signing_envelope_global_status | S/20260722000022_p2_b5a_ekyc_and_escrow_schema.sql:L5 |
+| type | public.signing_envelope_halt_reason | S/20260722000022_p2_b5a_ekyc_and_escrow_schema.sql:L13 |
 | type | public.signing_case_type | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L10 |
 | type | public.signing_envelope_status | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L11 |
 | type | public.signing_party_role | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L14 |

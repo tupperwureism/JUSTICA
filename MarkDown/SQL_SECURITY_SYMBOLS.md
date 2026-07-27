@@ -3,7 +3,7 @@
 > GENERATED FILE — jangan edit manual. Baca file ini secara on-demand setelah `SYMBOLS_MAP.md` mengarahkan ke area database.
 > Perbarui/verifikasi bersama peta utama memakai `node Tools/generate_symbol_map.mjs [--check]`.
 
-- 128 canonical policies/triggers.
+- 131 canonical policies/triggers.
 - Lokasi memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 
 | Kind | Symbol/relation | Deklarasi pilihan/terbaru |
@@ -38,6 +38,7 @@
 | policy | rls_compliance_assessments_restricted_insert ON public.compliance_assessments | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L480 |
 | policy | rls_compliance_assessments_restricted_read ON public.compliance_assessments | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L459 |
 | policy | rls_compliance_assessments_restricted_update ON public.compliance_assessments | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L504 |
+| policy | rls_compliance_workflow_events_compliance_read ON public.compliance_workflow_events_worm | S/20260722000022_p2_b5a_ekyc_and_escrow_schema.sql:L300 |
 | policy | rls_consultation_slots_advocate_manage ON public.consultation_slots | S/20260721000010_align_frontend_schema_contracts.sql:L321 +2 |
 | policy | rls_consultation_slots_public_read ON consultation_slots | S/20260715000002_domain2_consultation_fairclock_sla.sql:L36 +1 |
 | policy | rls_corporate_cases_participant_read ON public.corporate_service_cases | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L398 |
@@ -59,6 +60,7 @@
 | policy | rls_emeterai_public_verify ON emeterai_stamping_logs | S/20260715000004_domain4_legal_opinions_worm_emeterai.sql:L131 +1 |
 | policy | rls_escrow_transactions_advocate_read ON public.escrow_transactions | S/20260721000015_harden_verified_advocate_rls_helper.sql:L23 +3 |
 | policy | rls_escrow_transactions_client_read ON escrow_transactions | S/20260715000003_domain3_escrow_tax_ledgers_acid.sql:L57 +1 |
+| policy | rls_escrow_transactions_corporate_participant_read ON public.escrow_transactions | S/20260722000022_p2_b5a_ekyc_and_escrow_schema.sql:L197 |
 | policy | rls_escrow_transactions_mediator_read ON public.escrow_transactions | S/20260721000010_align_frontend_schema_contracts.sql:L620 |
 | policy | rls_governance_configs_admin_insert ON public.platform_governance_configs | S/20260721000010_align_frontend_schema_contracts.sql:L636 |
 | policy | rls_governance_configs_admin_update ON public.platform_governance_configs | S/20260721000010_align_frontend_schema_contracts.sql:L641 |
@@ -131,6 +133,7 @@
 | trigger | trg_worm_advocate_sanctions_vault ON public.advocate_sanctions_log | S/20260716000006_domain_hardening_worm_and_acid_mutex.sql:L22 +1 |
 | trigger | trg_worm_audit_logs_vault ON public.audit_logs_worm | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L33 +2 |
 | trigger | trg_worm_case_irac_notes ON case_irac_notes | S/20260715000004_domain4_legal_opinions_worm_emeterai.sql:L174 +1 |
+| trigger | trg_worm_compliance_workflow_events ON public.compliance_workflow_events_worm | S/20260722000022_p2_b5a_ekyc_and_escrow_schema.sql:L285 |
 | trigger | trg_worm_dispute_signatures_vault ON public.dispute_mediator_signatures | S/20260716000006_domain_hardening_worm_and_acid_mutex.sql:L29 +1 |
 | trigger | trg_worm_document_integrity_anchors ON public.document_integrity_anchors | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L57 |
 | trigger | trg_worm_emeterai_stamping_logs ON public.emeterai_stamping_logs | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L27 +2 |
