@@ -1,16 +1,16 @@
 # Traceability Matrix — Arsitektur 100% Siloed (Justifiqa & Qualifa)
 
-**Versi**: 2.1 (Refactored untuk BCE 5-Lifeline Architecture & Zero-Stacking Alignment)  
-**Tanggal**: 13 Juli 2026  
-**Cakupan**: 22 Use Case Justifiqa (Hukum) + 21 Use Case Qualifa (Psikologi) = **43 Use Case Mandiri**
+**Versi**: 2.2 (Sinkronisasi use case Phase 2 dan BCE 5-Lifeline)
+**Tanggal**: 27 Juli 2026
+**Cakupan**: 22 Use Case kanonik Justifiqa + 2 alias target Phase 2 + 21 Use Case Qualifa = **45 ID/alias use case unik dalam 47 baris matrix** (dua baris tambahan memetakan flow offline gabungan)
 
 Dokumen ini memetakan pelacakan penuh (*end-to-end traceability*) dari level **Use Case UML**, **Activity Diagram (AD)**, **Sequence Diagram (SD)**, lapisan **Arsitektur BCE Terdekopel (`Controller` / `Service` / `Repository` / `WORM Vault`)**, hingga ke **Product Backlog Story ID (ST)** dan **Regulasi Kepatuhan** untuk kedua aplikasi yang terisolasi total.
 
 ---
 
-## BAGIAN I: TRACEABILITY MATRIX — APLIKASI MANDIRI JUSTIFIQA (22 USE CASE HUKUM)
+## BAGIAN I: TRACEABILITY MATRIX — APLIKASI MANDIRI JUSTIFIQA (22 KANONIK + 2 TARGET PHASE 2)
 
-| UC-ID | Nama Use Case Hukum | Aktor Utama | Activity Diagram | Sequence Diagram | Lapisan Arsitektur BCE (Controller $\rightarrow$ Service $\rightarrow$ Entity) | Backlog Story ID | Regulasi & Kepatuhan Kunci | Compliance Flags & Security |
+| UC-ID | Nama Use Case Hukum | Aktor Utama | Activity Diagram | Sequence Diagram | Lapisan Arsitektur BCE (Controller $\rightarrow$ Service $\rightarrow$ Entity) | Backlog Story / Phase 2 Batch ID | Regulasi & Kepatuhan Kunci | Compliance Flags & Security |
 | :--- | :--- | :--- | :---: | :---: | :--- | :---: | :--- | :--- |
 | **J-UC01** | Registrasi Akun Klien Justifiqa | Klien Hukum | AD-J-01 | SD-J-01 | `ClientAuthController` $\rightarrow$ `ClientIAMService` $\rightarrow$ `ClientRepository & WORM Vault` | **ST-J-01** | UU PDP Pasal 15, 16, 17 | Validasi NIK Dukcapil, Consent SHA-256, FieldEnc |
 | **J-UC02** | Login Akun Klien Justifiqa | Klien Hukum | AD-J-02 | SD-J-02 | `ClientAuthController` $\rightarrow$ `ClientIAMService` $\rightarrow$ `ClientRepository & WORM Vault` | **ST-J-02** | UU PDP Pasal 46, Security | MFA OTP, TLS 1.3, Due Process Lock Check |
@@ -35,6 +35,19 @@ Dokumen ini memetakan pelacakan penuh (*end-to-end traceability*) dari level **U
 | **J-UC20** | Autentikasi Portal Backoffice Admin | Admin Justifiqa | AD-J-20 | SD-J-20 | `AdminAuthController` $\rightarrow$ `AdminIAMService` $\rightarrow$ `AdminIAMRepository & WORM Vault` | **ST-J-18** | ISO 27001 Security | IP Whitelisting Subdomain, MFA TOTP Mandatory |
 | **J-UC21** | Melaporkan Pelanggaran Etik Advokat | Klien Hukum | AD-J-21 | SD-J-21 | `EthicsReportController` $\rightarrow$ `ModerationReportService` $\rightarrow$ `EthicsRepository & WORM Vault` | **ST-J-19** | Kode Etik Peradi, UU ITE | Whistleblowing Form, Lampiran Log E2EE SHA-256 |
 | **J-UC22** | Top-Up Saldo Dompet Advokat | Advokat Justifiqa| AD-J-22 | SD-J-22 | `WalletTopUpController` $\rightarrow$ `AdvocateWalletService` $\rightarrow$ `AdvocateWalletRepository & PG` | **ST-J-20** | PSAK 71, Snap QRIS VA | Idempotent Top-Up Billing, HMAC-SHA512 Webhook Verification |
+| **J-UC23 (PROVISIONAL TARGET)** | Corporate Intake & Notary Stamping PT/CV | Klien & Notaris Terdaftar | **AD-P2-01 (`AD01-01..14`)** | **SD-P2-01 (`AD01-01..14`)** | **MANDATORY TARGET:** `CorporateController` $\rightarrow$ `CorporateEscrowNotaryService` $\rightarrow$ `CorporateRepository + DB + WORM Vault` | **P2-B4** | PP 8/2021, Perpres 13/2018, PMPJ, UU Jabatan Notaris | Intake/BO atomik; escrow lock sebelum penugasan; submission AHU/OSS idempoten; `COMPLIANCE_HOLD`; WORM; payout role-aware |
+| **J-UC24 (PROVISIONAL TARGET)** | Transaksi Properti dengan e-KYC Forensik Multi-Pihak | Para Pihak Transaksi | **AD-P2-02 (`AD02-01..17`)** | **SD-P2-02 (`AD02-01..17`)** | **MANDATORY TARGET:** `PropertyKycController` $\rightarrow$ `PropertyKycEscrowService` $\rightarrow$ `KycEscrowRepository + DB + WORM Vault` | **P2-B5/P2-B6** | UU PDP, UU ITE, PP 71/2019, PSrE Indonesia | Escrow wajib terkunci; TTL global 7×24 jam; zero raw biometric; Global Halt untuk ilegal/3× liveness/expiry; refund 100% idempoten |
+
+---
+
+### Kontrak ID dan rekonsiliasi Phase 2
+
+`J-UC23` dan `J-UC24` adalah **alias traceability provisional/target**, bukan ID kanonik yang sudah ditetapkan di `PHASE_2_USE_CASES_AND_DIAGRAMS.md`. Keduanya dipilih berurutan karena inventaris kanonik saat ini berhenti pada `J-UC22`; kanonisasi ID pada artefak Use Case harus dilakukan dalam batch dokumentasi terpisah yang mengizinkan perubahan file tersebut. Token aktivitas di SD memakai ID yang sama dengan AD sebagai bukti 1-to-1:
+
+- `J-UC23 → AD-P2-01 {AD01-01..14} → SD-P2-01 {AD01-01..14}`
+- `J-UC24 → AD-P2-02 {AD02-01..17} → SD-P2-02 {AD02-01..17}`
+
+Himpunan Phase 2 wajib memenuhi `S_AD − S_SD = ∅` dan `S_SD − S_AD = ∅`; ID baru tidak boleh ditambahkan pada salah satu diagram saja.
 
 ---
 
