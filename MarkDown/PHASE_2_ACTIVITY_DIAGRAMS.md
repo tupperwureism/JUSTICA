@@ -1,306 +1,271 @@
-# Phase 2 Activity Diagrams — Business Logic Tracking (PlantUML Swimlanes)
+# Phase 2 Activity Diagrams — Business Logic Tracking
 
-Dokumen ini berisi Activity Diagram PlantUML dengan **swimlanes** untuk dua fitur utama Phase 2 Justifiqa. Setiap diagram di-derive 1-to-1 dari Sequence Diagram di `PHASE_2_USE_CASES_AND_DIAGRAMS.md` dan diperkaya dengan percabangan bisnis dari Legal Matrix terkait.
+Dokumen ini memuat Activity Diagram PlantUML untuk dua workflow Phase 2 Justifiqa. Diagram memakai ID aktivitas stabil agar setiap aktivitas, keputusan, loop, dan terminal state dapat dipetakan 1-to-1 ke Sequence Diagram BCE di `PHASE_2_SEQUENCE_DIAGRAMS.md`.
 
-> **Konvensi:** Penomoran menggunakan `AD-P2-xx` (Activity Diagram — Phase 2). Swimlane memisahkan tanggung jawab aktor/komponen secara visual. `Supabase BaaS` merepresentasikan Backend-as-a-Service (PostgREST/RPC/Trigger/RLS), bukan database pasif.
+> **Konvensi:** `Supabase BaaS` adalah backend aktif (controller, domain service, scheduler, provider adapter, repository, trigger, dan RLS), bukan database pasif. Operasi provider eksternal tidak menyimpan credential atau payload mentah di database workflow.
 
----
+## Cara import ke Draw.io
 
-## Cara Import ke Draw.io
 1. Buka Draw.io (`app.diagrams.net`).
-2. Pada toolbar bagian atas, klik tombol **+ (Insert)** atau pilih menu **Arrange -> Insert**.
-3. Pilih **Advanced -> PlantUML...**.
-4. Salin dan tempel kode di bawah ini, lalu klik **Insert**.
+2. Pilih **Arrange → Insert → Advanced → PlantUML**.
+3. Tempel kode PlantUML, lalu pilih **Insert**.
 
 ---
 
-## AD-P2-01: Alur Bisnis Corporate Intake & Notary Stamping
+## AD-P2-01: Corporate Intake & Notary Stamping
 
-*Diagram alur bisnis pengisian data pendirian badan usaha (PT/CV), validasi form, **pembayaran escrow milestone**, penyimpanan via Supabase BaaS, review notaris, input NIB & SK Kemenkumham, penguncian WORM, dan **pencairan dana escrow ke Notaris**. Derived dari SD: "Alur Corporate Intake dan Notary Stamping" di `PHASE_2_USE_CASES_AND_DIAGRAMS.md`.*
-
-**Referensi domain:**
-- `CORPORATE_CONCIERGE_LEGAL_AND_PARTNER_MATRIX.md` — Responsibility Matrix (Bab 3), Escrow & Biaya (Bab 3 baris Escrow)
-- `NOTARY_AND_KEMENKUMHAM_LEGAL_MATRIX.md` — State & Kontrak Pengajuan (Bab 5)
-- `PAYMENT_ESCROW_AND_BIFAST_SECURITY_MATRIX.md` — Rekening Bersama, Zero Double-Payout, Row-Level Mutex
-- Tabel: `corporate_service_cases`, `corporate_parties`, `beneficial_owners`, `service_orders`, `service_fee_lines`, `payment_milestones`, `escrow_transactions`, `government_submission_jobs`, `document_integrity_anchors`
+Alur ini mencakup intake PT/CV, validasi berulang, order dan milestone, escrow, review Notaris, submission AHU/OSS yang dapat ditolak berulang, WORM anchoring, serta payout idempoten. Klien hanya menerima status netral; detail internal PMPJ/compliance tidak ditampilkan.
 
 ```plantuml
 @startuml
-title AD-P2-01: Alur Bisnis Corporate Intake & Notary Stamping
+title AD-P2-01: Corporate Intake & Notary Stamping
 
 |Klien|
 start
-:Buka halaman Corporate Intake;
-:Pilih jenis badan usaha\n(PT_ORDINARY / PT_INDIVIDUAL_UMK / CV);
-:Isi formulir data pendirian:\n— Nama usulan, domisili, KBLI\n— Modal, pendiri/pemegang saham\n— Direksi/komisaris (PT) atau\n  sekutu aktif/pasif (CV)\n— Deklarasi Beneficial Owner\n  (orang perseorangan);
-:Klik Submit Intake;
+:[AD01-01] Isi dan submit Corporate Intake\n(PT/CV, KBLI, struktur, natural-person BO,\nconsent dan versi legal scope);
 
 |Sistem UI|
-:Terima payload form Klien;
-if (Apakah data form valid?\n— Format, kelengkapan,\n  natural-person BO) then (Tidak Valid)
-  :Tampilkan error validasi\nke Klien;
+:[AD01-02] Validasi format dan kelengkapan;
+while (Payload valid?) is (Tidak)
+  :Tampilkan error terarah;
   |Klien|
-  :Perbaiki data input;
-  :Klik Submit Intake ulang;
+  :Perbaiki dan submit ulang;
   |Sistem UI|
-  :Terima payload form\nyang diperbaiki;
-  note right
-    Loop validasi hingga
-    data memenuhi syarat
-  end note
-endif
+  :Validasi ulang payload;
+endwhile (Ya)
 
 |Supabase BaaS|
-:(Ya — Valid)\nSimpan corporate_service_cases\n(status: DRAFT);
-:Simpan corporate_parties\n& beneficial_owners;
-:Catat consent & legal_scope_version;
-:Buat service_orders &\nservice_fee_lines\n(consent versi penawaran);
-:Buat payment_milestones\n(milestone notarial);
-:Return: Intake & order tersimpan;
+:[AD01-03] Simpan case DRAFT, parties, BO,\nservice order, fee lines, dan milestone\nsecara atomik;
 
 |Sistem UI|
-:Tampilkan halaman Checkout:\n— Rincian biaya (fee lines)\n— Milestone pembayaran\n— Metode pembayaran;
-
+:[AD01-04] Tampilkan checkout dan penawaran berversi;
 |Klien|
-:Review rincian biaya &\nsetujui penawaran;
-:Pilih metode pembayaran\n(Payment Gateway);
-:Transfer dana ke\nrekening bersama (Escrow);
+:Setujui penawaran dan pilih metode pembayaran;
+
+|Payment Gateway / Escrow|
+:Terima transfer ke rekening bersama;
+:Kirim webhook pembayaran bertanda tangan;
 
 |Supabase BaaS|
-:Terima webhook pembayaran\n(verifikasi HMAC SHA-256);
-:fn_webhook_settle_escrow_mutex:\n— Validasi signature, tipe,\n  ownership, nominal\n— Kunci escrow_transactions\n  (SELECT ... FOR UPDATE);
-:Update escrow_transactions\nstatus -> HELD_IN_ESCROW;
-:Update service_orders\nstatus -> PAID_ESCROW_LOCKED;
-note right
-  Dana terkunci di rekening
-  bersama. Bukan kas bebas
-  Justifiqa. (Escrow Legal Buffer)
-end note
-
-|Sistem UI|
-:Tampilkan konfirmasi:\n"Pembayaran diterima,\ndana terkunci di Escrow.\nMenunggu review Notaris";
-
-|Supabase BaaS|
-:Publikasikan Case ke\nNotary Workspace\n(status: ESCROW_LOCKED);
-:Kirim notifikasi ke\nNotaris yang ditugaskan\n(via user_notifications);
-
-|Notaris|
-:Terima notifikasi penugasan;
-:Buka workspace kasus\n(NotaryCaseWorkspacePanel);
-:Tarik data corporate intake\ndari Supabase BaaS;
-
-|Supabase BaaS|
-:Return: Data intake lengkap\n(RLS: assigned_notary_id\n= auth.uid());
-
-|Notaris|
-:Review kelengkapan data:\n— Identitas penghadap\n— Struktur BO\n— KBLI & domisili\n— Kesesuaian bentuk usaha;
-
-if (Apakah data intake\nlengkap & valid?) then (Tidak Valid)
-  :Tandai status:\nCUSTOMER_ACTION_REQUIRED;
-  |Supabase BaaS|
-  :Update corporate_service_cases\nstatus -> CUSTOMER_ACTION_REQUIRED;
-  :Kirim notifikasi ke Klien:\n"Dokumen tambahan diperlukan";
+:[AD01-05] Verifikasi HMAC, event, order, dan nominal;\nlock event + escrow row (SELECT ... FOR UPDATE);
+if (Webhook dan pembayaran valid?) then (Tidak)
+  :Tolak mutasi finansial;\norder tetap PENDING_PAYMENT;
+  |Sistem UI|
+  :Tampilkan pembayaran gagal/pending;
   |Klien|
-  :Terima notifikasi;
-  :Lengkapi / perbaiki data;
-  :Submit ulang;
+  :Ulangi pembayaran atau batalkan checkout;
+  stop
+else (Ya)
+  :Set escrow_transactions = HELD_IN_ESCROW;\nset milestone = FUNDED;\ncatat ledger append-only;
+endif
+
+|Supabase BaaS|
+:[AD01-06] Set case = ESCROW_LOCKED;\ntugaskan dan notifikasi Notaris;
+
+|Notaris|
+:[AD01-07] Buka workspace dan review intake,\nBO, identitas, KBLI, domisili, dan formalitas;
+while (Intake lengkap dan dapat diproses?) is (Tidak)
+  :Tandai CUSTOMER_ACTION_REQUIRED\n(tanpa alasan compliance sensitif);
   |Supabase BaaS|
-  :Update data yang diperbaiki;
+  :Simpan expected-state transition dan notifikasi Klien;\ndana tetap HELD_IN_ESCROW;
+  |Klien|
+  :Lengkapi data/dokumen dan submit ulang;
+  |Supabase BaaS|
+  :Simpan revisi dan audit metadata;
   |Notaris|
-  :Review ulang data yang diperbaiki;
-  note right
-    Loop review hingga
-    data memenuhi syarat.
-    Dana tetap terkunci
-    di Escrow selama proses.
-  end note
+  :[AD01-08] Review ulang revisi;
+endwhile (Ya)
+
+|Notaris|
+:[AD01-09] Siapkan submission AHU/OSS\nmelalui kanal resmi dengan credential sendiri;
+
+|Supabase BaaS|
+:Buat government_submission_job SUBMITTED\n(digest + idempotency key, tanpa raw credential/payload);
+while (Submission disetujui?) is (Tidak — REJECTED)
+  :[AD01-10] Catat REJECTED dan alasan yang boleh disimpan;
+  |Notaris|
+  :Revisi data/dokumen;
+  |Supabase BaaS|
+  :Buat job DRAFT baru dengan idempotency key baru;
+  |Notaris|
+  :Submit ulang melalui kanal resmi;
+  |Supabase BaaS|
+  :Set job revisi = SUBMITTED;
+endwhile (Ya — APPROVED)
+
+|Supabase BaaS|
+:[AD01-11] Rekonsiliasi nomor AHU/NIB,\nexternal reference, dan digest final;
+if (Rekonsiliasi final valid?) then (Tidak)
+  :Set COMPLIANCE_HOLD;\nblok payout dan minta review internal;
+  stop
+else (Ya)
 endif
 
 |Notaris|
-:(Ya — Valid)\nInput data resmi:\n— NIB (dari OSS RBA)\n— SK Kemenkumham (dari AHU);
-:Unggah dokumen final\nke bucket privat;
-
+:Unggah dokumen final ke bucket privat;
 |Supabase BaaS|
-:Server-side: scan malware,\nhitung SHA-256 dari byte final;
-:Simpan document_integrity_anchors\n(append-only WORM)\n— sha256_hash, case_id,\n  document_type, serial;
-:Simpan government_submission_jobs\n(idempotency_key, status: SUBMITTED);
+:[AD01-12] MIME allow-list + malware scan;\nhitung SHA-256 server-side;\nsimpan document_integrity_anchors\nappend-only dan kunci case;
 
-if (Apakah submission\nberhasil?) then (Ditolak — REJECTED)
-  |Supabase BaaS|
-  :Update job status -> REJECTED;
-  :Catat alasan penolakan;
-  |Notaris|
-  :Revisi data & buat\njob baru (idempotency baru);
-  note right
-    State: REJECTED -> DRAFT
-    (revisi eksplisit)
-  end note
-  |Supabase BaaS|
-  :Simpan job revisi;
-else (Disetujui — APPROVED)
-endif
-
+:[AD01-13] Siapkan payout milestone;\ncommit intent + idempotency key;\npanggil provider di luar transaksi DB;\nfinalize dengan row lock dan rekonsiliasi;
+|Payment Gateway / Escrow|
+:Transfer dana escrow ke rekening Notaris;\nkembalikan reference terautentikasi;
 |Supabase BaaS|
-:Update government_submission_jobs\nstatus -> APPROVED;
-:Catat nomor registrasi eksternal\n(AHU/NIB);
-:Trigger WORM: kunci status\ncorporate_service_cases;
-
-|Supabase BaaS|
-:=== ESCROW RELEASE PAYOUT ===;
-:fn_release_escrow_to_advocate_mutex:\n— Validasi milestone terpenuhi\n— idempotency_key =\n  SHA256(order_id + milestone_id\n  + timestamp);
-:Update escrow_transactions\nstatus -> RELEASED;
-:Update payment_milestones\nstatus -> COMPLETED;
-:Catat payout_idempotency_keys\n(status: INITIATED -> SUCCESS);
-:Catat audit_logs_worm\n(append-only);
-note right
-  Dana dicairkan dari rekening
-  bersama ke rekening Notaris.
-  Zero double-payout dijamin
-  oleh idempotency key unik.
-end note
+:Set milestone = RELEASED;\ncatat payout result dan audit_logs_worm;
 
 |Sistem UI|
-:Kirim notifikasi status\nstamping & pencairan ke Klien;
-
+:[AD01-14] Tampilkan status selesai,\ndokumen WORM, dan payout terkonfirmasi;
 |Klien|
-:Terima notifikasi:\n"Notary stamping selesai,\ndokumen terkunci WORM,\ndana escrow telah dicairkan";
-:Lihat status & dokumen final\ndi dashboard;
-
+:Unduh dokumen final melalui akses terotorisasi;
 |Notaris|
-:Terima konfirmasi:\n"Dana milestone telah\ndicairkan ke rekening Anda";
+:Terima konfirmasi payout;
 stop
 @enduml
 ```
 
 ---
 
-## AD-P2-02: High-Stakes Property Transaction — e-KYC Forensik Computer Vision (Jual Beli Tanah)
+## AD-P2-02: High-Stakes Property Transaction — e-KYC Forensik Multi-Pihak
 
-*Diagram alur bisnis transaksi jual beli tanah berisiko tinggi: auto-login via email, consent e-kertas multi-halaman, TTD final, verifikasi forensik Computer Vision (foto setengah badan + KTP + layar TTD), validasi Dukcapil via Supabase BaaS, percabangan retry maksimal 3 kali, dan sinkronisasi status KYC multi-pihak. **Tidak mencakup alur escrow pembayaran** — fokus eksklusif pada forensik identitas.*
-
-**Referensi domain:**
-- `EKYC_AND_MULTIPARTY_SIGNING_LEGAL_MATRIX.md` — Alur Minimum & Kontrol Kegagalan (Bab 4)
-- Zero Raw Biometric Storage (Bab 3): Justica **DILARANG** menyimpan foto/selfie/video/template biometrik mentah
-- Forensik CV: liveness anti-editan, OCR KTP, deteksi layar device + TTD final
-- Tabel: `ekyc_verification_logs`, `signing_envelopes`, `signing_envelope_parties`, `property_transaction_parties`, `audit_logs_worm`
+Escrow harus terkunci sebelum undangan e-KYC aktif. TTL global adalah **7 × 24 jam sejak `escrow_locked_at`**. Scheduler dan setiap command/callback memeriksa deadline yang sama. Satu pihak yang terbukti ilegal, gagal liveness pada percobaan ketiga, atau tidak merespons sampai TTL berakhir memicu **Global Halt**: envelope dibatalkan untuk semua pihak dan escrow dikembalikan penuh secara idempoten.
 
 ```plantuml
 @startuml
-title AD-P2-02: High-Stakes Property Transaction — e-KYC Forensik Computer Vision (Jual Beli Tanah)
+title AD-P2-02: Property Transaction — e-KYC, TTL 7 Hari, Global Halt & Escrow Refund
 
-|Klien|
+|Pihak Transaksi|
 start
-:Klik tautan dari Email\n(Auto-Login);
-
-|Sistem UI|
-:Terima sesi Auto-Login;
-:Paksa Basic Liveness Check\ndi awal sesi;
-
-|Klien|
-:Selesaikan Basic Liveness Check;
-
-|Sistem UI|
-if (Basic Liveness Check lulus?) then (Tidak)
-  :Tampilkan pesan error;
-  |Klien|
-  :Ulangi Basic Liveness Check;
-  |Sistem UI|
-endif
-
-|Klien|
-:Baca halaman e-kertas (1..n);
-:Tekan "Setuju" pada\ntiap halaman e-kertas;
-:Baca final e-kertas;
-:Bubuhkan Tanda Tangan (TTD)\npada final e-kertas;
-
-|Sistem UI|
-:Tampilkan instruksi forensik:\n"Ambil foto setengah badan.\nTangan kiri memegang KTP.\nTangan kanan memegang\nLaptop/Device yang menampilkan\nlayar TTD Final.";
-
-|Klien|
---> (UPLOAD_FOTO)
-:Ambil & unggah foto\npembuktian forensik;
-
-|Sistem UI|
-:Terima upload foto pembuktian;
-:Kirim foto ke CV AI\nuntuk analisis forensik;
-
-|CV AI (Computer Vision)|
-:Verifikasi liveness foto\n(bukan editan/manipulasi);
-:OCR KTP\n(NIK, nama, tanggal lahir);
-:Deteksi layar laptop/device;
-:Deteksi TTD Final di layar;
-:Kirim hasil analisis\nke Supabase BaaS;
+:[AD02-01] Inisiator membuat transaksi,\nmendaftarkan seluruh pihak dan e-kertas;
 
 |Supabase BaaS|
-:Validasi kecocokan data OCR KTP\ndengan Database Dukcapil/Pemerintah;
+:Bekukan digest dokumen;\nbuat envelope DRAFT dan party PENDING;
+|Sistem UI|
+:[AD02-02] Tampilkan checkout escrow;
+|Pihak Transaksi|
+:Setujui biaya dan transfer ke rekening bersama;
+|Payment Gateway / Escrow|
+:Verifikasi sumber dana dan kirim webhook bertanda tangan;
+|Supabase BaaS|
+:[AD02-03] Verifikasi webhook + nominal;\nrow-lock escrow; set HELD_IN_ESCROW;\nset expires_at = escrow_locked_at + 7 hari;\ncatat audit append-only;
+if (Escrow berhasil dikunci?) then (Tidak)
+  :Batalkan aktivasi e-KYC;\ntidak ada dana yang direfund;
+  stop
+else (Ya)
+endif
 
-if (Verifikasi forensik sukses?\n— Liveness OK, bukan editan\n— KTP cocok Dukcapil\n— Layar & TTD terdeteksi) then (Gagal:\nKTP beda / foto editan /\nilegal terdeteksi)
+:[AD02-04] Kirim undangan unik ke seluruh pihak;\naktifkan watchdog TTL 7 hari;
 
-  if (retry_count == 3?) then (Ya — Limit habis)
-    :Global Broadcast:\nProses Gagal\n(Pihak Ilegal Terdeteksi);
+while (Semua pihak berstatus PASSED?) is (Belum)
+  :[AD02-05] Pilih pihak PENDING berikutnya\natau tunggu event/callback;
+  if (Sekarang >= expires_at dan ada pihak belum PASSED?) then (Ya)
+    :[AD02-15] GLOBAL HALT — TTL_EXPIRED;\nset envelope = EXPIRED;\nblok seluruh command/callback lanjutan;
+    :[AD02-17] Row-lock escrow;\nrefund idempoten 100% ke Klien;\nset escrow = REFUNDED_TO_CLIENT;\ncatat ledger + audit_logs_worm;\nnotifikasi seluruh pihak;
     stop
-  else (Tidak — Sisa percobaan < 3)
-    :Increment variabel\n(retry_count + 1);
-    |Sistem UI|
-    :Minta Klien foto ulang\nsesuai instruksi forensik;
-    note right
-      Loop kembali ke UPLOAD_FOTO.
-      Maksimal 3 kali percobaan.
-      Blok CV AI & Supabase BaaS
-      dieksekusi ulang dari atas.
-    end note
-    |Klien|
-    --> (UPLOAD_FOTO)
-    detach
+  else (Tidak)
   endif
 
-else (Sukses — Validasi Cocok)
-endif
+  |Pihak Transaksi|
+  :Buka tautan auto-login dan baca e-kertas 1..n;\nsetujui tiap halaman dan bubuhkan TTD final;
+  |Sistem UI|
+  :[AD02-06] Verifikasi sesi, consent per halaman,\ndan digest dokumen yang telah dibekukan;
 
-:Kunci status KYC pihak ini\n-> Hijau (GREEN);
-:Simpan ekyc_verification_logs\n(reference_id, digest SHA-256,\ntimestamp — TANPA media mentah);
-:Update signing_envelope_parties:\nkyc_status = GREEN;
+  while (Pihak belum PASSED dan liveness_attempt_count < 3?) is (Ya)
+    |Supabase BaaS|
+    :Row-lock envelope; pastikan status masih aktif\ndan now < expires_at sebelum membuat sesi provider;
+    if (Deadline telah lewat?) then (Ya)
+      :[AD02-15] GLOBAL HALT — TTL_EXPIRED;\nset envelope = EXPIRED;\nblok seluruh command/callback lanjutan;
+      :[AD02-17] Row-lock escrow;\nrefund idempoten 100% ke Klien;\nset escrow = REFUNDED_TO_CLIENT;\ncatat ledger + audit_logs_worm;\nnotifikasi seluruh pihak;
+      stop
+    else (Tidak)
+    endif
+    |Sistem UI|
+    :[AD02-07] Buka SDK/redirect provider;\nmedia mentah dikirim langsung ke provider,\ntidak melalui API/storage/log Justifiqa;
+    |Pihak Transaksi|
+    :Ambil bukti forensik:\nsetengah badan + KTP + device berisi TTD final;
+    |Provider e-KYC / CV AI|
+    :Liveness anti-spoof/editan;\nOCR KTP; deteksi device dan TTD;\nvalidasi terhadap sumber pemerintah;
+    :Kirim callback metadata bertanda tangan\n(reference, status, digest, timestamp);
+    |Supabase BaaS|
+    :[AD02-08] Verifikasi signature, timestamp,\nnonce/idempotency dan anti-replay;
+    if (Callback valid?) then (Tidak)
+      :Tolak callback tanpa mengubah status;\nTTL tetap berjalan;
+    else (Ya)
+      :Row-lock envelope; periksa expires_at dan status terminal\nsebelum menerima outcome atau mengubah status;
+      if (Callback tiba setelah deadline?) then (Ya)
+        :[AD02-15] GLOBAL HALT — TTL_EXPIRED;\nset envelope = EXPIRED;\nblok seluruh command/callback lanjutan;
+        :[AD02-17] Row-lock escrow;\nrefund idempoten 100% ke Klien;\nset escrow = REFUNDED_TO_CLIENT;\ncatat ledger + audit_logs_worm;\nnotifikasi seluruh pihak;
+        stop
+      else (Tidak)
+        :Simpan metadata allow-list saja;\nTANPA media/payload biometrik mentah;
+      endif
 
---> (CEK_MULTI_PARTY)
+      if (Ilegal/fraud terkonfirmasi?) then (Ya)
+        :[AD02-09] GLOBAL HALT — ILLEGAL_CONFIRMED;\nset pihak = REJECTED;\nset envelope = VOIDED;\nblok semua pihak;
+        :[AD02-17] Row-lock escrow;\nrefund idempoten 100% ke Klien;\nset escrow = REFUNDED_TO_CLIENT;\ncatat ledger + audit_logs_worm;\nnotifikasi seluruh pihak;
+        stop
+      else (Tidak)
+      endif
 
-|Supabase BaaS|
-:Cek: Apakah SEMUA pihak\ntransaksi sudah berstatus Hijau?;
+      if (Hasil meragukan, OCR/device/TTD mismatch,\natau perlu keputusan manusia?) then (Ya)
+        :[AD02-11] Set REQUIRES_MANUAL_REVIEW;\nreviewer menerima metadata minimum,\nbukan raw media melalui Justifiqa;
+        :Saat callback reviewer tiba, verifikasi signature/anti-replay;\nrow-lock envelope dan periksa deadline yang sama;
+        if (Callback reviewer tiba setelah deadline?) then (Ya)
+          :[AD02-15] GLOBAL HALT — TTL_EXPIRED;\nset envelope = EXPIRED;\nblok seluruh command/callback lanjutan;
+          :[AD02-17] Row-lock escrow;\nrefund idempoten 100% ke Klien;\nset escrow = REFUNDED_TO_CLIENT;\ncatat ledger + audit_logs_worm;\nnotifikasi seluruh pihak;
+          stop
+        else (Tidak)
+        endif
+        if (Review mengonfirmasi ilegal?) then (Ya)
+          :[AD02-09] GLOBAL HALT — ILLEGAL_CONFIRMED;\nset pihak = REJECTED;\nset envelope = VOIDED;
+          :[AD02-17] Refund idempoten 100%;\nset escrow = REFUNDED_TO_CLIENT;\ncatat ledger + audit; notifikasi semua pihak;
+          stop
+        else (Tidak — Clear)
+          :Set hasil review = PASSED;
+        endif
+      else (Keputusan otomatis dapat diterima)
+        if (Liveness lulus?) then (Ya)
+          :Set hasil = PASSED;
+        else (Tidak)
+          :[AD02-10] Increment liveness_attempt_count;\ncatat kegagalan liveness terpisah;
+        endif
+      endif
+    endif
+  endwhile (Tidak)
 
-if (Semua pihak Hijau?) then (Belum)
-  :Menunggu pihak lain\nmenyelesaikan KYC forensik;
-  note right
-    Loop: Supabase BaaS menunggu
-    event/notification hingga
-    semua pihak berstatus GREEN.
-    Kembali ke CEK_MULTI_PARTY.
-  end note
-  --> (CEK_MULTI_PARTY)
-  detach
-else (Ya — Semua Hijau)
-endif
+  if (Pihak berstatus PASSED?) then (Tidak — 3 liveness gagal)
+    :[AD02-12] GLOBAL HALT — LIVENESS_FAILED_3X;\nset pihak = REJECTED;\nset envelope = VOIDED;\nblok semua pihak;
+    :[AD02-17] Row-lock escrow;\nrefund idempoten 100% ke Klien;\nset escrow = REFUNDED_TO_CLIENT;\ncatat ledger + audit_logs_worm;\nnotifikasi seluruh pihak;
+    stop
+  else (Ya)
+    :[AD02-13] Pertahankan status DB = PASSED;\nproyeksi UI = GREEN;
+  endif
 
-:Proses e-KYC forensik\nselesai untuk seluruh pihak;
+  :[AD02-14] Cek ulang seluruh pihak;\nreschedule watchdog bila masih PENDING;
+endwhile (Ya)
+
+:[AD02-16] Tandai fase e-KYC selesai;\nenvelope dapat lanjut ke fase signing;\nescrow tetap HELD_IN_ESCROW sampai\nmilestone berikutnya terpenuhi;
+|Sistem UI|
+:Tampilkan semua pihak GREEN dan deadline selesai;
+|Pihak Transaksi|
+:Lanjut ke fase signing/milestone berikutnya;
 stop
-
 @enduml
 ```
 
 ---
 
-## Catatan Teknis
+## Keputusan arsitektur dan status kanonik
 
-1. **Traceabilitas:** Kedua diagram di atas di-derive 1-to-1 dari Sequence Diagram di [`PHASE_2_USE_CASES_AND_DIAGRAMS.md`](PHASE_2_USE_CASES_AND_DIAGRAMS.md), diperkaya dengan percabangan bisnis dari Legal Matrix masing-masing domain.
+1. **Corporate rejection loop diperbaiki:** `REJECTED → DRAFT → SUBMITTED` kini kembali ke keputusan approval, bukan jatuh otomatis ke jalur `APPROVED`.
+2. **Payout Notaris tidak memakai fungsi payout Advokat:** diagram memakai port payout role-aware dengan prepare/commit → external call → finalize/reconcile. `fn_release_escrow_to_advocate_mutex` tidak diklaim dapat membayar Notaris.
+3. **e-KYC zero raw biometric:** browser berinteraksi langsung dengan SDK/provider. Justifiqa hanya menerima callback metadata yang telah diverifikasi.
+4. **Status e-KYC:** status database adalah `PENDING | PASSED | REJECTED | REQUIRES_MANUAL_REVIEW`; warna **GREEN** hanya proyeksi UI untuk `PASSED`.
+5. **Global Halt:** `VOIDED` digunakan untuk ilegal/fraud atau tiga kegagalan liveness; `EXPIRED` untuk TTL; histori individual tidak dihapus.
+6. **Escrow:** sukses e-KYC tidak otomatis mencairkan uang. Dana tetap `HELD_IN_ESCROW`; semua terminal Global Halt menghasilkan `REFUNDED_TO_CLIENT`.
+7. **Gap implementasi yang disengaja terlihat:** migrasi saat ini belum memiliki aggregate property transaction dan kolom deadline khusus yang mengikat envelope ke escrow. Diagram ini adalah kontrak target Batch 2; remediasi SQL berada di luar kewenangan batch ini.
 
-2. **Perubahan Arsitektural (v2):**
-   - **Swimlane `Database` → `Supabase BaaS`**: Menegaskan bahwa layer backend bukan database pasif, melainkan Backend-as-a-Service aktif (PostgREST/RPC/Trigger/RLS).
-   - **Injeksi Escrow Lifecycle**: Kedua diagram kini memiliki alur pembayaran lengkap — dari *Checkout/Payment Gateway* → *HELD_IN_ESCROW* → deliverable → *RELEASED (Payout)*.
+## Tabel terkait yang benar-benar tersedia
 
-3. **Kepatuhan Domain:**
-   - **AD-P2-01:** Mengikuti state machine `DRAFT -> PAID_ESCROW_LOCKED -> SUBMITTED -> APPROVED` dan `REJECTED -> DRAFT (revisi eksplisit)` dari `NOTARY_AND_KEMENKUMHAM_LEGAL_MATRIX.md`. Klien hanya menerima status netral (`CUSTOMER_ACTION_REQUIRED`), tidak pernah menerima detail PMPJ/compliance (anti-tipping-off). Escrow release menggunakan `fn_release_escrow_to_advocate_mutex` dengan idempotency key unik (zero double-payout).
-   - **AD-P2-02:** Mematuhi Zero Raw Biometric Storage — hanya menyimpan `reference_id`, status, digest SHA-256, dan timestamp (TANPA foto/selfie/template mentah). Forensik CV: liveness anti-editan, OCR KTP, deteksi layar device + TTD final, validasi Dukcapil. Percabangan kegagalan: retry maksimal 3 kali; percobaan ke-3 memicu **Global Broadcast: Proses Gagal (Pihak Ilegal Terdeteksi)**. Sinkronisasi multi-pihak: proses selesai hanya jika semua pihak berstatus KYC Hijau. **Tidak mencakup alur escrow pembayaran.**
-
-4. **Tabel Database Terkait:**
-   | Diagram | Tabel Utama |
-   |---|---|
-   | AD-P2-01 | `corporate_service_cases`, `corporate_parties`, `beneficial_owners`, `service_orders`, `service_fee_lines`, `payment_milestones`, `escrow_transactions`, `payout_idempotency_keys`, `government_submission_jobs`, `document_integrity_anchors`, `audit_logs_worm`, `user_notifications` |
-   | AD-P2-02 | `ekyc_verification_logs`, `signing_envelopes`, `signing_envelope_parties`, `property_transaction_parties`, `audit_logs_worm` |
+| Diagram | Tabel utama |
+| --- | --- |
+| AD-P2-01 | `corporate_service_cases`, `corporate_parties`, `beneficial_owners`, `service_orders`, `service_fee_lines`, `payment_milestones`, `escrow_transactions`, `payout_idempotency_keys`, `government_submission_jobs`, `document_integrity_anchors`, `audit_logs_worm`, `user_notifications` |
+| AD-P2-02 | `ekyc_verification_logs`, `signing_envelopes`, `signing_envelope_parties`, `escrow_transactions`, `payment_milestones`, `escrow_payout_ledgers`, `audit_logs_worm`, `user_notifications` |
