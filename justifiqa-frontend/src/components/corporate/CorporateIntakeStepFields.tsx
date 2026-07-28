@@ -48,5 +48,6 @@ export function CorporateIntakeStepFields({ step, draft, onChange }: Props) {
   return <div className="grid gap-4 md:grid-cols-2">
     <Card className="gap-3 rounded-2xl border-border bg-muted/40 p-5"><Badge variant="outline">Ringkasan intake</Badge><p className="font-semibold">{draft.businessName || 'Nama belum diisi'}</p><p className="text-sm text-muted-foreground">{draft.entityType} · {draft.kbli || 'KBLI belum diisi'} · BO: {draft.boName || 'belum diisi'}</p></Card>
     <Card className="gap-3 rounded-2xl border-border bg-muted/40 p-5"><CircleDollarSign className="size-5 text-primary" /><p className="font-semibold">Milestone escrow</p><p className="text-sm text-muted-foreground">Dana dilepas per hasil kerja yang disetujui. Biaya final muncul setelah notaris memeriksa ruang lingkup dan dokumen.</p></Card>
+    <label className="flex items-start gap-3 rounded-xl border border-border bg-background p-4 text-sm font-semibold md:col-span-2"><input type="checkbox" checked={draft.acceptedScope} onChange={(e) => onChange({ acceptedScope: e.target.checked })} className="mt-0.5 size-5 shrink-0 accent-primary" />Saya menyetujui ruang lingkup layanan dan memahami bahwa pengajuan pemerintah tunduk pada pemeriksaan Notaris.</label>
   </div>;
 }

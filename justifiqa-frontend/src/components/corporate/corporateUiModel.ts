@@ -1,4 +1,11 @@
 export type CorporateEntityType = 'PT_ORDINARY' | 'PT_INDIVIDUAL_UMK' | 'CV';
+export type CorporateCaseStage =
+  | 'DRAFT'
+  | 'ESCROW_LOCKED'
+  | 'NOTARY_REVIEW'
+  | 'CUSTOMER_ACTION_REQUIRED'
+  | 'COMPLIANCE_HOLD'
+  | 'COMPLETED';
 
 export type CorporateIntakeDraft = {
   entityType: CorporateEntityType;
@@ -9,6 +16,7 @@ export type CorporateIntakeDraft = {
   ownership: string;
   boName: string;
   controlBasis: string;
+  acceptedScope: boolean;
 };
 export const INTAKE_STEPS = [
   'Jenis Entitas',
@@ -20,16 +28,21 @@ export const INTAKE_STEPS = [
 
 export const CORPORATE_STAGES = [
   ['DRAFT', 'Draf'],
-  ['IDENTITY_PENDING', 'Verifikasi identitas'],
-  ['CDD_REVIEW', 'Review internal'],
-  ['DOCUMENTS_PENDING', 'Kelengkapan dokumen'],
+  ['ESCROW_LOCKED', 'Escrow terkunci'],
   ['NOTARY_REVIEW', 'Review notaris'],
-  ['AHU_SUBMITTED', 'Diajukan ke AHU'],
-  ['AHU_APPROVED', 'Disetujui AHU'],
-  ['OSS_PENDING', 'Proses OSS'],
-  ['NIB_ISSUED', 'NIB terbit'],
+  ['CUSTOMER_ACTION_REQUIRED', 'Tindakan klien diperlukan'],
+  ['COMPLIANCE_HOLD', 'Proses ditahan'],
   ['COMPLETED', 'Selesai'],
 ] as const;
+
+export const CLIENT_STAGE_COPY: Record<CorporateCaseStage, { label: string; tone: string; detail: string }> = {
+  DRAFT: { label: 'Draft', tone: 'secondary', detail: 'Lengkapi intake dan setujui penawaran.' },
+  ESCROW_LOCKED: { label: 'Escrow Locked', tone: 'primary', detail: 'Dana aman di rekening bersama; notaris telah diberi tugas.' },
+  NOTARY_REVIEW: { label: 'Review', tone: 'info', detail: 'Notaris memeriksa kelengkapan formalitas.' },
+  CUSTOMER_ACTION_REQUIRED: { label: 'Tindakan diperlukan', tone: 'warning', detail: 'Ada data atau dokumen yang perlu dilengkapi.' },
+  COMPLIANCE_HOLD: { label: 'Hold', tone: 'danger', detail: 'Proses sementara ditahan. Tim akan menghubungi Anda bila ada tindakan.' },
+  COMPLETED: { label: 'Selesai', tone: 'success', detail: 'Dokumen final tersedia melalui akses terotorisasi.' },
+};
 
 export const EMPTY_INTAKE_DRAFT: CorporateIntakeDraft = {
   entityType: 'PT_ORDINARY',
@@ -40,4 +53,5 @@ export const EMPTY_INTAKE_DRAFT: CorporateIntakeDraft = {
   ownership: '100',
   boName: '',
   controlBasis: 'OWNERSHIP',
+  acceptedScope: false,
 };

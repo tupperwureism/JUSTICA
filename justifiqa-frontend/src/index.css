@@ -129,6 +129,22 @@
   --border-glass-medium: rgba(15, 23, 42, 0.14);
 }
 
+@layer components {
+  /* Corporate Intake: semantic token consumers; primitives retain atomic geometry. */
+  .corporate-suite-shell { @apply mx-auto grid w-full max-w-[1180px] gap-8 overflow-x-clip px-4 sm:px-8; }
+  .corporate-card-shell { @apply flex flex-col gap-6 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-md backdrop-blur-sm sm:p-8; box-shadow: var(--shadow-glass); }
+  .corporate-summary-item { @apply flex items-center gap-3 rounded-xl border border-border bg-secondary/40 p-4 text-sm; }
+  .corporate-summary-item span { @apply flex min-w-0 flex-col gap-1; }
+  .corporate-summary-item small { @apply text-muted-foreground; }
+  .corporate-status-badge { @apply gap-1.5 rounded-full px-3.5 py-1 text-xs font-extrabold uppercase tracking-wider; }
+  .corporate-status-draft { @apply border-border bg-secondary text-secondary-foreground; }
+  .corporate-status-review { @apply border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300; }
+  .corporate-status-locked { @apply border-primary/40 bg-primary/10 text-primary; }
+  .corporate-status-hold { @apply border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300; }
+  .corporate-status-success { @apply border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300; }
+  .corporate-notary-boundary { @apply rounded-xl border border-primary/40 bg-primary/10 p-4 text-sm text-foreground; }
+}
+
 /* ==========================================================================
    3. BASE RESET & BODY SETUP
    ========================================================================== */

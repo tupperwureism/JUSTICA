@@ -11,7 +11,9 @@ const SUBMISSIONS = [
   ['OSS_RBA', 'DRAFT', 'Menunggu SK Kemenkumham'],
 ] as const;
 
-export function NotaryCaseWorkspacePanel() {
+type Props = { hasNotaryAssignment?: boolean };
+
+export function NotaryCaseWorkspacePanel({ hasNotaryAssignment = true }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingAnchor, setPendingAnchor] = useState<NotaryStampingRequest | null>(null);
   const submitStamping = (request: NotaryStampingRequest) => {
@@ -19,8 +21,16 @@ export function NotaryCaseWorkspacePanel() {
     setModalOpen(false);
   };
 
+  if (!hasNotaryAssignment) return (
+    <Card className="corporate-card-shell" role="alert">
+      <CardHeader className="gap-3 p-0"><Badge variant="destructive" className="w-fit">Akses dibatasi</Badge><CardTitle>Workspace Notaris tidak tersedia</CardTitle></CardHeader>
+      <CardContent className="p-0 text-sm text-muted-foreground">Hanya Notaris yang ditugaskan pada kasus ini dapat melihat dokumen intake dan menjalankan tindakan workspace.</CardContent>
+    </Card>
+  );
+
   return (
     <section className="space-y-6" aria-label="Workspace notaris tertugas">
+      <p className="corporate-notary-boundary">Boundary akses: UI ini hanya memproyeksikan kasus Notaris tertugas. Otorisasi dan data scope tetap harus ditegakkan oleh RLS/server.</p>
       <Card className="gap-5 rounded-2xl border-border bg-card p-6 shadow-md sm:p-8">
         <CardHeader className="gap-3 p-0"><div className="flex flex-wrap items-center justify-between gap-3"><Badge variant="outline" className="rounded-full border-primary/40 bg-primary/10 px-3.5 py-1 text-primary"><ShieldCheck />Assigned Notary Only</Badge><Badge variant="secondary">NOTARY_REVIEW</Badge></div><CardTitle className="font-heading text-2xl font-extrabold">PT Contoh Usaha Indonesia</CardTitle><p className="text-sm text-muted-foreground">Kasus JBIZ-202607-001 · PT_ORDINARY · Jakarta Selatan · KBLI 62019</p></CardHeader>
         <CardContent className="grid gap-4 p-0 md:grid-cols-3">

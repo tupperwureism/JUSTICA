@@ -14,6 +14,7 @@ export function CorporateIntakeWizard({ onComplete }: Props) {
   const [prepared, setPrepared] = useState(false);
   const isLast = step === INTAKE_STEPS.length - 1;
 
+  const canPrepare = !isLast || draft.acceptedScope;
   const continueFlow = () => {
     if (!isLast) return setStep((value) => value + 1);
     setPrepared(true);
@@ -31,7 +32,7 @@ export function CorporateIntakeWizard({ onComplete }: Props) {
       <CardContent className="p-0"><CorporateIntakeStepFields step={step} draft={draft} onChange={(patch) => setDraft((value) => ({ ...value, ...patch }))} /></CardContent>
       <CardFooter className="flex flex-wrap justify-between gap-3 p-0">
         <Button type="button" variant="outline" size="lg" disabled={step === 0} onClick={() => setStep((value) => value - 1)} className="min-h-10 rounded-xl"><ArrowLeft />Kembali</Button>
-        <Button type="button" size="lg" onClick={continueFlow} className="min-h-10 rounded-xl">{isLast ? <Check /> : <ArrowRight />}{isLast ? 'Siapkan draft order' : 'Lanjutkan'}</Button>
+        <Button type="button" size="lg" disabled={!canPrepare} onClick={continueFlow} className="min-h-10 rounded-xl">{isLast ? <Check /> : <ArrowRight />}{isLast ? 'Siapkan tagihan escrow' : 'Lanjutkan'}</Button>
       </CardFooter>
       {prepared && <p role="status" className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">Draft siap. Persistensi order dan pembayaran tetap harus dilakukan melalui endpoint server tervalidasi.</p>}
     </Card>
