@@ -93,8 +93,9 @@ test('all financial mutexes lock rows before state or balance mutation', () => {
   assert.ok(book.indexOf('FOR UPDATE;') < book.indexOf('UPDATE public.wallet_balances'));
 
   const release = latestFunctionBody('fn_release_escrow_to_advocate_mutex');
-  assert.ok(release.indexOf('WHERE escrow_id = p_escrow_id FOR UPDATE') < release.indexOf('UPDATE public.escrow_transactions'));
-  assert.ok(release.indexOf("user_type = 'CLIENT' FOR UPDATE") < release.indexOf('SET balance_held_idr'));
+  assert.ok(release.indexOf('WHERE escrow.escrow_id = p_escrow_id') < release.indexOf('UPDATE public.escrow_transactions'));
+  assert.ok(release.indexOf('ORDER BY wallet.wallet_id') < release.indexOf('SET balance_held_idr'));
+  assert.ok(release.indexOf('FOR UPDATE;') < release.indexOf('SET balance_held_idr'));
 
   const webhook = latestFunctionBody('fn_webhook_settle_escrow_mutex');
   assert.ok(webhook.indexOf('provider_event_id = p_provider_event_id\n    FOR UPDATE') < webhook.indexOf('FOR UPDATE OF escrow'));

@@ -5,10 +5,10 @@
 
 ## Cakupan
 
-- 186 source files dipindai.
-- 239 exported TypeScript symbols dalam 155 files.
-- 97 core PostgreSQL objects dari 335 deklarasi migrasi.
-- 134 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
+- 193 source files dipindai.
+- 249 exported TypeScript symbols dalam 160 files.
+- 104 core PostgreSQL objects dari 353 deklarasi migrasi.
+- 140 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 - Migrasi `supabase/` diprioritaskan di atas salinan `database/`; peta deklarasi ini bukan rekonstruksi state database setelah seluruh migrasi.
 - Indeks SQL sengaja tidak dimuat agar peta tetap ringkas; cari dengan `rg "CREATE .*INDEX" database supabase` bila diperlukan.
@@ -104,13 +104,14 @@
 | components/consultation/ConsultationBookingForm.tsx | 17f ConsultationBookingForm |
 | components/consultation/ConsultationBookingReceipt.tsx | 6f ConsultationBookingReceipt |
 | components/corporate/AdvocateCorporateCaseManager.tsx | 9f AdvocateCorporateCaseManager |
-| components/corporate/ClientCorporateSuiteTab.tsx | 5f ClientCorporateSuiteTab |
+| components/corporate/ClientCorporateSuiteTab.tsx | 6f ClientCorporateSuiteTab |
 | components/corporate/CorporateCaseTrackerPanel.tsx | 13f CorporateCaseTrackerPanel |
+| components/corporate/CorporateEscrowCheckoutPanel.tsx | 12f CorporateEscrowCheckoutPanel |
 | components/corporate/CorporateIntakeStepFields.tsx | 22f CorporateIntakeStepFields |
 | components/corporate/CorporateIntakeWizard.tsx | 11f CorporateIntakeWizard |
-| components/corporate/corporateUiModel.ts | 1t CorporateEntityType, 3t CorporateIntakeDraft, 13v INTAKE_STEPS, 21v CORPORATE_STAGES, 34v EMPTY_INTAKE_DRAFT |
+| components/corporate/corporateUiModel.ts | 1t CorporateEntityType, 2t CorporateCaseStage, 10t CorporateIntakeDraft, 21v INTAKE_STEPS, 29v CORPORATE_STAGES, 38v CLIENT_STAGE_COPY, 47v EMPTY_INTAKE_DRAFT |
 | components/corporate/notary/KemenkumhamStampingModal.tsx | 8t NotaryStampingRequest, 20f KemenkumhamStampingModal |
-| components/corporate/notary/NotaryCaseWorkspacePanel.tsx | 14f NotaryCaseWorkspacePanel |
+| components/corporate/notary/NotaryCaseWorkspacePanel.tsx | 16f NotaryCaseWorkspacePanel |
 | components/document/DocumentDraftActions.tsx | 6f DocumentDraftActions |
 | components/document/DocumentDraftPreview.tsx | 6f DocumentDraftPreview |
 | components/document/DocumentDraftingForm.tsx | 18f DocumentDraftingForm |
@@ -124,8 +125,12 @@
 | components/gateway/VerifierPanel.tsx | 13v VerifierPanel |
 | components/payment/EscrowDisbursementTrackerPanel.tsx | 19f EscrowDisbursementTrackerPanel |
 | components/payment/PaymentGatewaySelectorModal.tsx | 7t PaymentGatewayMethod, 19f PaymentGatewaySelectorModal |
-| components/signing/EkycVerificationWizard.tsx | 14f EkycVerificationWizard |
+| components/signing/EkycVerificationWizard.tsx | 13f EkycVerificationWizard |
 | components/signing/MultiPartySigningPanel.tsx | 7t SigningParty, 10f MultiPartySigningPanel |
+| components/signing/ekyc/EkycLivenessCamera.tsx | 8f EkycLivenessCamera |
+| components/signing/ekyc/EkycOtpPanel.tsx | 8f EkycOtpPanel |
+| components/signing/ekyc/EkycOutcomePanel.tsx | 9f EkycOutcomePanel |
+| components/signing/ekyc/ekycUiModel.ts | 1t EkycScreen, 3t EkycOutcome, 5v E_KYC_STEPS, 7v outcomeCopy |
 | components/ui/badge.tsx | 50x Badge, 50x badgeVariants |
 | components/ui/button.tsx | 66x Button, 66x buttonVariants |
 | components/ui/card.tsx | 84x Card, 84x CardHeader, 84x CardFooter, 84x CardTitle, 84x CardAction, 84x CardDescription, 84x CardContent |
@@ -171,7 +176,7 @@
 | types/authForms.ts | 1t ThemeMode, 2t AuthTab, 3t SyncStatus, 5i ClientLoginFields, 6i ClientRegistrationFields, 7i AdvocateLoginFields, 8i AdvocateRegistrationFields |
 | types/client.ts | 4t ClientTabKey, 6i ActiveConsultation, 15i HistoryDocument, 23i ServiceOption, 32i Advocate, 49i TimeSlot, 54i CheckoutDraft |
 | types/consultation.ts | 1t ConsultationTierId, 3t EscrowStatus, 5i ConsultationTier, 18i ConsultationSlot, 29i LiveConsultationSlot, 31i ConsultationCheckout, 46i EscrowTransaction, 59i BookingRequest |
-| types/database.types.ts | 1t Json, 9t Database, 2327t Tables, 2356t TablesInsert, 2381t TablesUpdate, 2406t Enums, 2423t CompositeTypes, 2440v Constants |
+| types/database.types.ts | 1t Json, 9t Database, 2544t Tables, 2573t TablesInsert, 2598t TablesUpdate, 2623t Enums, 2640t CompositeTypes, 2657v Constants |
 | types/irac.ts | 1t LegalDocumentTemplateId, 3i IracAnalysis, 16i DocumentClause, 22i LegalDocumentDraft |
 | types/portalAuth.ts | 3t PortalRole, 5v portalHome, 11v portalLogin, 17f getPortalRole, 22f safePortalRedirect |
 
@@ -183,36 +188,43 @@
 | function | public.fn_assert_completed_envelope_anchor() | S/20260722000021_phase2_holistic_security_hardening.sql:L55 |
 | function | public.fn_assert_service_order_financial_reconciliation() | S/20260722000016_p2_b3_service_orders_expand_only.sql:L439 |
 | function | public.fn_audit_corporate_escrow_lock() | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L138 |
-| function | public.fn_audit_escrow_state_transition() | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L162 |
+| function | public.fn_audit_escrow_state_transition() | S/20260728000025_phase2_backend_forensic_hardening.sql:L91 +1 |
 | function | public.fn_audit_signing_global_transition() | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L200 |
 | function | public.fn_book_consultation_slot_mutex( p_slot_id UUID, p_case_summary TEXT, p_booking_ty… | S/20260722000016_p2_b3_service_orders_expand_only.sql:L11 +4 |
 | function | public.fn_can_read_signing_envelope(p_envelope_id UUID) | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L263 |
 | function | public.fn_client_checkout_consultation_mutex( p_slot_id UUID, p_case_summary TEXT, p_book… | S/20260721000012_add_authenticated_checkout_rpc_facade.sql:L1 |
-| function | public.fn_guard_corporate_case_stage_mutation() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L306 |
 | function | public.fn_confirm_party_illegal_atomic( p_envelope_id UUID, p_party_id UUID, p_verificati… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L858 |
 | function | public.fn_create_corporate_intake_atomic( p_order_id UUID, p_entity_type VARCHAR, p_propo… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L261 |
+| function | public.fn_create_corporate_intake_complete_atomic( p_order_id UUID, p_client_id UUID, p_e… | S/20260728000025_phase2_backend_forensic_hardening.sql:L539 |
 | function | public.fn_current_compliance_event_actor() | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L9 |
 | function | public.fn_global_halt_ekyc_and_refund_atomic( p_envelope_id UUID, p_party_id UUID, p_veri… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L961 |
+| function | public.fn_guard_corporate_case_stage_mutation() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L306 |
+| function | public.fn_guard_corporate_notary_assignment() | S/20260728000025_phase2_backend_forensic_hardening.sql:L233 |
 | function | public.fn_guard_ekyc_log_mutation() | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L136 |
+| function | public.fn_guard_escrow_financial_state() | S/20260728000025_phase2_backend_forensic_hardening.sql:L37 |
+| function | public.fn_guard_government_submission_transition() | S/20260728000025_phase2_backend_forensic_hardening.sql:L277 |
+| function | public.fn_guard_payout_idempotency_mutation() | S/20260728000025_phase2_backend_forensic_hardening.sql:L938 |
+| function | public.fn_guard_provider_webhook_event_mutation() | S/20260728000025_phase2_backend_forensic_hardening.sql:L881 |
 | function | public.fn_guard_signing_envelope_mutation() | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L161 |
-| function | public.fn_guard_signing_party_mutation() | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L206 |
+| function | public.fn_guard_signing_party_mutation() | S/20260728000025_phase2_backend_forensic_hardening.sql:L348 +1 |
 | function | public.fn_is_verified_advocate(p_advocate_id UUID) | S/20260721000015_harden_verified_advocate_rls_helper.sql:L1 |
-| function | public.fn_mutate_wallet_balance_mutex( p_wallet_id UUID, p_amount NUMERIC, p_mutation_typ… | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L92 +3 |
-| function | public.fn_prevent_worm_mutation() | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L9 +5 |
 | function | public.fn_lock_corporate_escrow_atomic( p_case_id UUID, p_escrow_id UUID, p_expected_amou… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L617 |
 | function | public.fn_lock_corporate_escrow_webhook_atomic( p_order_id UUID, p_case_id UUID, p_escrow… | S/20260722000024_p2_b5c_pg_cron_ttl_scheduler.sql:L10 |
+| function | public.fn_mutate_wallet_balance_mutex( p_wallet_id UUID, p_amount NUMERIC, p_mutation_typ… | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L92 +3 |
+| function | public.fn_prevent_worm_mutation() | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L9 +5 |
 | function | public.fn_process_ekyc_callback_atomic( p_envelope_id UUID, p_party_id UUID, p_user_id UU… | S/20260722000024_p2_b5c_pg_cron_ttl_scheduler.sql:L65 |
 | function | public.fn_protect_accepted_service_fee_line() | S/20260722000016_p2_b3_service_orders_expand_only.sql:L383 |
 | function | public.fn_protect_payment_milestone_terms() | S/20260722000016_p2_b3_service_orders_expand_only.sql:L406 |
 | function | public.fn_record_immutable_audit_log( p_actor_user_id UUID, p_actor_type VARCHAR, p_actio… | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L212 +3 |
 | function | public.fn_refund_escrow_to_client_mutex( p_escrow_id UUID, p_refund_reason TEXT ) | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L149 +3 |
-| function | public.fn_release_escrow_to_advocate_mutex(p_escrow_id UUID) | S/20260721000013_add_realtime_room_and_client_release.sql:L42 +3 |
+| function | public.fn_release_escrow_to_advocate_mutex( p_escrow_id UUID ) | S/20260728000025_phase2_backend_forensic_hardening.sql:L419 +4 |
 | function | public.fn_sync_notary_submission_contract() | S/20260722000020_p2_b8_notary_workspace_and_kemenkumham_seams.sql:L56 |
 | function | public.fn_touch_corporate_record_updated_at() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L279 |
 | function | public.fn_transition_corporate_service_case( p_case_id UUID, p_expected_stage VARCHAR, p_… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L748 +1 |
 | function | public.fn_validate_corporate_service_case_order() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L250 |
 | function | public.fn_validate_document_integrity_anchor() | S/20260722000021_phase2_holistic_security_hardening.sql:L20 |
 | function | public.fn_validate_signing_envelope_case() | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L117 |
+| function | public.fn_validate_signing_envelope_escrow_binding() | S/20260728000025_phase2_backend_forensic_hardening.sql:L141 |
 | function | public.fn_verify_public_legal_document(p_sha256_hash TEXT) | S/20260722000021_phase2_holistic_security_hardening.sql:L118 +1 |
 | function | public.fn_webhook_settle_escrow_mutex( p_provider_event_id VARCHAR, p_order_id UUID, p_am… | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L61 |
 | table | advocate_reviews | S/20260715000002_domain2_consultation_fairclock_sla.sql:L162 +1 |
@@ -235,6 +247,7 @@
 | table | probono_cases | S/20260715000005_domain5_probono_disputes_worm_audit.sql:L12 +1 |
 | table | public.beneficial_owners | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L92 |
 | table | public.compliance_assessments | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L145 |
+| table | public.compliance_workflow_events_worm | S/20260722000022_p2_b5a_ekyc_and_escrow_schema.sql:L233 |
 | table | public.corporate_parties | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L56 |
 | table | public.corporate_service_cases | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L7 |
 | table | public.document_integrity_anchors | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L39 |
@@ -242,7 +255,6 @@
 | table | public.government_submission_jobs | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L189 |
 | table | public.payment_milestones | S/20260722000016_p2_b3_service_orders_expand_only.sql:L317 |
 | table | public.payout_idempotency_keys | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L26 |
-| table | public.compliance_workflow_events_worm | S/20260722000022_p2_b5a_ekyc_and_escrow_schema.sql:L233 |
 | table | public.provider_webhook_events | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L9 |
 | table | public.service_fee_lines | S/20260722000016_p2_b3_service_orders_expand_only.sql:L287 |
 | table | public.service_orders | S/20260722000016_p2_b3_service_orders_expand_only.sql:L246 |
@@ -264,9 +276,9 @@
 | type | public.notary_submission_target_system | S/20260722000020_p2_b8_notary_workspace_and_kemenkumham_seams.sql:L4 |
 | type | public.payout_channel | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L5 |
 | type | public.payout_idempotency_status | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L6 |
+| type | public.signing_case_type | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L10 |
 | type | public.signing_envelope_global_status | S/20260722000022_p2_b5a_ekyc_and_escrow_schema.sql:L5 |
 | type | public.signing_envelope_halt_reason | S/20260722000022_p2_b5a_ekyc_and_escrow_schema.sql:L13 |
-| type | public.signing_case_type | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L10 |
 | type | public.signing_envelope_status | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L11 |
 | type | public.signing_party_role | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L14 |
 | type | public.signing_party_status | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L15 |

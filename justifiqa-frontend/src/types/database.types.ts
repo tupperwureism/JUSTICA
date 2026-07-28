@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       advocate_reviews: {
@@ -69,21 +44,18 @@ export type Database = {
           {
             foreignKeyName: "fk_review_advocate"
             columns: ["advocate_id"]
-            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_review_booking"
             columns: ["booking_id"]
-            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "fk_review_client"
             columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "users_client"
             referencedColumns: ["client_id"]
           },
@@ -121,14 +93,12 @@ export type Database = {
           {
             foreignKeyName: "fk_sanction_admin"
             columns: ["issued_by_admin_id"]
-            isOneToOne: false
             referencedRelation: "users_admin"
             referencedColumns: ["admin_id"]
           },
           {
             foreignKeyName: "fk_sanction_advocate"
             columns: ["advocate_id"]
-            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
@@ -193,7 +163,6 @@ export type Database = {
           {
             foreignKeyName: "fk_tier_advocate"
             columns: ["advocate_id"]
-            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
@@ -291,7 +260,6 @@ export type Database = {
           {
             foreignKeyName: "fk_beneficial_owners_case"
             columns: ["case_id"]
-            isOneToOne: false
             referencedRelation: "corporate_service_cases"
             referencedColumns: ["case_id"]
           },
@@ -350,21 +318,18 @@ export type Database = {
           {
             foreignKeyName: "fk_booking_advocate"
             columns: ["advocate_id"]
-            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_booking_client"
             columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "users_client"
             referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "fk_booking_slot"
             columns: ["slot_id"]
-            isOneToOne: false
             referencedRelation: "consultation_slots"
             referencedColumns: ["slot_id"]
           },
@@ -420,14 +385,12 @@ export type Database = {
           {
             foreignKeyName: "fk_irac_advocate"
             columns: ["advocate_id"]
-            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_irac_booking"
             columns: ["booking_id"]
-            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
@@ -465,7 +428,6 @@ export type Database = {
           {
             foreignKeyName: "fk_chat_meta_booking"
             columns: ["booking_id"]
-            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
@@ -524,9 +486,75 @@ export type Database = {
           {
             foreignKeyName: "fk_compliance_assessments_case"
             columns: ["case_id"]
-            isOneToOne: false
             referencedRelation: "corporate_service_cases"
             referencedColumns: ["case_id"]
+          },
+        ]
+      }
+      compliance_workflow_events_worm: {
+        Row: {
+          actor_user_id: string | null
+          corporate_case_id: string | null
+          created_at: string
+          envelope_id: string | null
+          escrow_id: string | null
+          event_digest_sha256: string
+          event_id: string
+          event_type: string
+          idempotency_key: string
+          occurred_at: string
+          verification_id: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          corporate_case_id?: string | null
+          created_at?: string
+          envelope_id?: string | null
+          escrow_id?: string | null
+          event_digest_sha256: string
+          event_id?: string
+          event_type: string
+          idempotency_key: string
+          occurred_at: string
+          verification_id?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          corporate_case_id?: string | null
+          created_at?: string
+          envelope_id?: string | null
+          escrow_id?: string | null
+          event_digest_sha256?: string
+          event_id?: string
+          event_type?: string
+          idempotency_key?: string
+          occurred_at?: string
+          verification_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_workflow_events_worm_corporate_case_id_fkey"
+            columns: ["corporate_case_id"]
+            referencedRelation: "corporate_service_cases"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "compliance_workflow_events_worm_envelope_id_fkey"
+            columns: ["envelope_id"]
+            referencedRelation: "signing_envelopes"
+            referencedColumns: ["envelope_id"]
+          },
+          {
+            foreignKeyName: "compliance_workflow_events_worm_escrow_id_fkey"
+            columns: ["escrow_id"]
+            referencedRelation: "escrow_transactions"
+            referencedColumns: ["escrow_id"]
+          },
+          {
+            foreignKeyName: "compliance_workflow_events_worm_verification_id_fkey"
+            columns: ["verification_id"]
+            referencedRelation: "ekyc_verification_logs"
+            referencedColumns: ["verification_id"]
           },
         ]
       }
@@ -565,14 +593,12 @@ export type Database = {
           {
             foreignKeyName: "fk_slot_advocate"
             columns: ["advocate_id"]
-            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_slot_tier"
             columns: ["tier_id"]
-            isOneToOne: false
             referencedRelation: "advocate_service_tiers"
             referencedColumns: ["tier_id"]
           },
@@ -625,7 +651,6 @@ export type Database = {
           {
             foreignKeyName: "fk_corporate_parties_case"
             columns: ["case_id"]
-            isOneToOne: false
             referencedRelation: "corporate_service_cases"
             referencedColumns: ["case_id"]
           },
@@ -690,21 +715,18 @@ export type Database = {
           {
             foreignKeyName: "fk_corporate_cases_compliance_reviewer"
             columns: ["assigned_compliance_reviewer_id"]
-            isOneToOne: false
             referencedRelation: "users_admin"
             referencedColumns: ["admin_id"]
           },
           {
             foreignKeyName: "fk_corporate_cases_notary"
             columns: ["assigned_notary_id"]
-            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_corporate_cases_order"
             columns: ["order_id"]
-            isOneToOne: true
             referencedRelation: "service_orders"
             referencedColumns: ["order_id"]
           },
@@ -754,21 +776,18 @@ export type Database = {
           {
             foreignKeyName: "dispute_cases_reported_by_client_id_fkey"
             columns: ["reported_by_client_id"]
-            isOneToOne: false
             referencedRelation: "users_client"
             referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "fk_dispute_booking"
             columns: ["booking_id"]
-            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "fk_dispute_escrow"
             columns: ["escrow_id"]
-            isOneToOne: false
             referencedRelation: "escrow_transactions"
             referencedColumns: ["escrow_id"]
           },
@@ -803,14 +822,12 @@ export type Database = {
           {
             foreignKeyName: "fk_signature_admin"
             columns: ["mediator_admin_id"]
-            isOneToOne: false
             referencedRelation: "users_admin"
             referencedColumns: ["admin_id"]
           },
           {
             foreignKeyName: "fk_signature_dispute"
             columns: ["dispute_id"]
-            isOneToOne: false
             referencedRelation: "dispute_cases"
             referencedColumns: ["dispute_id"]
           },
@@ -857,14 +874,12 @@ export type Database = {
           {
             foreignKeyName: "fk_document_integrity_anchor_case"
             columns: ["case_id"]
-            isOneToOne: false
             referencedRelation: "corporate_service_cases"
             referencedColumns: ["case_id"]
           },
           {
             foreignKeyName: "fk_document_integrity_anchor_envelope"
             columns: ["signing_envelope_id"]
-            isOneToOne: false
             referencedRelation: "signing_envelopes"
             referencedColumns: ["envelope_id"]
           },
@@ -896,7 +911,6 @@ export type Database = {
           {
             foreignKeyName: "fk_revision_opinion"
             columns: ["opinion_id"]
-            isOneToOne: false
             referencedRelation: "legal_opinions"
             referencedColumns: ["opinion_id"]
           },
@@ -905,6 +919,9 @@ export type Database = {
       ekyc_verification_logs: {
         Row: {
           created_at: string
+          envelope_id: string | null
+          liveness_attempt_count: number
+          party_id: string | null
           provider_name: string
           provider_reference_id: string | null
           result_digest_sha256: string | null
@@ -917,6 +934,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          envelope_id?: string | null
+          liveness_attempt_count?: number
+          party_id?: string | null
           provider_name: string
           provider_reference_id?: string | null
           result_digest_sha256?: string | null
@@ -929,6 +949,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          envelope_id?: string | null
+          liveness_attempt_count?: number
+          party_id?: string | null
           provider_name?: string
           provider_reference_id?: string | null
           result_digest_sha256?: string | null
@@ -939,7 +962,14 @@ export type Database = {
           verification_type?: Database["public"]["Enums"]["ekyc_verification_type"]
           verified_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_ekyc_signing_party"
+            columns: ["envelope_id", "party_id"]
+            referencedRelation: "signing_envelope_parties"
+            referencedColumns: ["envelope_id", "party_id"]
+          },
+        ]
       }
       emeterai_stamping_logs: {
         Row: {
@@ -973,7 +1003,6 @@ export type Database = {
           {
             foreignKeyName: "fk_emeterai_opinion"
             columns: ["opinion_id"]
-            isOneToOne: false
             referencedRelation: "legal_opinions"
             referencedColumns: ["opinion_id"]
           },
@@ -1011,14 +1040,12 @@ export type Database = {
           {
             foreignKeyName: "fk_ledger_escrow"
             columns: ["escrow_id"]
-            isOneToOne: false
             referencedRelation: "escrow_transactions"
             referencedColumns: ["escrow_id"]
           },
           {
             foreignKeyName: "fk_ledger_wallet"
             columns: ["wallet_id"]
-            isOneToOne: false
             referencedRelation: "wallet_balances"
             referencedColumns: ["wallet_id"]
           },
@@ -1026,13 +1053,16 @@ export type Database = {
       }
       escrow_transactions: {
         Row: {
-          advocate_id: string
+          advocate_id: string | null
           advocate_payout_ratio: number
-          booking_id: string
+          booking_id: string | null
           client_id: string
           client_payout_ratio: number
+          corporate_case_id: string | null
           created_at: string
           escrow_id: string
+          funds_lock_time_reconstructed: boolean
+          funds_locked_at: string | null
           holding_expires_at: string
           is_mutex_locked: boolean
           mutex_lock_id: string | null
@@ -1044,13 +1074,16 @@ export type Database = {
           worm_audit_hash: string | null
         }
         Insert: {
-          advocate_id: string
+          advocate_id?: string | null
           advocate_payout_ratio?: number
-          booking_id: string
+          booking_id?: string | null
           client_id: string
           client_payout_ratio?: number
+          corporate_case_id?: string | null
           created_at?: string
           escrow_id?: string
+          funds_lock_time_reconstructed?: boolean
+          funds_locked_at?: string | null
           holding_expires_at: string
           is_mutex_locked?: boolean
           mutex_lock_id?: string | null
@@ -1062,13 +1095,16 @@ export type Database = {
           worm_audit_hash?: string | null
         }
         Update: {
-          advocate_id?: string
+          advocate_id?: string | null
           advocate_payout_ratio?: number
-          booking_id?: string
+          booking_id?: string | null
           client_id?: string
           client_payout_ratio?: number
+          corporate_case_id?: string | null
           created_at?: string
           escrow_id?: string
+          funds_lock_time_reconstructed?: boolean
+          funds_locked_at?: string | null
           holding_expires_at?: string
           is_mutex_locked?: boolean
           mutex_lock_id?: string | null
@@ -1083,23 +1119,26 @@ export type Database = {
           {
             foreignKeyName: "fk_escrow_advocate"
             columns: ["advocate_id"]
-            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_escrow_booking"
             columns: ["booking_id"]
-            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "fk_escrow_client"
             columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "users_client"
             referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "fk_escrow_corporate_case"
+            columns: ["corporate_case_id"]
+            referencedRelation: "corporate_service_cases"
+            referencedColumns: ["case_id"]
           },
         ]
       }
@@ -1111,8 +1150,8 @@ export type Database = {
           case_id: string
           created_at: string
           decided_at: string | null
-          external_registration_number: string | null
           external_reference_id: string | null
+          external_registration_number: string | null
           idempotency_key: string
           job_id: string
           last_error_code: string | null
@@ -1135,8 +1174,8 @@ export type Database = {
           case_id: string
           created_at?: string
           decided_at?: string | null
-          external_registration_number?: string | null
           external_reference_id?: string | null
+          external_registration_number?: string | null
           idempotency_key: string
           job_id?: string
           last_error_code?: string | null
@@ -1159,8 +1198,8 @@ export type Database = {
           case_id?: string
           created_at?: string
           decided_at?: string | null
-          external_registration_number?: string | null
           external_reference_id?: string | null
+          external_registration_number?: string | null
           idempotency_key?: string
           job_id?: string
           last_error_code?: string | null
@@ -1180,14 +1219,12 @@ export type Database = {
           {
             foreignKeyName: "fk_government_submission_jobs_case"
             columns: ["case_id"]
-            isOneToOne: false
             referencedRelation: "corporate_service_cases"
             referencedColumns: ["case_id"]
           },
           {
             foreignKeyName: "fk_government_submission_jobs_submitter"
             columns: ["authorized_submitter_id"]
-            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
@@ -1243,21 +1280,18 @@ export type Database = {
           {
             foreignKeyName: "fk_opinion_advocate"
             columns: ["advocate_id"]
-            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_opinion_booking"
             columns: ["booking_id"]
-            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "fk_opinion_client"
             columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "users_client"
             referencedColumns: ["client_id"]
           },
@@ -1292,7 +1326,6 @@ export type Database = {
           {
             foreignKeyName: "fk_handshake_booking"
             columns: ["booking_id"]
-            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
@@ -1357,41 +1390,8 @@ export type Database = {
           {
             foreignKeyName: "fk_payment_milestones_order"
             columns: ["order_id"]
-            isOneToOne: false
             referencedRelation: "service_orders"
             referencedColumns: ["order_id"]
-          },
-        ]
-      }
-      platform_governance_configs: {
-        Row: {
-          config_key: string
-          config_value: string
-          description: string
-          updated_at: string
-          updated_by_admin_id: string
-        }
-        Insert: {
-          config_key: string
-          config_value: string
-          description: string
-          updated_at?: string
-          updated_by_admin_id: string
-        }
-        Update: {
-          config_key?: string
-          config_value?: string
-          description?: string
-          updated_at?: string
-          updated_by_admin_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_config_admin"
-            columns: ["updated_by_admin_id"]
-            isOneToOne: false
-            referencedRelation: "users_admin"
-            referencedColumns: ["admin_id"]
           },
         ]
       }
@@ -1430,9 +1430,39 @@ export type Database = {
           {
             foreignKeyName: "payout_idempotency_keys_escrow_transaction_id_fkey"
             columns: ["escrow_transaction_id"]
-            isOneToOne: false
             referencedRelation: "escrow_transactions"
             referencedColumns: ["escrow_id"]
+          },
+        ]
+      }
+      platform_governance_configs: {
+        Row: {
+          config_key: string
+          config_value: string
+          description: string
+          updated_at: string
+          updated_by_admin_id: string
+        }
+        Insert: {
+          config_key: string
+          config_value: string
+          description: string
+          updated_at?: string
+          updated_by_admin_id: string
+        }
+        Update: {
+          config_key?: string
+          config_value?: string
+          description?: string
+          updated_at?: string
+          updated_by_admin_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_config_admin"
+            columns: ["updated_by_admin_id"]
+            referencedRelation: "users_admin"
+            referencedColumns: ["admin_id"]
           },
         ]
       }
@@ -1465,14 +1495,12 @@ export type Database = {
           {
             foreignKeyName: "fk_probono_admin"
             columns: ["verified_by_admin_id"]
-            isOneToOne: false
             referencedRelation: "users_admin"
             referencedColumns: ["admin_id"]
           },
           {
             foreignKeyName: "fk_probono_client"
             columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "users_client"
             referencedColumns: ["client_id"]
           },
@@ -1519,7 +1547,6 @@ export type Database = {
           {
             foreignKeyName: "provider_webhook_events_order_id_fkey"
             columns: ["order_id"]
-            isOneToOne: false
             referencedRelation: "service_orders"
             referencedColumns: ["order_id"]
           },
@@ -1569,7 +1596,6 @@ export type Database = {
           {
             foreignKeyName: "fk_service_fee_lines_order"
             columns: ["order_id"]
-            isOneToOne: false
             referencedRelation: "service_orders"
             referencedColumns: ["order_id"]
           },
@@ -1622,21 +1648,18 @@ export type Database = {
           {
             foreignKeyName: "fk_service_orders_client"
             columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "users_client"
             referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "fk_service_orders_origin_booking"
             columns: ["origin_booking_id"]
-            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "fk_service_orders_professional"
             columns: ["assigned_professional_id"]
-            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
@@ -1686,7 +1709,6 @@ export type Database = {
           {
             foreignKeyName: "signing_envelope_parties_envelope_id_fkey"
             columns: ["envelope_id"]
-            isOneToOne: false
             referencedRelation: "signing_envelopes"
             referencedColumns: ["envelope_id"]
           },
@@ -1702,8 +1724,18 @@ export type Database = {
           document_sha256_hash: string
           document_title: string
           envelope_id: string
+          escrow_id: string | null
+          escrow_locked_at: string | null
+          expires_at: string | null
           external_envelope_id: string
+          global_status: Database["public"]["Enums"]["signing_envelope_global_status"]
+          halt_reason:
+            | Database["public"]["Enums"]["signing_envelope_halt_reason"]
+            | null
+          halted_at: string | null
+          is_legacy_halt_unclassified: boolean
           provider_name: string
+          refunded_at: string | null
           status: Database["public"]["Enums"]["signing_envelope_status"]
           updated_at: string
         }
@@ -1716,8 +1748,18 @@ export type Database = {
           document_sha256_hash: string
           document_title: string
           envelope_id?: string
+          escrow_id?: string | null
+          escrow_locked_at?: string | null
+          expires_at?: string | null
           external_envelope_id: string
+          global_status?: Database["public"]["Enums"]["signing_envelope_global_status"]
+          halt_reason?:
+            | Database["public"]["Enums"]["signing_envelope_halt_reason"]
+            | null
+          halted_at?: string | null
+          is_legacy_halt_unclassified?: boolean
           provider_name: string
+          refunded_at?: string | null
           status?: Database["public"]["Enums"]["signing_envelope_status"]
           updated_at?: string
         }
@@ -1730,12 +1772,29 @@ export type Database = {
           document_sha256_hash?: string
           document_title?: string
           envelope_id?: string
+          escrow_id?: string | null
+          escrow_locked_at?: string | null
+          expires_at?: string | null
           external_envelope_id?: string
+          global_status?: Database["public"]["Enums"]["signing_envelope_global_status"]
+          halt_reason?:
+            | Database["public"]["Enums"]["signing_envelope_halt_reason"]
+            | null
+          halted_at?: string | null
+          is_legacy_halt_unclassified?: boolean
           provider_name?: string
+          refunded_at?: string | null
           status?: Database["public"]["Enums"]["signing_envelope_status"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_signing_envelope_escrow"
+            columns: ["escrow_id"]
+            referencedRelation: "escrow_transactions"
+            referencedColumns: ["escrow_id"]
+          },
+        ]
       }
       sipp_verifications: {
         Row: {
@@ -1769,14 +1828,12 @@ export type Database = {
           {
             foreignKeyName: "fk_sipp_admin"
             columns: ["verified_by_admin_id"]
-            isOneToOne: false
             referencedRelation: "users_admin"
             referencedColumns: ["admin_id"]
           },
           {
             foreignKeyName: "fk_sipp_advocate"
             columns: ["advocate_id"]
-            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
@@ -1820,14 +1877,12 @@ export type Database = {
           {
             foreignKeyName: "fk_tax_advocate"
             columns: ["advocate_id"]
-            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_tax_escrow"
             columns: ["escrow_id"]
-            isOneToOne: false
             referencedRelation: "escrow_transactions"
             referencedColumns: ["escrow_id"]
           },
@@ -2176,6 +2231,19 @@ export type Database = {
       }
     }
     Functions: {
+      fn_append_compliance_workflow_event: {
+        Args: {
+          p_actor_user_id: string
+          p_corporate_case_id: string
+          p_envelope_id: string
+          p_escrow_id: string
+          p_event_type: string
+          p_idempotency_key: string
+          p_occurred_at: string
+          p_verification_id: string
+        }
+        Returns: string
+      }
       fn_book_consultation_slot_mutex: {
         Args: {
           p_booking_type?: string
@@ -2201,9 +2269,122 @@ export type Database = {
         Args: { p_envelope_id: string }
         Returns: boolean
       }
+      fn_confirm_party_illegal_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_envelope_id: string
+          p_idempotency_key: string
+          p_party_id: string
+          p_verification_id: string
+        }
+        Returns: string
+      }
+      fn_create_corporate_intake_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_authorized_capital_idr: number
+          p_beneficial_owners: Json
+          p_domicile_city: string
+          p_domicile_province: string
+          p_entity_type: string
+          p_idempotency_key: string
+          p_kbli_snapshot: Json
+          p_legal_scope_version: string
+          p_order_id: string
+          p_paid_up_capital_idr: number
+          p_payment_gateway_ref: string
+          p_proposed_name: string
+          p_total_amount_idr: number
+        }
+        Returns: {
+          corporate_case_id: string
+          escrow_id: string
+          replayed: boolean
+        }[]
+      }
+      fn_create_corporate_intake_complete_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_authorized_capital_idr: number
+          p_beneficial_owners: Json
+          p_client_id: string
+          p_corporate_parties: Json
+          p_domicile_city: string
+          p_domicile_province: string
+          p_entity_type: string
+          p_fee_lines: Json
+          p_idempotency_key: string
+          p_kbli_snapshot: Json
+          p_legal_scope_version: string
+          p_order_id: string
+          p_paid_up_capital_idr: number
+          p_payment_gateway_ref: string
+          p_payment_milestones: Json
+          p_proposed_name: string
+          p_total_amount_idr: number
+        }
+        Returns: {
+          corporate_case_id: string
+          escrow_id: string
+          order_id: string
+          replayed: boolean
+        }[]
+      }
+      fn_current_compliance_event_actor: { Args: never; Returns: string }
+      fn_global_halt_ekyc_and_refund_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_envelope_id: string
+          p_halt_reason: Database["public"]["Enums"]["signing_envelope_halt_reason"]
+          p_idempotency_key: string
+          p_party_id: string
+          p_verification_id: string
+        }
+        Returns: {
+          envelope_id: string
+          escrow_id: string
+          escrow_status: string
+          global_status: Database["public"]["Enums"]["signing_envelope_global_status"]
+          replayed: boolean
+        }[]
+      }
       fn_is_verified_advocate: {
         Args: { p_advocate_id: string }
         Returns: boolean
+      }
+      fn_lock_corporate_escrow_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_case_id: string
+          p_escrow_id: string
+          p_expected_amount_idr: number
+          p_idempotency_key: string
+          p_payment_gateway_ref: string
+        }
+        Returns: {
+          corporate_case_id: string
+          escrow_id: string
+          escrow_locked_at: string
+          expires_at: string
+          replayed: boolean
+        }[]
+      }
+      fn_lock_corporate_escrow_webhook_atomic: {
+        Args: {
+          p_case_id: string
+          p_escrow_id: string
+          p_expected_amount_idr: number
+          p_idempotency_key: string
+          p_order_id: string
+          p_payment_gateway_ref: string
+        }
+        Returns: {
+          corporate_case_id: string
+          escrow_id: string
+          escrow_locked_at: string
+          expires_at: string
+          replayed: boolean
+        }[]
       }
       fn_mutate_wallet_balance_mutex: {
         Args: {
@@ -2213,6 +2394,28 @@ export type Database = {
           p_wallet_id: string
         }
         Returns: number
+      }
+      fn_process_ekyc_callback_atomic: {
+        Args: {
+          p_envelope_id: string
+          p_idempotency_key: string
+          p_liveness_attempt_count: number
+          p_outcome: string
+          p_party_id: string
+          p_provider_name: string
+          p_provider_reference_id: string
+          p_result_digest_sha256: string
+          p_user_id: string
+          p_user_role: Database["public"]["Enums"]["ekyc_user_role"]
+          p_verification_type: Database["public"]["Enums"]["ekyc_verification_type"]
+          p_verified_at: string
+        }
+        Returns: {
+          expired: boolean
+          global_status: Database["public"]["Enums"]["signing_envelope_global_status"]
+          replayed: boolean
+          verification_id: string
+        }[]
       }
       fn_record_immutable_audit_log: {
         Args: {
@@ -2298,11 +2501,25 @@ export type Database = {
         | "REJECTED"
         | "REQUIRES_MANUAL_REVIEW"
       ekyc_verification_type: "LIVENESS_OCR" | "SIPP_BIOMETRIC"
+      notary_submission_status: "DRAFT" | "SUBMITTED" | "REJECTED" | "APPROVED"
+      notary_submission_target_system:
+        | "AHU_SABH"
+        | "AHU_SABU"
+        | "AHU_BO"
+        | "OSS_RBA"
       payout_channel: "BI_FAST" | "RTGS" | "VIRTUAL_ACCOUNT"
       payout_idempotency_status: "INITIATED" | "SUCCESS" | "FAILED"
-      notary_submission_status: "DRAFT" | "SUBMITTED" | "REJECTED" | "APPROVED"
-      notary_submission_target_system: "AHU_SABH" | "AHU_SABU" | "AHU_BO" | "OSS_RBA"
       signing_case_type: "CONSULTATION" | "CORPORATE"
+      signing_envelope_global_status:
+        | "ACTIVE"
+        | "HALTED"
+        | "REFUND_PENDING"
+        | "REFUNDED"
+        | "COMPLETED"
+      signing_envelope_halt_reason:
+        | "PARTY_ILLEGAL"
+        | "LIVENESS_FAILED_3X"
+        | "TTL_EXPIRED"
       signing_envelope_status:
         | "DRAFT"
         | "SENT"
@@ -2438,9 +2655,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       document_anchor_source: [
@@ -2456,11 +2670,28 @@ export const Constants = {
         "REQUIRES_MANUAL_REVIEW",
       ],
       ekyc_verification_type: ["LIVENESS_OCR", "SIPP_BIOMETRIC"],
+      notary_submission_status: ["DRAFT", "SUBMITTED", "REJECTED", "APPROVED"],
+      notary_submission_target_system: [
+        "AHU_SABH",
+        "AHU_SABU",
+        "AHU_BO",
+        "OSS_RBA",
+      ],
       payout_channel: ["BI_FAST", "RTGS", "VIRTUAL_ACCOUNT"],
       payout_idempotency_status: ["INITIATED", "SUCCESS", "FAILED"],
-      notary_submission_status: ["DRAFT", "SUBMITTED", "REJECTED", "APPROVED"],
-      notary_submission_target_system: ["AHU_SABH", "AHU_SABU", "AHU_BO", "OSS_RBA"],
       signing_case_type: ["CONSULTATION", "CORPORATE"],
+      signing_envelope_global_status: [
+        "ACTIVE",
+        "HALTED",
+        "REFUND_PENDING",
+        "REFUNDED",
+        "COMPLETED",
+      ],
+      signing_envelope_halt_reason: [
+        "PARTY_ILLEGAL",
+        "LIVENESS_FAILED_3X",
+        "TTL_EXPIRED",
+      ],
       signing_envelope_status: [
         "DRAFT",
         "SENT",

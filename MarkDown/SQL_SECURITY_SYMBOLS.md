@@ -3,7 +3,7 @@
 > GENERATED FILE — jangan edit manual. Baca file ini secara on-demand setelah `SYMBOLS_MAP.md` mengarahkan ke area database.
 > Perbarui/verifikasi bersama peta utama memakai `node Tools/generate_symbol_map.mjs [--check]`.
 
-- 134 canonical policies/triggers.
+- 140 canonical policies/triggers.
 - Lokasi memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 
 | Kind | Symbol/relation | Deklarasi pilihan/terbaru |
@@ -81,7 +81,7 @@
 | policy | rls_offline_handshakes_participant_insert ON public.offline_handshakes_totp | S/20260721000010_align_frontend_schema_contracts.sql:L442 |
 | policy | rls_offline_handshakes_participant_read ON public.offline_handshakes_totp | S/20260721000010_align_frontend_schema_contracts.sql:L436 |
 | policy | rls_payment_milestones_participant_read ON public.payment_milestones | S/20260722000016_p2_b3_service_orders_expand_only.sql:L563 |
-| policy | rls_payout_ledgers_wallet_owner_read ON escrow_payout_ledgers | S/20260715000003_domain3_escrow_tax_ledgers_acid.sql:L123 +1 |
+| policy | rls_payout_ledgers_wallet_owner_read ON public.escrow_payout_ledgers | S/20260728000025_phase2_backend_forensic_hardening.sql:L989 +2 |
 | policy | rls_probono_cases_client_insert ON public.probono_cases | S/20260721000010_align_frontend_schema_contracts.sql:L482 |
 | policy | rls_probono_cases_client_read ON probono_cases | S/20260715000005_domain5_probono_disputes_worm_audit.sql:L35 +1 |
 | policy | rls_probono_cases_compliance_read ON public.probono_cases | S/20260721000010_align_frontend_schema_contracts.sql:L559 |
@@ -113,10 +113,14 @@
 | policy | rls_wallet_balances_self_read ON wallet_balances | S/20260715000003_domain3_escrow_tax_ledgers_acid.sql:L90 +1 |
 | trigger | trg_assert_completed_envelope_anchor ON public.signing_envelopes | S/20260722000021_phase2_holistic_security_hardening.sql:L75 |
 | trigger | trg_audit_corporate_escrow_lock ON public.corporate_service_cases | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L238 |
-| trigger | trg_audit_escrow_state_transition ON public.escrow_transactions | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L242 |
+| trigger | trg_audit_escrow_state_transition ON public.escrow_transactions | S/20260728000025_phase2_backend_forensic_hardening.sql:L131 +1 |
 | trigger | trg_audit_signing_global_transition ON public.signing_envelopes | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L246 |
 | trigger | trg_guard_corporate_case_stage_mutation ON public.corporate_service_cases | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L320 |
+| trigger | trg_guard_corporate_notary_assignment ON public.corporate_service_cases | S/20260728000025_phase2_backend_forensic_hardening.sql:L267 |
 | trigger | trg_guard_ekyc_log_mutation ON public.ekyc_verification_logs | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L253 |
+| trigger | trg_guard_escrow_financial_state ON public.escrow_transactions | S/20260728000025_phase2_backend_forensic_hardening.sql:L83 |
+| trigger | trg_guard_payout_idempotency_mutation ON public.payout_idempotency_keys | S/20260728000025_phase2_backend_forensic_hardening.sql:L978 |
+| trigger | trg_guard_provider_webhook_event_mutation ON public.provider_webhook_events | S/20260728000025_phase2_backend_forensic_hardening.sql:L932 |
 | trigger | trg_guard_signing_envelope_mutation ON public.signing_envelopes | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L256 |
 | trigger | trg_guard_signing_party_mutation ON public.signing_envelope_parties | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L259 |
 | trigger | trg_protect_accepted_service_fee_line ON public.service_fee_lines | S/20260722000016_p2_b3_service_orders_expand_only.sql:L402 |
@@ -133,6 +137,7 @@
 | trigger | trg_validate_corporate_service_case_order ON public.corporate_service_cases | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L275 |
 | trigger | trg_validate_document_integrity_anchor ON public.document_integrity_anchors | S/20260722000021_phase2_holistic_security_hardening.sql:L51 |
 | trigger | trg_validate_signing_envelope_case ON public.signing_envelopes | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L250 |
+| trigger | trg_validate_signing_envelope_escrow_binding ON public.signing_envelopes | S/20260728000025_phase2_backend_forensic_hardening.sql:L219 |
 | trigger | trg_worm_advocate_sanctions_vault ON public.advocate_sanctions_log | S/20260716000006_domain_hardening_worm_and_acid_mutex.sql:L22 +1 |
 | trigger | trg_worm_audit_logs_vault ON public.audit_logs_worm | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L33 +2 |
 | trigger | trg_worm_case_irac_notes ON case_irac_notes | S/20260715000004_domain4_legal_opinions_worm_emeterai.sql:L174 +1 |
@@ -142,3 +147,4 @@
 | trigger | trg_worm_emeterai_stamping_logs ON public.emeterai_stamping_logs | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L27 +2 |
 | trigger | trg_worm_escrow_payout_ledgers_vault ON public.escrow_payout_ledgers | S/20260716000006_domain_hardening_worm_and_acid_mutex.sql:L36 +1 |
 | trigger | trg_worm_legal_opinions_vault ON public.legal_opinions | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L21 |
+| trigger | trg_z_guard_government_submission_transition ON public.government_submission_jobs | S/20260728000025_phase2_backend_forensic_hardening.sql:L336 |
