@@ -1,51 +1,57 @@
-import { useMemo, useState } from 'react';
-import { CheckCircle2, ExternalLink, FileSignature, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, FileSignature, RefreshCw, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEkycIntegration } from '@/hooks/useEkycIntegration';
+import { EkycVerificationFlow } from './EkycVerificationWizard';
+import { scopeEkycWorkspaceToDocument } from './ekyc/ekycUiModel';
 
-export type SigningParty = { id: string; name: string; role: 'CLIENT' | 'ADVOCATE' | 'NOTARY' | 'WITNESS'; status: 'PENDING' | 'SIGNED' | 'REJECTED' };
-interface MultiPartySigningPanelProps { documentTitle: string; parties: SigningParty[] }
+export type SigningParty = {
+  id: string;
+  name: string;
+  role: 'CLIENT' | 'ADVOCATE' | 'NOTARY' | 'WITNESS';
+  status: 'PENDING' | 'SIGNED' | 'REJECTED';
+};
 
-export function MultiPartySigningPanel({ documentTitle, parties }: MultiPartySigningPanelProps) {
-  const [provider, setProvider] = useState<'PRIVY' | 'MEKARI_SIGN'>('PRIVY');
-  const [partyState, setPartyState] = useState(parties);
-  const [sandboxOpened, setSandboxOpened] = useState(false);
-  const signedCount = partyState.filter((party) => party.status === 'SIGNED').length;
-  const envelopeStatus = partyState.length > 0 && signedCount === partyState.length ? 'COMPLETED' : signedCount > 0 ? 'PARTIALLY_SIGNED' : 'SENT';
-  const nextParty = useMemo(() => partyState.find((party) => party.status === 'PENDING'), [partyState]);
+interface MultiPartySigningPanelProps {
+  documentTitle: string;
+  parties: SigningParty[];
+  userRole?: 'client' | 'advocate';
+}
 
-  const openSandbox = () => {
-    setSandboxOpened(true);
-    if (!nextParty) return;
-    setPartyState((current) => current.map((party) => party.id === nextParty.id ? { ...party, status: 'SIGNED' } : party));
-  };
+export function MultiPartySigningPanel({
+  documentTitle, parties: plannedParties, userRole = 'client',
+}: MultiPartySigningPanelProps) {
+  const integration = useEkycIntegration();
+  const workspace = scopeEkycWorkspaceToDocument(
+    integration.workspace.data,
+    documentTitle,
+  );
+  const parties = workspace?.parties.map((party) => ({
+    id: party.id,
+    name: party.email,
+    role: party.role,
+    status: party.status,
+  })) ?? plannedParties.map((party) => ({ ...party, status: 'PENDING' }));
+  const refresh = () => { void integration.workspace.refresh().catch(() => undefined); };
 
   return (
     <Card className="w-full rounded-2xl border-border bg-card p-6 sm:p-8">
       <CardHeader className="gap-3 p-0">
-        <div className="flex flex-wrap items-center justify-between gap-3"><Badge variant="outline">TTE MULTI-PIHAK</Badge><Badge variant={envelopeStatus === 'COMPLETED' ? 'default' : 'secondary'}>{envelopeStatus}</Badge></div>
+        <div className="flex flex-wrap items-center justify-between gap-3"><Badge variant="outline">TTE MULTI-PIHAK</Badge><Badge variant={workspace?.status === 'COMPLETED' ? 'default' : 'secondary'}>{workspace?.status ?? 'NOT_CREATED'}</Badge></div>
         <CardTitle className="flex items-center gap-3 text-xl"><FileSignature className="size-6 text-primary" />{documentTitle}</CardTitle>
-        <CardDescription>Urutan signer dan status envelope provider. Aksi di panel ini adalah sandbox UI sampai adapter webhook produksi dikonfigurasi.</CardDescription>
+        <CardDescription>{workspace ? `Envelope ${workspace.envelopeId} diproyeksikan dari backend ${workspace.providerName}.` : 'Rencana signer belum menjadi envelope. Pembuatan envelope memerlukan boundary server yang belum tersedia untuk browser.'}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5 p-0">
-        <div className="flex flex-wrap gap-2" aria-label="Pilih provider TTE">
-          {(['PRIVY', 'MEKARI_SIGN'] as const).map((name) => <Button key={name} type="button" variant={provider === name ? 'default' : 'outline'} size="sm" onClick={() => setProvider(name)}>{name === 'MEKARI_SIGN' ? 'Mekari Sign' : 'Privy'}</Button>)}
-        </div>
+        <div className="flex flex-wrap gap-2" aria-label="Provider TTE"><Button type="button" variant="outline" size="sm" disabled>{workspace?.providerName ?? 'Provider ditentukan server'}</Button></div>
         <ul className="divide-y divide-border rounded-2xl border border-border">
-          {partyState.map((party, index) => (
-            <li key={party.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-              <div><p className="font-semibold text-foreground">{index + 1}. {party.name}</p><p className="text-sm text-muted-foreground">{party.role}</p></div>
-              <Badge variant={party.status === 'SIGNED' ? 'default' : party.status === 'REJECTED' ? 'destructive' : 'outline'}>{party.status === 'SIGNED' && <CheckCircle2 />}{party.status}</Badge>
-            </li>
-          ))}
+          {parties.map((party, index) => <li key={party.id} className="flex flex-wrap items-center justify-between gap-3 p-4"><div><p className="font-semibold text-foreground">{index + 1}. {party.name}</p><p className="text-sm text-muted-foreground">{party.role}</p></div><Badge variant={party.status === 'SIGNED' ? 'default' : party.status === 'REJECTED' ? 'destructive' : 'outline'}>{party.status === 'SIGNED' && <CheckCircle2 />}{party.status}</Badge></li>)}
         </ul>
-        <div className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" /><span>Provider mengendalikan sertifikat dan kunci privat. Justica menyimpan status, recipient ID, timestamp, dan digest dokumen saja.</span></div>
-        {sandboxOpened && <p role="status" className="text-sm text-muted-foreground">Handoff sandbox {provider === 'PRIVY' ? 'Privy' : 'Mekari Sign'} disimulasikan; tidak ada API eksternal yang dipanggil.</p>}
+        <div className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm text-muted-foreground"><ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" /><span>Provider mengendalikan sertifikat dan kunci privat. Justica hanya membaca status, recipient ID, timestamp, dan digest dokumen melalui RLS.</span></div>
+        {integration.workspace.error && <p role="alert" className="text-sm text-destructive">{integration.workspace.error}</p>}
+        <EkycVerificationFlow userRole={userRole} integration={integration} workspace={workspace} />
       </CardContent>
-      <CardFooter className="p-0">
-        <Button type="button" size="lg" className="w-full" disabled={!nextParty} onClick={openSandbox}><ExternalLink />{nextParty ? `Buka sandbox ${provider === 'PRIVY' ? 'Privy' : 'Mekari Sign'} untuk ${nextParty.name}` : 'Semua pihak telah menandatangani'}</Button>
-      </CardFooter>
+      <CardFooter className="p-0"><Button type="button" size="lg" className="w-full" disabled={integration.workspace.isLoading} onClick={refresh}><RefreshCw />{integration.workspace.isLoading ? 'Memuat envelope...' : workspace ? 'Perbarui status envelope' : 'Periksa envelope dari server'}</Button></CardFooter>
     </Card>
   );
 }

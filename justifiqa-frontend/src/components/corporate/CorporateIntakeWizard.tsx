@@ -6,19 +6,29 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { CorporateIntakeStepFields } from './CorporateIntakeStepFields';
 import { EMPTY_INTAKE_DRAFT, INTAKE_STEPS, type CorporateIntakeDraft } from './corporateUiModel';
 
-type Props = { onComplete?: (draft: CorporateIntakeDraft) => void };
+type Props = {
+  onComplete?: (draft: CorporateIntakeDraft) => void | Promise<void>;
+  submitting?: boolean;
+  error?: string | null;
+  success?: boolean;
+  onRetry?: () => void;
+};
 
-export function CorporateIntakeWizard({ onComplete }: Props) {
+export function CorporateIntakeWizard({
+  onComplete, submitting = false, error, success = false, onRetry,
+}: Props) {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState(EMPTY_INTAKE_DRAFT);
-  const [prepared, setPrepared] = useState(false);
   const isLast = step === INTAKE_STEPS.length - 1;
 
-  const canPrepare = !isLast || draft.acceptedScope;
+  const validStep = step === 0
+    || (step === 1 && !!draft.businessName.trim() && !!draft.domicile.trim() && !!draft.kbli.trim())
+    || (step === 2 && !!draft.founderName.trim() && Number(draft.ownership) > 0 && Number(draft.ownership) <= 100)
+    || (step === 3 && !!draft.boName.trim() && !!draft.controlBasis.trim())
+    || (step === 4 && draft.acceptedScope);
   const continueFlow = () => {
     if (!isLast) return setStep((value) => value + 1);
-    setPrepared(true);
-    onComplete?.(draft);
+    void Promise.resolve(onComplete?.(draft)).catch(() => undefined);
   };
 
   return (
@@ -31,10 +41,11 @@ export function CorporateIntakeWizard({ onComplete }: Props) {
       </CardHeader>
       <CardContent className="p-0"><CorporateIntakeStepFields step={step} draft={draft} onChange={(patch) => setDraft((value) => ({ ...value, ...patch }))} /></CardContent>
       <CardFooter className="flex flex-wrap justify-between gap-3 p-0">
-        <Button type="button" variant="outline" size="lg" disabled={step === 0} onClick={() => setStep((value) => value - 1)} className="min-h-10 rounded-xl"><ArrowLeft />Kembali</Button>
-        <Button type="button" size="lg" disabled={!canPrepare} onClick={continueFlow} className="min-h-10 rounded-xl">{isLast ? <Check /> : <ArrowRight />}{isLast ? 'Siapkan tagihan escrow' : 'Lanjutkan'}</Button>
+        <Button type="button" variant="outline" size="lg" disabled={step === 0 || submitting} onClick={() => setStep((value) => value - 1)} className="min-h-10 rounded-xl"><ArrowLeft />Kembali</Button>
+        <Button type="button" size="lg" disabled={!validStep || submitting} onClick={continueFlow} className="min-h-10 rounded-xl">{isLast ? <Check /> : <ArrowRight />}{submitting ? 'Mengirim intake...' : isLast ? 'Kirim Corporate Intake' : 'Lanjutkan'}</Button>
       </CardFooter>
-      {prepared && <p role="status" className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">Draft siap. Persistensi order dan pembayaran tetap harus dilakukan melalui endpoint server tervalidasi.</p>}
+      {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm"><span>{error}</span>{onRetry && <Button type="button" variant="outline" size="sm" onClick={onRetry} disabled={submitting}>Coba lagi</Button>}</div>}
+      {success && <p role="status" className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">Corporate Intake tersimpan dan proyeksi kasus telah diperbarui.</p>}
     </Card>
   );
 }

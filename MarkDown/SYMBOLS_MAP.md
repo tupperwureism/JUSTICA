@@ -5,8 +5,8 @@
 
 ## Cakupan
 
-- 193 source files dipindai.
-- 249 exported TypeScript symbols dalam 160 files.
+- 201 source files dipindai.
+- 278 exported TypeScript symbols dalam 168 files.
 - 104 core PostgreSQL objects dari 353 deklarasi migrasi.
 - 140 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
@@ -104,14 +104,14 @@
 | components/consultation/ConsultationBookingForm.tsx | 17f ConsultationBookingForm |
 | components/consultation/ConsultationBookingReceipt.tsx | 6f ConsultationBookingReceipt |
 | components/corporate/AdvocateCorporateCaseManager.tsx | 9f AdvocateCorporateCaseManager |
-| components/corporate/ClientCorporateSuiteTab.tsx | 6f ClientCorporateSuiteTab |
+| components/corporate/ClientCorporateSuiteTab.tsx | 15f ClientCorporateSuiteTab |
 | components/corporate/CorporateCaseTrackerPanel.tsx | 13f CorporateCaseTrackerPanel |
-| components/corporate/CorporateEscrowCheckoutPanel.tsx | 12f CorporateEscrowCheckoutPanel |
+| components/corporate/CorporateEscrowCheckoutPanel.tsx | 37f CorporateEscrowCheckoutPanel |
 | components/corporate/CorporateIntakeStepFields.tsx | 22f CorporateIntakeStepFields |
-| components/corporate/CorporateIntakeWizard.tsx | 11f CorporateIntakeWizard |
+| components/corporate/CorporateIntakeWizard.tsx | 17f CorporateIntakeWizard |
 | components/corporate/corporateUiModel.ts | 1t CorporateEntityType, 2t CorporateCaseStage, 10t CorporateIntakeDraft, 21v INTAKE_STEPS, 29v CORPORATE_STAGES, 38v CLIENT_STAGE_COPY, 47v EMPTY_INTAKE_DRAFT |
-| components/corporate/notary/KemenkumhamStampingModal.tsx | 8t NotaryStampingRequest, 20f KemenkumhamStampingModal |
-| components/corporate/notary/NotaryCaseWorkspacePanel.tsx | 16f NotaryCaseWorkspacePanel |
+| components/corporate/notary/KemenkumhamStampingModal.tsx | 8t NotaryStampingRequest, 23f KemenkumhamStampingModal |
+| components/corporate/notary/NotaryCaseWorkspacePanel.tsx | 23f NotaryCaseWorkspacePanel |
 | components/document/DocumentDraftActions.tsx | 6f DocumentDraftActions |
 | components/document/DocumentDraftPreview.tsx | 6f DocumentDraftPreview |
 | components/document/DocumentDraftingForm.tsx | 18f DocumentDraftingForm |
@@ -125,12 +125,12 @@
 | components/gateway/VerifierPanel.tsx | 13v VerifierPanel |
 | components/payment/EscrowDisbursementTrackerPanel.tsx | 19f EscrowDisbursementTrackerPanel |
 | components/payment/PaymentGatewaySelectorModal.tsx | 7t PaymentGatewayMethod, 19f PaymentGatewaySelectorModal |
-| components/signing/EkycVerificationWizard.tsx | 13f EkycVerificationWizard |
-| components/signing/MultiPartySigningPanel.tsx | 7t SigningParty, 10f MultiPartySigningPanel |
-| components/signing/ekyc/EkycLivenessCamera.tsx | 8f EkycLivenessCamera |
-| components/signing/ekyc/EkycOtpPanel.tsx | 8f EkycOtpPanel |
-| components/signing/ekyc/EkycOutcomePanel.tsx | 9f EkycOutcomePanel |
-| components/signing/ekyc/ekycUiModel.ts | 1t EkycScreen, 3t EkycOutcome, 5v E_KYC_STEPS, 7v outcomeCopy |
+| components/signing/EkycVerificationWizard.tsx | 21f EkycVerificationFlow, 55f EkycVerificationWizard |
+| components/signing/MultiPartySigningPanel.tsx | 9t SigningParty, 22f MultiPartySigningPanel |
+| components/signing/ekyc/EkycLivenessCamera.tsx | 18f EkycLivenessCamera |
+| components/signing/ekyc/EkycOtpPanel.tsx | 15f EkycOtpPanel |
+| components/signing/ekyc/EkycOutcomePanel.tsx | 17f EkycOutcomePanel |
+| components/signing/ekyc/ekycUiModel.ts | 3t EkycScreen, 12t EkycOutcome, 14v E_KYC_STEPS, 18v resolveEkycScreen, 33v scopeEkycWorkspaceToDocument, 38v outcomeCopy |
 | components/ui/badge.tsx | 50x Badge, 50x badgeVariants |
 | components/ui/button.tsx | 66x Button, 66x buttonVariants |
 | components/ui/card.tsx | 84x Card, 84x CardHeader, 84x CardFooter, 84x CardTitle, 84x CardAction, 84x CardDescription, 84x CardContent |
@@ -142,8 +142,14 @@
 | data/clientPortalData.ts | 3v DEFAULT_CLIENT_SESSION_ID, 5v ACTIVE_CONSULTATIONS, 24v HISTORY_DOCUMENTS |
 | data/documentDraftingData.ts | 3v DOCUMENT_TEMPLATES |
 | hooks/authSessionContext.ts | 5i AuthSessionState, 11v AuthSessionContext |
+| hooks/phase2MutationState.ts | 3t Phase2MutationStatus, 5t Phase2MutationState, 11t Phase2MutationAction, 17v initialPhase2MutationState, 23f phase2MutationReducer, 33f safePhase2MutationError, 38f createSingleFlightMutation |
 | hooks/useAuthSession.tsx | 14f AuthSessionProvider |
+| hooks/useClientCorporateIntegration.ts | 5f useClientCorporateIntegration |
 | hooks/useDocumentDrafting.ts | 7f useDocumentDrafting |
+| hooks/useEkycIntegration.ts | 5f useEkycIntegration |
+| hooks/useNotaryWorkspaceIntegration.ts | 8f useNotaryWorkspaceIntegration |
+| hooks/usePhase2Mutation.ts | 13f usePhase2Mutation |
+| hooks/usePhase2Query.ts | 4f usePhase2Query |
 | hooks/usePortalSession.ts | 4f usePortalSession |
 | hooks/usePublicVerifier.ts | 9t VerifyStatus, 11t PublicVerificationResult, 17f usePublicVerifier |
 | hooks/useRealtimeChat.ts | 7t RealtimeChatStatus, 19f useRealtimeChat |
@@ -169,6 +175,8 @@
 | services/consultationService.ts | 15f getAvailableConsultationSlots, 52f checkoutConsultation |
 | services/mockConsultationService.ts | 8v TIER_CATALOG, 65v MOCK_ADVOCATE_SLOTS, 98c MockConsultationService |
 | services/mockIracService.ts | 8c MockIracService |
+| services/phase2IntegrationService.ts | 3t Phase2PortalRole, 4t Phase2Actor, 6t CorporateEscrowStatus, 17t CorporateEscrowProjection, 25t ClientCorporateWorkspace, 35t NotaryWorkspace, 65t EkycWorkspace, 95i Phase2IntegrationGateway, 106t CorporateIntakeInput, 118t Phase2IntegrationErrorCode, 133c Phase2IntegrationError, 168f createPhase2IntegrationService |
+| services/phase2SupabaseGateway.ts | 42v phase2SupabaseGateway, 250v phase2IntegrationService |
 | services/portalAuthService.ts | 12f signInPortal, 22f registerPortal, 39f signOutPortal, 44f authErrorMessage |
 | services/roomSessionService.ts | 3i RoomSession, 11f resolveRoomSession |
 | services/vaultDeliveryService.ts | 4i VaultDocument, 23f getVaultDocument, 41f createVaultDownloadUrl, 47f releaseVaultEscrow |

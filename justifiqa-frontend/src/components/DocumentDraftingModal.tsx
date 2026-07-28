@@ -35,6 +35,7 @@ export const DocumentDraftingModal: React.FC<DocumentDraftingModalProps> = ({ an
             <MultiPartySigningPanel
               key={drafting.draft.id}
               documentTitle={drafting.draft.title}
+              userRole={session.role === 'ADVOCATE' ? 'advocate' : 'client'}
               parties={[
                 { id: 'client', name: drafting.draft.clientName, role: 'CLIENT', status: 'PENDING' },
                 { id: 'advocate', name: drafting.draft.advocateName, role: 'ADVOCATE', status: 'PENDING' },
