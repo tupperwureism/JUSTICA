@@ -27,14 +27,16 @@ export function AdminLoginPage() {
 
   const submitLogin = async (event: FormEvent) => {
     event.preventDefault();
-    if (!email.toLowerCase().endsWith('@justica.id')) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const isLocalSeedAdmin = import.meta.env.DEV && normalizedEmail === 'admin@test.com';
+    if (!normalizedEmail.endsWith('@justica.id') && !isLocalSeedAdmin) {
       window.alert('Gunakan email korporat Administrator dengan domain @justica.id.');
       return;
     }
     if (!/^\d{6}$/.test(otp)) return window.alert('Kode OTP harus terdiri dari tepat 6 digit.');
     setSubmitting(true);
     try {
-      await signInPortal(email, password, 'ADMIN');
+      await signInPortal(normalizedEmail, password, 'ADMIN');
       navigate(safePortalRedirect(searchParams.get('redirect'), 'ADMIN'), { replace: true });
     } catch (error) {
       window.alert(authErrorMessage(error));
