@@ -143,13 +143,23 @@ export const removeKbliCode = (draft: CorporateIntakeDraft, index: number): Corp
 
 const issue = (code: string, message: string): CorporateIntakeValidationIssue => ({ code, message });
 
-export function validateCorporateIntake(draft: CorporateIntakeDraft): CorporateIntakeValidationIssue[] {
+const validateEntityType = (draft: CorporateIntakeDraft): CorporateIntakeValidationIssue[] => {
   const issues: CorporateIntakeValidationIssue[] = [];
   if (!isAllowed(CORPORATE_ENTITY_TYPES, draft.entityType)) issues.push(issue('ENTITY_TYPE_INVALID', 'Jenis entitas tidak valid.'));
+  return issues;
+};
+
+const validateBusinessDetails = (draft: CorporateIntakeDraft): CorporateIntakeValidationIssue[] => {
+  const issues: CorporateIntakeValidationIssue[] = [];
   if (!isPresent(draft.businessName)) issues.push(issue('BUSINESS_NAME_REQUIRED', 'Nama usulan wajib diisi.'));
   if (!isPresent(draft.domicileCity)) issues.push(issue('DOMICILE_CITY_REQUIRED', 'Kota domisili wajib diisi.'));
   if (!isPresent(draft.domicileProvince)) issues.push(issue('DOMICILE_PROVINCE_REQUIRED', 'Provinsi domisili wajib diisi.'));
   if (!draft.kbliCodes.length || draft.kbliCodes.some((code) => !isPresent(code))) issues.push(issue('KBLI_REQUIRED', 'Minimal satu KBLI wajib diisi.'));
+  return issues;
+};
+
+const validateCorporateParties = (draft: CorporateIntakeDraft): CorporateIntakeValidationIssue[] => {
+  const issues: CorporateIntakeValidationIssue[] = [];
   if (!isNonNegativeAmount(draft.authorizedCapitalIdr)) issues.push(issue('AUTHORIZED_CAPITAL_INVALID', 'Modal dasar harus berupa angka IDR non-negatif.'));
   if (!isNonNegativeAmount(draft.paidUpCapitalIdr)) issues.push(issue('PAID_UP_CAPITAL_INVALID', 'Modal disetor harus berupa angka IDR non-negatif.'));
   if (isNonNegativeAmount(draft.authorizedCapitalIdr) && isNonNegativeAmount(draft.paidUpCapitalIdr)
@@ -161,34 +171,59 @@ export function validateCorporateIntake(draft: CorporateIntakeDraft): CorporateI
     if (!isAllowed(CORPORATE_PARTY_TYPES, party.partyType)) issues.push(issue('PARTY_TYPE_INVALID', `Jenis pihak pada baris ${index + 1} tidak valid.`));
     if (!isAllowed(CORPORATE_PARTY_ROLES, party.role)) issues.push(issue('PARTY_ROLE_INVALID', `Peran pihak pada baris ${index + 1} tidak valid.`));
     if (!isPresent(party.displayName)) issues.push(issue('PARTY_NAME_REQUIRED', `Nama pihak pada baris ${index + 1} wajib diisi.`));
-    if (!isPresent(party.identityReference)) issues.push(issue('IDENTITY_REFERENCE_REQUIRED', `Referensi identitas pihak pada baris ${index + 1} wajib diisi.`));
+    if (!isPresent(party.identityReference)) issues.push(issue('PARTY_IDENTITY_REFERENCE_REQUIRED', `Referensi identitas pihak pada baris ${index + 1} wajib diisi.`));
     if (!isPercentage(party.ownershipPercentage)) issues.push(issue('OWNERSHIP_PERCENTAGE_INVALID', `Persentase kepemilikan pada baris ${index + 1} harus 0–100.`));
     if (!isPercentage(party.votingPercentage)) issues.push(issue('VOTING_PERCENTAGE_INVALID', `Persentase hak suara pada baris ${index + 1} harus 0–100.`));
     if (!isIsoCalendarDate(party.effectiveDate)) issues.push(issue('PARTY_EFFECTIVE_DATE_INVALID', `Tanggal efektif pihak pada baris ${index + 1} harus berupa tanggal kalender YYYY-MM-DD.`));
   });
+  return issues;
+};
+
+const validateBeneficialOwners = (draft: CorporateIntakeDraft): CorporateIntakeValidationIssue[] => {
+  const issues: CorporateIntakeValidationIssue[] = [];
   if (!draft.beneficialOwners.length) issues.push(issue('BENEFICIAL_OWNER_REQUIRED', 'Minimal satu pemilik manfaat wajib diisi.'));
   draft.beneficialOwners.forEach((owner, index) => {
     if (!isPresent(owner.naturalPersonName)) issues.push(issue('BENEFICIAL_OWNER_NAME_REQUIRED', `Nama pemilik manfaat pada baris ${index + 1} wajib diisi.`));
-    if (!isPresent(owner.identityReference)) issues.push(issue('IDENTITY_REFERENCE_REQUIRED', `Referensi identitas pemilik manfaat pada baris ${index + 1} wajib diisi.`));
+    if (!isPresent(owner.identityReference)) issues.push(issue('BENEFICIAL_OWNER_IDENTITY_REFERENCE_REQUIRED', `Referensi identitas pemilik manfaat pada baris ${index + 1} wajib diisi.`));
     if (!isAllowed(BENEFICIAL_OWNER_CONTROL_BASES, owner.controlBasis)) issues.push(issue('CONTROL_BASIS_INVALID', `Dasar kendali pada baris ${index + 1} tidak valid.`));
     if (!isPercentage(owner.percentage)) issues.push(issue('BENEFICIAL_OWNER_PERCENTAGE_INVALID', `Persentase pemilik manfaat pada baris ${index + 1} harus 0–100.`));
   });
-  const identities = [...draft.corporateParties, ...draft.beneficialOwners]
-    .map((person) => person.identityReference.trim().toLowerCase())
+  const beneficialOwnerIdentities = draft.beneficialOwners
+    .map((owner) => owner.identityReference.trim())
     .filter(Boolean);
-  if (new Set(identities).size !== identities.length) issues.push(issue('DUPLICATE_IDENTITY_REFERENCE', 'Referensi identitas tidak boleh duplikat.'));
-  if (!draft.acceptedScope) issues.push(issue('SCOPE_ACCEPTANCE_REQUIRED', 'Persetujuan ruang lingkup wajib diberikan sebelum mengirim.'));
+  if (new Set(beneficialOwnerIdentities).size !== beneficialOwnerIdentities.length) {
+    issues.push(issue(
+      'DUPLICATE_BENEFICIAL_OWNER_IDENTITY_REFERENCE',
+      'Referensi identitas pemilik manfaat tidak boleh duplikat.',
+    ));
+  }
   return issues;
+};
+
+const validateScopeAcceptance = (draft: CorporateIntakeDraft): CorporateIntakeValidationIssue[] => (
+  draft.acceptedScope
+    ? []
+    : [issue('SCOPE_ACCEPTANCE_REQUIRED', 'Persetujuan ruang lingkup wajib diberikan sebelum mengirim.')]
+);
+
+const intakeStepValidators: Readonly<Record<number, (draft: CorporateIntakeDraft) => CorporateIntakeValidationIssue[]>> = {
+  0: validateEntityType,
+  1: validateBusinessDetails,
+  2: validateCorporateParties,
+  3: validateBeneficialOwners,
+  4: validateScopeAcceptance,
+};
+
+export function validateCorporateIntake(draft: CorporateIntakeDraft): CorporateIntakeValidationIssue[] {
+  return [
+    ...validateEntityType(draft),
+    ...validateBusinessDetails(draft),
+    ...validateCorporateParties(draft),
+    ...validateBeneficialOwners(draft),
+    ...validateScopeAcceptance(draft),
+  ];
 }
 
 export function validateCorporateIntakeStep(draft: CorporateIntakeDraft, step: number): CorporateIntakeValidationIssue | null {
-  const issues = validateCorporateIntake(draft);
-  const stepIssueCodes: Record<number, string[]> = {
-    0: ['ENTITY_TYPE_INVALID'],
-    1: ['BUSINESS_NAME_REQUIRED', 'DOMICILE_CITY_REQUIRED', 'DOMICILE_PROVINCE_REQUIRED', 'KBLI_REQUIRED'],
-    2: ['AUTHORIZED_CAPITAL_INVALID', 'PAID_UP_CAPITAL_INVALID', 'PAID_UP_EXCEEDS_AUTHORIZED', 'CORPORATE_PARTY_REQUIRED', 'PARTY_TYPE_INVALID', 'PARTY_ROLE_INVALID', 'PARTY_NAME_REQUIRED', 'IDENTITY_REFERENCE_REQUIRED', 'OWNERSHIP_PERCENTAGE_INVALID', 'VOTING_PERCENTAGE_INVALID', 'PARTY_EFFECTIVE_DATE_INVALID', 'DUPLICATE_IDENTITY_REFERENCE'],
-    3: ['BENEFICIAL_OWNER_REQUIRED', 'BENEFICIAL_OWNER_NAME_REQUIRED', 'IDENTITY_REFERENCE_REQUIRED', 'CONTROL_BASIS_INVALID', 'BENEFICIAL_OWNER_PERCENTAGE_INVALID', 'DUPLICATE_IDENTITY_REFERENCE'],
-    4: ['SCOPE_ACCEPTANCE_REQUIRED'],
-  };
-  return issues.find((currentIssue) => stepIssueCodes[step]?.includes(currentIssue.code)) ?? null;
+  return intakeStepValidators[step]?.(draft)[0] ?? null;
 }

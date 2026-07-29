@@ -4,7 +4,9 @@ CREATE TEMP TABLE corporate_pricing_catalog_test_ids AS
 SELECT
     'a1000000-0000-4000-8000-000000000001'::UUID AS active_catalog_id,
     'a1000000-0000-4000-8000-000000000002'::UUID AS competing_catalog_id,
-    'a1000000-0000-4000-8000-000000000003'::UUID AS invalid_catalog_id;
+    'a1000000-0000-4000-8000-000000000003'::UUID AS invalid_catalog_id,
+    'a1000000-0000-4000-8000-000000000004'::UUID AS direct_active_catalog_id,
+    'a1000000-0000-4000-8000-000000000005'::UUID AS direct_retired_catalog_id;
 
 DO $$
 DECLARE
@@ -43,6 +45,74 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'CORPORATE_PRICING_CATALOG_BROWSER_POLICY_PRESENT';
     END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+    BEGIN
+        INSERT INTO public.corporate_pricing_catalogs (
+            catalog_id,
+            service_type,
+            quote_version,
+            legal_scope_version,
+            currency,
+            total_amount_idr,
+            status,
+            effective_from
+        )
+        SELECT
+            direct_active_catalog_id,
+            'PT_ORDINARY',
+            93,
+            'LOCAL_TEST_SCOPE_93',
+            'IDR',
+            100,
+            'ACTIVE',
+            pg_catalog.clock_timestamp()
+        FROM corporate_pricing_catalog_test_ids;
+        RAISE EXCEPTION 'EXPECTED_DIRECT_ACTIVE_INSERT_REJECTION_MISSING';
+    EXCEPTION
+        WHEN OTHERS THEN
+            IF pg_catalog.strpos(
+                SQLERRM,
+                'CORPORATE_PRICING_CATALOG_INITIAL_STATUS_INVALID'
+            ) = 0 THEN
+                RAISE;
+            END IF;
+    END;
+
+    BEGIN
+        INSERT INTO public.corporate_pricing_catalogs (
+            catalog_id,
+            service_type,
+            quote_version,
+            legal_scope_version,
+            currency,
+            total_amount_idr,
+            status,
+            effective_from
+        )
+        SELECT
+            direct_retired_catalog_id,
+            'PT_ORDINARY',
+            94,
+            'LOCAL_TEST_SCOPE_94',
+            'IDR',
+            100,
+            'RETIRED',
+            pg_catalog.clock_timestamp()
+        FROM corporate_pricing_catalog_test_ids;
+        RAISE EXCEPTION 'EXPECTED_DIRECT_RETIRED_INSERT_REJECTION_MISSING';
+    EXCEPTION
+        WHEN OTHERS THEN
+            IF pg_catalog.strpos(
+                SQLERRM,
+                'CORPORATE_PRICING_CATALOG_INITIAL_STATUS_INVALID'
+            ) = 0 THEN
+                RAISE;
+            END IF;
+    END;
 END;
 $$;
 

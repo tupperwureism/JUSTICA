@@ -46,6 +46,18 @@ test('corporate intake captures non-financial domicile and capital state', () =>
   assert.equal(validateCorporateIntakeStep({ ...draft, paidUpCapitalIdr: '100000001' }, 2)?.code, 'PAID_UP_EXCEEDS_AUTHORIZED');
 });
 
+test('party step ignores untouched beneficial-owner fields from the next step', () => {
+  const draft = validDraft();
+  draft.beneficialOwners[0] = {
+    ...draft.beneficialOwners[0],
+    naturalPersonName: '',
+    identityReference: '',
+    percentage: '',
+  };
+
+  assert.equal(validateCorporateIntakeStep(draft, 2), null);
+});
+
 test('corporate party rows can be added and cannot be removed below one', () => {
   const original = validDraft();
   const expanded = addCorporateParty(original);
@@ -62,10 +74,32 @@ test('beneficial owner rows can be added and cannot be removed below one', () =>
   assert.strictEqual(removeBeneficialOwner(original, 0), original);
 });
 
-test('identity references must be unique across corporate parties and beneficial owners', () => {
+test('the same natural person can be both a corporate party and a beneficial owner', () => {
   const draft = validDraft();
-  draft.beneficialOwners[0].identityReference = draft.corporateParties[0].identityReference.toLowerCase();
-  assert.ok(codesOf(draft).includes('DUPLICATE_IDENTITY_REFERENCE'));
+  draft.beneficialOwners[0].identityReference = draft.corporateParties[0].identityReference;
+  assert.deepEqual(codesOf(draft), []);
+});
+
+test('beneficial-owner identity references must be unique within the declaration', () => {
+  const draft = validDraft();
+  draft.beneficialOwners.push({
+    ...draft.beneficialOwners[0],
+    naturalPersonName: 'Budi Santoso Duplikat',
+    identityReference: ` ${draft.beneficialOwners[0].identityReference} `,
+  });
+
+  assert.ok(codesOf(draft).includes('DUPLICATE_BENEFICIAL_OWNER_IDENTITY_REFERENCE'));
+});
+
+test('protected beneficial-owner references retain backend case-sensitive semantics', () => {
+  const draft = validDraft();
+  draft.beneficialOwners.push({
+    ...draft.beneficialOwners[0],
+    naturalPersonName: 'Budi Santoso Referensi Lain',
+    identityReference: draft.beneficialOwners[0].identityReference.toLowerCase(),
+  });
+
+  assert.deepEqual(codesOf(draft), []);
 });
 
 test('effective dates must be valid ISO calendar dates before progression', () => {

@@ -117,7 +117,7 @@
 | trigger | trg_audit_signing_global_transition ON public.signing_envelopes | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L246 |
 | trigger | trg_guard_corporate_case_stage_mutation ON public.corporate_service_cases | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L320 |
 | trigger | trg_guard_corporate_notary_assignment ON public.corporate_service_cases | S/20260728000025_phase2_backend_forensic_hardening.sql:L267 |
-| trigger | trg_guard_corporate_pricing_catalog_mutation ON public.corporate_pricing_catalogs | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L349 |
+| trigger | trg_guard_corporate_pricing_catalog_mutation ON public.corporate_pricing_catalogs | S/20260729032519_guard_corporate_pricing_initial_status.sql:L77 +1 |
 | trigger | trg_guard_corporate_pricing_fee_lines_mutation ON public.corporate_pricing_fee_lines | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L353 |
 | trigger | trg_guard_corporate_pricing_milestones_mutation ON public.corporate_pricing_milestones | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L357 |
 | trigger | trg_guard_ekyc_log_mutation ON public.ekyc_verification_logs | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L253 |

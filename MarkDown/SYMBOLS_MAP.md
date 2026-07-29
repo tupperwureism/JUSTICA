@@ -5,9 +5,9 @@
 
 ## Cakupan
 
-- 206 source files dipindai.
+- 207 source files dipindai.
 - 318 exported TypeScript symbols dalam 172 files.
-- 112 core PostgreSQL objects dari 367 deklarasi migrasi.
+- 112 core PostgreSQL objects dari 369 deklarasi migrasi.
 - 146 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 - Migrasi `supabase/` diprioritaskan di atas salinan `database/`; peta deklarasi ini bukan rekonstruksi state database setelah seluruh migrasi.
@@ -159,7 +159,7 @@
 | hooks/useVaultDelivery.ts | 4f useVaultDelivery |
 | lib/supabase.ts | 20v supabase |
 | lib/utils.ts | 4f cn |
-| models/corporateIntake.ts | 1v CORPORATE_ENTITY_TYPES, 2v CORPORATE_PARTY_TYPES, 3v CORPORATE_PARTY_ROLES, 11v BENEFICIAL_OWNER_CONTROL_BASES, 19t CorporateEntityType, 20t CorporatePartyType, 21t CorporatePartyRole, 22t BeneficialOwnerControlBasis, 24t CorporatePartyDraft, 34t BeneficialOwnerDraft, 41t CorporateIntakeDraft, 54t CorporateIntakeValidationIssue, 59v createEmptyCorporateParty, 69v createEmptyBeneficialOwner, 76v EMPTY_INTAKE_DRAFT, 105v addCorporateParty, 110v removeCorporateParty, 118v addBeneficialOwner, 123v removeBeneficialOwner, 131v addKbliCode, 136v removeKbliCode, 146f validateCorporateIntake, 184f validateCorporateIntakeStep |
+| models/corporateIntake.ts | 1v CORPORATE_ENTITY_TYPES, 2v CORPORATE_PARTY_TYPES, 3v CORPORATE_PARTY_ROLES, 11v BENEFICIAL_OWNER_CONTROL_BASES, 19t CorporateEntityType, 20t CorporatePartyType, 21t CorporatePartyRole, 22t BeneficialOwnerControlBasis, 24t CorporatePartyDraft, 34t BeneficialOwnerDraft, 41t CorporateIntakeDraft, 54t CorporateIntakeValidationIssue, 59v createEmptyCorporateParty, 69v createEmptyBeneficialOwner, 76v EMPTY_INTAKE_DRAFT, 105v addCorporateParty, 110v removeCorporateParty, 118v addBeneficialOwner, 123v removeBeneficialOwner, 131v addKbliCode, 136v removeKbliCode, 217f validateCorporateIntake, 227f validateCorporateIntakeStep |
 | pages/AdminDashboardPage.tsx | 10f AdminDashboardPage |
 | pages/AdvocateAuthPage.tsx | 15v AdvocateAuthPage |
 | pages/AdvocateDashboardPage.tsx | 20v AdvocateDashboardPage |
@@ -214,7 +214,7 @@
 | function | public.fn_guard_corporate_case_stage_mutation() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L306 |
 | function | public.fn_guard_corporate_notary_assignment() | S/20260728000025_phase2_backend_forensic_hardening.sql:L233 |
 | function | public.fn_guard_corporate_pricing_catalog_child_mutation() | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L204 |
-| function | public.fn_guard_corporate_pricing_catalog_mutation() | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L138 |
+| function | public.fn_guard_corporate_pricing_catalog_mutation() | S/20260729032519_guard_corporate_pricing_initial_status.sql:L1 +1 |
 | function | public.fn_guard_ekyc_log_mutation() | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L136 |
 | function | public.fn_guard_escrow_financial_state() | S/20260728000025_phase2_backend_forensic_hardening.sql:L37 |
 | function | public.fn_guard_government_submission_transition() | S/20260728000025_phase2_backend_forensic_hardening.sql:L277 |

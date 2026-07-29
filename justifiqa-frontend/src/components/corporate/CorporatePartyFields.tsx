@@ -34,9 +34,9 @@ export function CorporatePartyFields({ parties, onChange, onAdd, onRemove }: Pro
       <legend className="text-sm font-semibold">Pihak korporasi</legend>
       <p className="text-sm text-muted-foreground">Masukkan pendiri, pemegang saham, atau organ yang relevan pada baris terpisah.</p>
       {parties.map((party, index) => (
-        <Card key={`party-${index}`} className="gap-4 rounded-2xl border-border bg-muted/40 p-4">
+        <Card key={`party-${index}`} role="group" aria-labelledby={`party-title-${index}`} className="gap-4 rounded-2xl border-border bg-muted/40 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="font-semibold">Pihak {index + 1}</p>
+            <p id={`party-title-${index}`} className="font-semibold">Pihak {index + 1}</p>
             <Button type="button" variant="outline" size="sm" disabled={parties.length <= 1} onClick={() => onRemove(index)} aria-label={`Hapus pihak korporasi ${index + 1}`}>
               <Minus /> Hapus
             </Button>
@@ -53,7 +53,10 @@ export function CorporatePartyFields({ parties, onChange, onAdd, onRemove }: Pro
               </select>
             </label>
             <label className="space-y-2 text-sm font-semibold">Nama tampilan<Input required value={party.displayName} onChange={(event) => updateParty(index, { displayName: event.target.value })} className="min-h-10 rounded-xl border-border bg-background" /></label>
-            <label className="space-y-2 text-sm font-semibold">Referensi identitas<Input required value={party.identityReference} onChange={(event) => updateParty(index, { identityReference: event.target.value })} className="min-h-10 rounded-xl border-border bg-background" /></label>
+            <label className="space-y-2 text-sm font-semibold">Referensi bukti identitas
+              <Input required aria-describedby={`party-identity-help-${index}`} value={party.identityReference} onChange={(event) => updateParty(index, { identityReference: event.target.value })} className="min-h-10 rounded-xl border-border bg-background" />
+              <span id={`party-identity-help-${index}`} className="block text-xs font-normal text-muted-foreground">Gunakan referensi bukti terproteksi. Jangan masukkan NIK, nomor KTP, atau data identitas mentah.</span>
+            </label>
             <label className="space-y-2 text-sm font-semibold">Kepemilikan (%)<Input required type="number" min="0" max="100" value={party.ownershipPercentage} onChange={(event) => updateParty(index, { ownershipPercentage: event.target.value })} className="min-h-10 rounded-xl border-border bg-background" /></label>
             <label className="space-y-2 text-sm font-semibold">Hak suara (%)<Input required type="number" min="0" max="100" value={party.votingPercentage} onChange={(event) => updateParty(index, { votingPercentage: event.target.value })} className="min-h-10 rounded-xl border-border bg-background" /></label>
             <label className="space-y-2 text-sm font-semibold">Tanggal efektif<Input required type="date" value={party.effectiveDate} onChange={(event) => updateParty(index, { effectiveDate: event.target.value })} className="min-h-10 rounded-xl border-border bg-background" /></label>
