@@ -123,7 +123,7 @@ BEGIN
             v_new_rpc,
             'EXECUTE'
        )
-       OR NOT pg_catalog.has_function_privilege(
+       OR pg_catalog.has_function_privilege(
             'service_role',
             v_new_rpc,
             'EXECUTE'
@@ -554,7 +554,7 @@ $$;
 
 GRANT SELECT ON TABLE catalog_intake_ids TO service_role;
 
-SET LOCAL ROLE service_role;
+SET LOCAL ROLE postgres;
 CREATE TEMP TABLE first_catalog_intake_result AS
 SELECT *
 FROM public.fn_create_corporate_intake_from_catalog_atomic(
@@ -757,7 +757,7 @@ SET CONSTRAINTS ALL IMMEDIATE;
 SET CONSTRAINTS ALL DEFERRED;
 
 -- Identical replay must not create another row.
-SET LOCAL ROLE service_role;
+SET LOCAL ROLE postgres;
 CREATE TEMP TABLE second_catalog_intake_result AS
 SELECT *
 FROM public.fn_create_corporate_intake_from_catalog_atomic(

@@ -112,7 +112,7 @@ BEGIN
         RAISE EXCEPTION 'PRIVATE_FUNCTION_ACL_INVALID';
     END IF;
 
-    IF NOT pg_catalog.has_function_privilege(
+    IF pg_catalog.has_function_privilege(
         'service_role',
         v_new_rpc,
         'EXECUTE'
@@ -267,7 +267,7 @@ FROM canonical_snapshot_ids;
 
 GRANT SELECT ON TABLE canonical_snapshot_ids TO service_role;
 
-SET LOCAL ROLE service_role;
+SET LOCAL ROLE postgres;
 CREATE TEMP TABLE canonical_intake_result AS
 SELECT *
 FROM public.fn_create_corporate_intake_from_catalog_atomic(
@@ -302,6 +302,7 @@ FROM public.fn_create_corporate_intake_from_catalog_atomic(
     (SELECT client_id FROM canonical_snapshot_ids)
 );
 RESET ROLE;
+GRANT SELECT ON TABLE canonical_intake_result TO service_role;
 
 SET CONSTRAINTS ALL IMMEDIATE;
 SET CONSTRAINTS ALL DEFERRED;
@@ -620,7 +621,7 @@ SET CONSTRAINTS ALL IMMEDIATE;
 SET CONSTRAINTS ALL DEFERRED;
 
 GRANT SELECT ON TABLE canonical_snapshot_ids TO service_role;
-SET LOCAL ROLE service_role;
+SET LOCAL ROLE postgres;
 CREATE TEMP TABLE canonical_replay_result AS
 SELECT *
 FROM public.fn_create_corporate_intake_from_catalog_atomic(
@@ -660,7 +661,7 @@ SELECT public.fn_retire_corporate_pricing_catalog(
     (SELECT catalog_id FROM canonical_snapshot_ids)
 );
 
-SET LOCAL ROLE service_role;
+SET LOCAL ROLE postgres;
 CREATE TEMP TABLE retired_catalog_replay_result AS
 SELECT *
 FROM public.fn_create_corporate_intake_from_catalog_atomic(

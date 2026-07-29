@@ -17,6 +17,11 @@ export async function sha256Hex(value: string): Promise<string> {
   return bytesToHex(new Uint8Array(digest));
 }
 
+export async function sha256HexBytes(value: Uint8Array): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", value);
+  return bytesToHex(new Uint8Array(digest));
+}
+
 export async function deriveIdempotencyKey(namespace: string, value: string): Promise<string> {
   return (await sha256Hex(`${namespace}:${value}`)).slice(0, 48);
 }

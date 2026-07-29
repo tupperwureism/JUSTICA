@@ -5,10 +5,10 @@
 
 ## Cakupan
 
-- 209 source files dipindai.
+- 210 source files dipindai.
 - 318 exported TypeScript symbols dalam 172 files.
-- 117 core PostgreSQL objects dari 381 deklarasi migrasi.
-- 152 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
+- 126 core PostgreSQL objects dari 394 deklarasi migrasi.
+- 156 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 - Migrasi `supabase/` diprioritaskan di atas salinan `database/`; peta deklarasi ini bukan rekonstruksi state database setelah seluruh migrasi.
 - Indeks SQL sengaja tidak dimuat agar peta tetap ringkas; cari dengan `rg "CREATE .*INDEX" database supabase` bila diperlukan.
@@ -188,7 +188,7 @@
 | types/authForms.ts | 1t ThemeMode, 2t AuthTab, 3t SyncStatus, 5i ClientLoginFields, 6i ClientRegistrationFields, 7i AdvocateLoginFields, 8i AdvocateRegistrationFields |
 | types/client.ts | 4t ClientTabKey, 6i ActiveConsultation, 15i HistoryDocument, 23i ServiceOption, 32i Advocate, 49i TimeSlot, 54i CheckoutDraft |
 | types/consultation.ts | 1t ConsultationTierId, 3t EscrowStatus, 5i ConsultationTier, 18i ConsultationSlot, 29i LiveConsultationSlot, 31i ConsultationCheckout, 46i EscrowTransaction, 59i BookingRequest |
-| types/database.types.ts | 1t Json, 9t Database, 2804t Tables, 2833t TablesInsert, 2858t TablesUpdate, 2883t Enums, 2900t CompositeTypes, 2917v Constants |
+| types/database.types.ts | 1t Json, 9t Database, 3003t Tables, 3032t TablesInsert, 3057t TablesUpdate, 3082t Enums, 3099t CompositeTypes, 3116v Constants |
 | types/irac.ts | 1t LegalDocumentTemplateId, 3i IracAnalysis, 16i DocumentClause, 22i LegalDocumentDraft |
 | types/portalAuth.ts | 3t PortalRole, 5v portalHome, 11v portalLogin, 17f getPortalRole, 22f safePortalRedirect |
 
@@ -212,9 +212,14 @@
 | function | public.fn_create_corporate_intake_atomic( p_order_id UUID, p_entity_type VARCHAR, p_propo… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L261 |
 | function | public.fn_create_corporate_intake_complete_atomic( p_order_id UUID, p_client_id UUID, p_e… | S/20260728000025_phase2_backend_forensic_hardening.sql:L539 |
 | function | public.fn_create_corporate_intake_from_catalog_atomic( p_order_id UUID, p_client_id UUID,… | S/20260729063938_bind_atomic_intake_to_canonical_pricing_catalog.sql:L235 |
+| function | public.fn_create_corporate_intake_from_evidence_atomic( p_order_id UUID, p_client_id UUID… | S/20260729115454_protected_beneficial_owner_evidence_boundary.sql:L829 |
 | function | public.fn_current_compliance_event_actor() | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L9 |
+| function | public.fn_expire_corporate_intake_evidence_batch( p_batch_size INTEGER DEFAULT 100 ) | S/20260729115454_protected_beneficial_owner_evidence_boundary.sql:L729 |
+| function | public.fn_finalize_corporate_intake_evidence_atomic( p_evidence_id UUID, p_client_id UUID… | S/20260729115454_protected_beneficial_owner_evidence_boundary.sql:L518 |
+| function | public.fn_get_corporate_intake_evidence_storage_object( p_evidence_id UUID, p_client_id U… | S/20260729115454_protected_beneficial_owner_evidence_boundary.sql:L771 |
 | function | public.fn_global_halt_ekyc_and_refund_atomic( p_envelope_id UUID, p_party_id UUID, p_veri… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L961 |
 | function | public.fn_guard_corporate_case_stage_mutation() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L306 |
+| function | public.fn_guard_corporate_intake_evidence_lifecycle() | S/20260729115454_protected_beneficial_owner_evidence_boundary.sql:L199 |
 | function | public.fn_guard_corporate_notary_assignment() | S/20260728000025_phase2_backend_forensic_hardening.sql:L233 |
 | function | public.fn_guard_corporate_pricing_catalog_child_mutation() | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L204 |
 | function | public.fn_guard_corporate_pricing_catalog_mutation() | S/20260729032519_guard_corporate_pricing_initial_status.sql:L1 +1 |
@@ -226,16 +231,19 @@
 | function | public.fn_guard_service_order_accepted_terms() | S/20260729063938_bind_atomic_intake_to_canonical_pricing_catalog.sql:L85 |
 | function | public.fn_guard_signing_envelope_mutation() | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L161 |
 | function | public.fn_guard_signing_party_mutation() | S/20260728000025_phase2_backend_forensic_hardening.sql:L348 +1 |
+| function | public.fn_is_corporate_intake_client( p_client_id UUID ) | S/20260729115454_protected_beneficial_owner_evidence_boundary.sql:L343 |
 | function | public.fn_is_verified_advocate(p_advocate_id UUID) | S/20260721000015_harden_verified_advocate_rls_helper.sql:L1 |
 | function | public.fn_lock_corporate_escrow_atomic( p_case_id UUID, p_escrow_id UUID, p_expected_amou… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L617 |
 | function | public.fn_lock_corporate_escrow_webhook_atomic( p_order_id UUID, p_case_id UUID, p_escrow… | S/20260722000024_p2_b5c_pg_cron_ttl_scheduler.sql:L10 |
 | function | public.fn_mutate_wallet_balance_mutex( p_wallet_id UUID, p_amount NUMERIC, p_mutation_typ… | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L92 +3 |
+| function | public.fn_prepare_corporate_intake_evidence_atomic( p_evidence_id UUID, p_client_id UUID,… | S/20260729115454_protected_beneficial_owner_evidence_boundary.sql:L368 |
 | function | public.fn_prevent_worm_mutation() | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L9 +5 |
 | function | public.fn_process_ekyc_callback_atomic( p_envelope_id UUID, p_party_id UUID, p_user_id UU… | S/20260722000024_p2_b5c_pg_cron_ttl_scheduler.sql:L65 |
 | function | public.fn_protect_accepted_service_fee_line() | S/20260722000016_p2_b3_service_orders_expand_only.sql:L383 |
 | function | public.fn_protect_payment_milestone_terms() | S/20260729063938_bind_atomic_intake_to_canonical_pricing_catalog.sql:L51 +1 |
 | function | public.fn_record_immutable_audit_log( p_actor_user_id UUID, p_actor_type VARCHAR, p_actio… | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L212 +3 |
 | function | public.fn_refund_escrow_to_client_mutex( p_escrow_id UUID, p_refund_reason TEXT ) | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L149 +3 |
+| function | public.fn_reject_corporate_intake_evidence_atomic( p_evidence_id UUID, p_client_id UUID, … | S/20260729115454_protected_beneficial_owner_evidence_boundary.sql:L668 |
 | function | public.fn_release_escrow_to_advocate_mutex( p_escrow_id UUID ) | S/20260728000025_phase2_backend_forensic_hardening.sql:L419 +4 |
 | function | public.fn_resolve_corporate_pricing_catalog( p_service_type VARCHAR, p_catalog_id UUID DE… | S/20260729063938_bind_atomic_intake_to_canonical_pricing_catalog.sql:L120 |
 | function | public.fn_retire_corporate_pricing_catalog( p_catalog_id UUID ) | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L313 |
@@ -270,6 +278,7 @@
 | table | public.beneficial_owners | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L92 |
 | table | public.compliance_assessments | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L145 |
 | table | public.compliance_workflow_events_worm | S/20260722000022_p2_b5a_ekyc_and_escrow_schema.sql:L233 |
+| table | public.corporate_intake_evidence_artifacts | S/20260729115454_protected_beneficial_owner_evidence_boundary.sql:L20 |
 | table | public.corporate_parties | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L56 |
 | table | public.corporate_pricing_catalogs | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L4 |
 | table | public.corporate_pricing_fee_lines | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L45 |

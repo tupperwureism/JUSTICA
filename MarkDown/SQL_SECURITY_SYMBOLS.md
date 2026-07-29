@@ -3,7 +3,7 @@
 > GENERATED FILE — jangan edit manual. Baca file ini secara on-demand setelah `SYMBOLS_MAP.md` mengarahkan ke area database.
 > Perbarui/verifikasi bersama peta utama memakai `node Tools/generate_symbol_map.mjs [--check]`.
 
-- 152 canonical policies/triggers.
+- 156 canonical policies/triggers.
 - Lokasi memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 
 | Kind | Symbol/relation | Deklarasi pilihan/terbaru |
@@ -11,6 +11,9 @@
 | policy | "consultationparticipantsreceivebroadcasts" ON realtime.messages | S/20260721000013_add_realtime_room_and_client_release.sql:L4 |
 | policy | "consultationparticipantssendbroadcasts" ON realtime.messages | S/20260721000013_add_realtime_room_and_client_release.sql:L16 |
 | policy | "participantsdownloadlegalopinions" ON storage.objects | S/20260721000013_add_realtime_room_and_client_release.sql:L32 |
+| policy | corporate_intake_evidence_insert_own ON storage.objects | S/20260729115454_protected_beneficial_owner_evidence_boundary.sql:L305 |
+| policy | corporate_intake_evidence_select_own ON public.corporate_intake_evidence_artifacts | S/20260729115454_protected_beneficial_owner_evidence_boundary.sql:L188 |
+| policy | corporate_intake_evidence_select_own_object ON storage.objects | S/20260729115454_protected_beneficial_owner_evidence_boundary.sql:L325 |
 | policy | rls_advocate_reviews_client_submit ON public.advocate_reviews | S/20260721000010_align_frontend_schema_contracts.sql:L470 +2 |
 | policy | rls_advocate_reviews_participant_read ON public.advocate_reviews | S/20260721000010_align_frontend_schema_contracts.sql:L467 |
 | policy | rls_advocate_reviews_public_read ON advocate_reviews | S/20260715000002_domain2_consultation_fairclock_sla.sql:L187 +1 |
@@ -111,6 +114,7 @@
 | policy | rls_users_client_self_read ON public.users_client | S/20260721000010_align_frontend_schema_contracts.sql:L279 |
 | policy | rls_users_client_self_update ON public.users_client | S/20260721000010_align_frontend_schema_contracts.sql:L281 |
 | policy | rls_wallet_balances_self_read ON wallet_balances | S/20260715000003_domain3_escrow_tax_ledgers_acid.sql:L90 +1 |
+| trigger | guard_corporate_intake_evidence_lifecycle ON public.corporate_intake_evidence_artifacts | S/20260729115454_protected_beneficial_owner_evidence_boundary.sql:L295 |
 | trigger | trg_assert_canonical_snapshot_case ON public.corporate_service_cases | S/20260729082554_enforce_canonical_snapshots_and_repair_participant_rls.sql:L329 |
 | trigger | trg_assert_canonical_snapshot_escrow ON public.escrow_transactions | S/20260729082554_enforce_canonical_snapshots_and_repair_participant_rls.sql:L335 |
 | trigger | trg_assert_canonical_snapshot_fee_line ON public.service_fee_lines | S/20260729082554_enforce_canonical_snapshots_and_repair_participant_rls.sql:L317 |

@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { deriveIdempotencyKey, sha256Hex, verifyHmacSha256 } from "./crypto.ts";
+import {
+  deriveIdempotencyKey,
+  sha256Hex,
+  sha256HexBytes,
+  verifyHmacSha256,
+} from "./crypto.ts";
 
 async function signature(secret: string, timestamp: string, body: string): Promise<string> {
   const key = await crypto.subtle.importKey(
@@ -66,4 +71,11 @@ test("digest and idempotency keys are deterministic and bounded", async () => {
   assert.equal(first, await deriveIdempotencyKey("payment", "provider:event"));
   assert.equal(first.length, 48);
   assert.notEqual(first, await deriveIdempotencyKey("ekyc", "provider:event"));
+});
+
+test("sha256HexBytes hashes the exact binary bytes", async () => {
+  assert.equal(
+    await sha256HexBytes(Uint8Array.from([0, 255, 1, 2, 3])),
+    "4be72cf29a33b5f223067ab9d5dd9567e0c14978e6ed54e2d556ddc9e2cc6038",
+  );
 });

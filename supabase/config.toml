@@ -393,6 +393,9 @@ verify_jwt = false
 [functions.cron-ttl-sweeper]
 verify_jwt = false
 
+[functions.corporate-evidence]
+verify_jwt = true
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

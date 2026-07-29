@@ -624,6 +624,93 @@ export type Database = {
           },
         ]
       }
+      corporate_intake_evidence_artifacts: {
+        Row: {
+          actual_byte_size: number | null
+          bucket_id: string
+          client_id: string
+          consumed_at: string | null
+          consumed_order_id: string | null
+          created_at: string
+          declared_byte_size: number
+          declared_mime: string
+          detected_mime: string | null
+          evidence_id: string
+          evidence_type: string
+          expires_at: string
+          finalize_idempotency_key: string | null
+          finalized_at: string | null
+          object_path: string
+          prepare_idempotency_key: string
+          rejection_code: string | null
+          sha256_digest: string | null
+          status: string
+          storage_object_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          actual_byte_size?: number | null
+          bucket_id: string
+          client_id: string
+          consumed_at?: string | null
+          consumed_order_id?: string | null
+          created_at?: string
+          declared_byte_size: number
+          declared_mime: string
+          detected_mime?: string | null
+          evidence_id: string
+          evidence_type: string
+          expires_at: string
+          finalize_idempotency_key?: string | null
+          finalized_at?: string | null
+          object_path: string
+          prepare_idempotency_key: string
+          rejection_code?: string | null
+          sha256_digest?: string | null
+          status: string
+          storage_object_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actual_byte_size?: number | null
+          bucket_id?: string
+          client_id?: string
+          consumed_at?: string | null
+          consumed_order_id?: string | null
+          created_at?: string
+          declared_byte_size?: number
+          declared_mime?: string
+          detected_mime?: string | null
+          evidence_id?: string
+          evidence_type?: string
+          expires_at?: string
+          finalize_idempotency_key?: string | null
+          finalized_at?: string | null
+          object_path?: string
+          prepare_idempotency_key?: string
+          rejection_code?: string | null
+          sha256_digest?: string | null
+          status?: string
+          storage_object_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "corporate_intake_evidence_artifacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "users_client"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "corporate_intake_evidence_artifacts_consumed_order_id_fkey"
+            columns: ["consumed_order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["order_id"]
+          },
+        ]
+      }
       corporate_parties: {
         Row: {
           case_id: string
@@ -2576,7 +2663,84 @@ export type Database = {
           total_amount_idr: number
         }[]
       }
+      fn_create_corporate_intake_from_evidence_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_authorized_capital_idr: number
+          p_beneficial_owners: Json
+          p_client_id: string
+          p_corporate_parties: Json
+          p_domicile_city: string
+          p_domicile_province: string
+          p_entity_type: string
+          p_idempotency_key: string
+          p_kbli_snapshot: Json
+          p_order_id: string
+          p_paid_up_capital_idr: number
+          p_payment_gateway_ref: string
+          p_proposed_name: string
+        }
+        Returns: {
+          corporate_case_id: string
+          escrow_id: string
+          legal_scope_version: string
+          order_id: string
+          pricing_catalog_id: string
+          quote_version: number
+          replayed: boolean
+          total_amount_idr: number
+        }[]
+      }
       fn_current_compliance_event_actor: { Args: never; Returns: string }
+      fn_expire_corporate_intake_evidence_batch: {
+        Args: { p_batch_size?: number }
+        Returns: {
+          evidence_id: string
+          previous_status: string
+          status: string
+        }[]
+      }
+      fn_finalize_corporate_intake_evidence_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_actual_byte_size: number
+          p_client_id: string
+          p_detected_mime: string
+          p_evidence_id: string
+          p_idempotency_key: string
+          p_sha256_digest: string
+          p_storage_object_id: string
+        }
+        Returns: {
+          evidence_id: string
+          evidence_reference: string
+          expires_at: string
+          replayed: boolean
+          status: string
+        }[]
+      }
+      fn_get_corporate_intake_evidence_storage_object: {
+        Args: { p_client_id: string; p_evidence_id: string }
+        Returns: {
+          artifact_actual_byte_size: number
+          artifact_detected_mime: string
+          artifact_finalize_idempotency_key: string
+          artifact_sha256_digest: string
+          artifact_storage_object_id: string
+          bucket_id: string
+          client_id: string
+          declared_byte_size: number
+          declared_mime: string
+          evidence_id: string
+          expires_at: string
+          object_path: string
+          status: string
+          storage_object_id: string
+          storage_owner_id: string
+          stored_byte_size: number
+          stored_mime: string
+        }[]
+      }
       fn_global_halt_ekyc_and_refund_atomic: {
         Args: {
           p_actor_user_id: string
@@ -2593,6 +2757,10 @@ export type Database = {
           global_status: Database["public"]["Enums"]["signing_envelope_global_status"]
           replayed: boolean
         }[]
+      }
+      fn_is_corporate_intake_client: {
+        Args: { p_client_id: string }
+        Returns: boolean
       }
       fn_is_verified_advocate: {
         Args: { p_advocate_id: string }
@@ -2641,6 +2809,24 @@ export type Database = {
         }
         Returns: number
       }
+      fn_prepare_corporate_intake_evidence_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_client_id: string
+          p_declared_byte_size: number
+          p_declared_mime: string
+          p_evidence_id: string
+          p_idempotency_key: string
+        }
+        Returns: {
+          bucket_id: string
+          evidence_id: string
+          expires_at: string
+          object_path: string
+          replayed: boolean
+          status: string
+        }[]
+      }
       fn_process_ekyc_callback_atomic: {
         Args: {
           p_envelope_id: string
@@ -2676,6 +2862,19 @@ export type Database = {
       fn_refund_escrow_to_client_mutex: {
         Args: { p_escrow_id: string; p_refund_reason: string }
         Returns: boolean
+      }
+      fn_reject_corporate_intake_evidence_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_client_id: string
+          p_evidence_id: string
+          p_rejection_code: string
+        }
+        Returns: {
+          evidence_id: string
+          replayed: boolean
+          status: string
+        }[]
       }
       fn_release_escrow_to_advocate_mutex: {
         Args: { p_escrow_id: string }
