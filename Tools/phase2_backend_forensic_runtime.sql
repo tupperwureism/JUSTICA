@@ -4,9 +4,10 @@ BEGIN;
 
 CREATE TEMP TABLE phase2_forensic_ids AS
 SELECT
-    '91000000-0000-0000-0000-000000000001'::UUID AS client_id,
+    (SELECT id FROM auth.users ORDER BY created_at LIMIT 1) AS client_id,
     '92000000-0000-0000-0000-000000000001'::UUID AS order_id,
     '93000000-0000-0000-0000-000000000001'::UUID AS envelope_id,
+    '94000000-0000-0000-0000-000000000001'::UUID AS pricing_catalog_id,
     pg_catalog.clock_timestamp() AS callback_at,
     (SELECT id FROM auth.users ORDER BY created_at LIMIT 1) AS auth_user_id;
 
@@ -33,7 +34,9 @@ SELECT
     '+620000000001',
     'VERIFIED',
     '!FORENSIC_ROLLBACK!'
-FROM phase2_forensic_ids;
+FROM phase2_forensic_ids
+ON CONFLICT (client_id) DO UPDATE
+SET kyc_status = EXCLUDED.kyc_status;
 
 INSERT INTO public.users_advocate (
     advocate_id,
@@ -58,8 +61,65 @@ FROM phase2_forensic_ids
 ON CONFLICT (advocate_id) DO UPDATE
 SET kyc_status = 'VERIFIED';
 
+INSERT INTO public.corporate_pricing_catalogs (
+    catalog_id,
+    service_type,
+    quote_version,
+    legal_scope_version,
+    currency,
+    total_amount_idr,
+    effective_from
+)
+SELECT
+    pricing_catalog_id,
+    'PT_ORDINARY',
+    71,
+    'LEGAL-SCOPE-P2-1',
+    'IDR',
+    100000,
+    pg_catalog.clock_timestamp() - INTERVAL '1 minute'
+FROM phase2_forensic_ids;
+
+INSERT INTO public.corporate_pricing_fee_lines (
+    catalog_id,
+    fee_line_code,
+    fee_type,
+    description,
+    amount
+)
+SELECT
+    pricing_catalog_id,
+    'FORENSIC-INTAKE',
+    'JUSTICA_FEE',
+    'Synthetic forensic intake fee',
+    100000
+FROM phase2_forensic_ids;
+
+INSERT INTO public.corporate_pricing_milestones (
+    catalog_id,
+    milestone_type,
+    sequence_number,
+    amount,
+    releasable_party,
+    evidence_condition,
+    dispute_refund_rule
+)
+SELECT
+    pricing_catalog_id,
+    'DEPOSIT_INTAKE',
+    1,
+    100000,
+    'JUSTICA',
+    'Validated forensic intake',
+    'Full refund before professional work'
+FROM phase2_forensic_ids;
+
+SELECT public.fn_activate_corporate_pricing_catalog(
+    (SELECT pricing_catalog_id FROM phase2_forensic_ids)
+);
+
 SELECT *
-FROM public.fn_create_corporate_intake_complete_atomic(
+FROM public.fn_create_corporate_intake_from_catalog_atomic(
     (SELECT order_id FROM phase2_forensic_ids),
     (SELECT client_id FROM phase2_forensic_ids),
     'PT_ORDINARY',
@@ -69,7 +129,6 @@ FROM public.fn_create_corporate_intake_complete_atomic(
     '["62010"]'::JSONB,
     100000000,
     25000000,
-    'LEGAL-SCOPE-P2-1',
     '[{
         "party_type": "NATURAL_PERSON",
         "role": "FOUNDER",
@@ -86,21 +145,6 @@ FROM public.fn_create_corporate_intake_complete_atomic(
         "percentage": 100,
         "evidence_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     }]'::JSONB,
-    '[{
-        "fee_line_code": "JUSTICA-INTAKE",
-        "fee_type": "JUSTICA_FEE",
-        "description": "Forensic intake fee",
-        "amount": 100000
-    }]'::JSONB,
-    '[{
-        "milestone_type": "DEPOSIT_INTAKE",
-        "sequence_number": 1,
-        "amount": 100000,
-        "releasable_party": "JUSTICA",
-        "evidence_condition": "Validated intake",
-        "dispute_refund_rule": "Full refund before professional work"
-    }]'::JSONB,
-    100000,
     'FORENSIC-PAYMENT-REFERENCE',
     'forensic-intake-001',
     (SELECT auth_user_id FROM phase2_forensic_ids)

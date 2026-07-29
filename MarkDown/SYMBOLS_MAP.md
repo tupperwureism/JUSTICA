@@ -5,10 +5,10 @@
 
 ## Cakupan
 
-- 208 source files dipindai.
+- 209 source files dipindai.
 - 318 exported TypeScript symbols dalam 172 files.
-- 115 core PostgreSQL objects dari 374 deklarasi migrasi.
-- 147 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
+- 117 core PostgreSQL objects dari 381 deklarasi migrasi.
+- 152 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 - Migrasi `supabase/` diprioritaskan di atas salinan `database/`; peta deklarasi ini bukan rekonstruksi state database setelah seluruh migrasi.
 - Indeks SQL sengaja tidak dimuat agar peta tetap ringkas; cari dengan `rg "CREATE .*INDEX" database supabase` bila diperlukan.
@@ -196,6 +196,8 @@
 
 | Kind | Symbol/signature | Deklarasi pilihan/terbaru |
 | --- | --- | --- |
+| function | private.fn_current_phase2_admin_role_group() | S/20260729082554_enforce_canonical_snapshots_and_repair_participant_rls.sql:L10 |
+| function | private.fn_enforce_canonical_intake_snapshot() | S/20260729082554_enforce_canonical_snapshots_and_repair_participant_rls.sql:L31 |
 | function | public.fn_activate_corporate_pricing_catalog( p_catalog_id UUID ) | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L242 |
 | function | public.fn_append_compliance_workflow_event( p_corporate_case_id UUID, p_escrow_id UUID, p… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L30 |
 | function | public.fn_assert_completed_envelope_anchor() | S/20260722000021_phase2_holistic_security_hardening.sql:L55 |
