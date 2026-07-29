@@ -3,7 +3,7 @@
 > GENERATED FILE — jangan edit manual. Baca file ini secara on-demand setelah `SYMBOLS_MAP.md` mengarahkan ke area database.
 > Perbarui/verifikasi bersama peta utama memakai `node Tools/generate_symbol_map.mjs [--check]`.
 
-- 146 canonical policies/triggers.
+- 147 canonical policies/triggers.
 - Lokasi memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 
 | Kind | Symbol/relation | Deklarasi pilihan/terbaru |
@@ -124,6 +124,7 @@
 | trigger | trg_guard_escrow_financial_state ON public.escrow_transactions | S/20260728000025_phase2_backend_forensic_hardening.sql:L83 |
 | trigger | trg_guard_payout_idempotency_mutation ON public.payout_idempotency_keys | S/20260728000025_phase2_backend_forensic_hardening.sql:L978 |
 | trigger | trg_guard_provider_webhook_event_mutation ON public.provider_webhook_events | S/20260728000025_phase2_backend_forensic_hardening.sql:L932 |
+| trigger | trg_guard_service_order_accepted_terms ON public.service_orders | S/20260729063938_bind_atomic_intake_to_canonical_pricing_catalog.sql:L112 |
 | trigger | trg_guard_signing_envelope_mutation ON public.signing_envelopes | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L256 |
 | trigger | trg_guard_signing_party_mutation ON public.signing_envelope_parties | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L259 |
 | trigger | trg_protect_accepted_service_fee_line ON public.service_fee_lines | S/20260722000016_p2_b3_service_orders_expand_only.sql:L402 |

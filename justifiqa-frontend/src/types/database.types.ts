@@ -1520,6 +1520,8 @@ export type Database = {
           currency: string
           dispute_refund_rule: string
           due_at: string | null
+          due_offset_anchor: string | null
+          due_offset_days: number | null
           evidence_condition: string
           funded_at: string | null
           milestone_id: string
@@ -1538,6 +1540,8 @@ export type Database = {
           currency?: string
           dispute_refund_rule: string
           due_at?: string | null
+          due_offset_anchor?: string | null
+          due_offset_days?: number | null
           evidence_condition: string
           funded_at?: string | null
           milestone_id?: string
@@ -1556,6 +1560,8 @@ export type Database = {
           currency?: string
           dispute_refund_rule?: string
           due_at?: string | null
+          due_offset_anchor?: string | null
+          due_offset_days?: number | null
           evidence_condition?: string
           funded_at?: string | null
           milestone_id?: string
@@ -1792,6 +1798,7 @@ export type Database = {
       }
       service_orders: {
         Row: {
+          accepted_pricing_catalog_id: string | null
           accepted_quote_version: number | null
           assigned_professional_id: string | null
           client_id: string
@@ -1806,6 +1813,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepted_pricing_catalog_id?: string | null
           accepted_quote_version?: number | null
           assigned_professional_id?: string | null
           client_id: string
@@ -1820,6 +1828,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepted_pricing_catalog_id?: string | null
           accepted_quote_version?: number | null
           assigned_professional_id?: string | null
           client_id?: string
@@ -1834,6 +1843,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_service_orders_accepted_pricing_catalog"
+            columns: ["accepted_pricing_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "corporate_pricing_catalogs"
+            referencedColumns: ["catalog_id"]
+          },
           {
             foreignKeyName: "fk_service_orders_client"
             columns: ["client_id"]
@@ -2532,6 +2548,34 @@ export type Database = {
           replayed: boolean
         }[]
       }
+      fn_create_corporate_intake_from_catalog_atomic: {
+        Args: {
+          p_actor_user_id: string
+          p_authorized_capital_idr: number
+          p_beneficial_owners: Json
+          p_client_id: string
+          p_corporate_parties: Json
+          p_domicile_city: string
+          p_domicile_province: string
+          p_entity_type: string
+          p_idempotency_key: string
+          p_kbli_snapshot: Json
+          p_order_id: string
+          p_paid_up_capital_idr: number
+          p_payment_gateway_ref: string
+          p_proposed_name: string
+        }
+        Returns: {
+          corporate_case_id: string
+          escrow_id: string
+          legal_scope_version: string
+          order_id: string
+          pricing_catalog_id: string
+          quote_version: number
+          replayed: boolean
+          total_amount_idr: number
+        }[]
+      }
       fn_current_compliance_event_actor: { Args: never; Returns: string }
       fn_global_halt_ekyc_and_refund_atomic: {
         Args: {
@@ -2636,6 +2680,16 @@ export type Database = {
       fn_release_escrow_to_advocate_mutex: {
         Args: { p_escrow_id: string }
         Returns: boolean
+      }
+      fn_resolve_corporate_pricing_catalog: {
+        Args: { p_catalog_id?: string; p_service_type: string }
+        Returns: {
+          catalog_id: string
+          currency: string
+          legal_scope_version: string
+          quote_version: number
+          total_amount_idr: number
+        }[]
       }
       fn_retire_corporate_pricing_catalog: {
         Args: { p_catalog_id: string }
