@@ -1,9 +1,21 @@
-import { Building2, CircleDollarSign, Scale, ShieldCheck } from 'lucide-react';
+import { Building2, CircleDollarSign, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import type { CorporateEntityType, CorporateIntakeDraft } from './corporateUiModel';
+import {
+  addBeneficialOwner,
+  addCorporateParty,
+  addKbliCode,
+  removeBeneficialOwner,
+  removeCorporateParty,
+  removeKbliCode,
+  type CorporateEntityType,
+  type CorporateIntakeDraft,
+} from './corporateUiModel';
+import { BeneficialOwnerFields } from './BeneficialOwnerFields';
+import { CorporateKbliCodeFields } from './CorporateKbliCodeFields';
+import { CorporatePartyFields } from './CorporatePartyFields';
 
 type Props = {
   step: number;
@@ -17,8 +29,6 @@ const entities: Array<{ value: CorporateEntityType; label: string; note: string 
   { value: 'CV', label: 'Persekutuan Komanditer', note: 'Sekutu aktif dan sekutu pasif.' },
 ];
 
-const fieldClass = 'min-h-10 rounded-xl border-border bg-background';
-
 export function CorporateIntakeStepFields({ step, draft, onChange }: Props) {
   if (step === 0) return <div className="grid gap-4 md:grid-cols-3">{entities.map((entity) => (
     <Card key={entity.value} className={`gap-3 rounded-2xl p-5 ${draft.entityType === entity.value ? 'border-primary bg-primary/5' : 'border-border'}`}>
@@ -28,26 +38,26 @@ export function CorporateIntakeStepFields({ step, draft, onChange }: Props) {
   ))}</div>;
 
   if (step === 1) return <div className="grid gap-4 md:grid-cols-2">
-    <label className="space-y-2 text-sm font-semibold">Nama usulan<Input required value={draft.businessName} onChange={(e) => onChange({ businessName: e.target.value })} placeholder="Contoh: Justica Solusi Indonesia" className={fieldClass} /></label>
-    <label className="space-y-2 text-sm font-semibold">Domisili<Input required value={draft.domicile} onChange={(e) => onChange({ domicile: e.target.value })} placeholder="Kota/Kabupaten, Provinsi" className={fieldClass} /></label>
-    <label className="space-y-2 text-sm font-semibold md:col-span-2">KBLI utama<Input required value={draft.kbli} onChange={(e) => onChange({ kbli: e.target.value })} placeholder="Kode dan uraian KBLI" className={fieldClass} /></label>
+    <label className="space-y-2 text-sm font-semibold">Nama usulan<Input required value={draft.businessName} onChange={(event) => onChange({ businessName: event.target.value })} placeholder="Contoh: Justica Solusi Indonesia" className="min-h-10 rounded-xl border-border bg-background" /></label>
+    <label className="space-y-2 text-sm font-semibold">Kota domisili<Input required value={draft.domicileCity} onChange={(event) => onChange({ domicileCity: event.target.value })} placeholder="Contoh: Jakarta Selatan" className="min-h-10 rounded-xl border-border bg-background" /></label>
+    <label className="space-y-2 text-sm font-semibold">Provinsi domisili<Input required value={draft.domicileProvince} onChange={(event) => onChange({ domicileProvince: event.target.value })} placeholder="Contoh: DKI Jakarta" className="min-h-10 rounded-xl border-border bg-background" /></label>
+    <CorporateKbliCodeFields codes={draft.kbliCodes} onChange={(kbliCodes) => onChange({ kbliCodes })} onAdd={() => onChange({ kbliCodes: addKbliCode(draft).kbliCodes })} onRemove={(index) => onChange({ kbliCodes: removeKbliCode(draft, index).kbliCodes })} />
   </div>;
 
   if (step === 2) return <div className="grid gap-4 md:grid-cols-2">
-    <label className="space-y-2 text-sm font-semibold">Nama pendiri / sekutu<Input required value={draft.founderName} onChange={(e) => onChange({ founderName: e.target.value })} className={fieldClass} /></label>
-    <label className="space-y-2 text-sm font-semibold">Persentase kepemilikan / kontribusi<Input required type="number" min="0" max="100" value={draft.ownership} onChange={(e) => onChange({ ownership: e.target.value })} className={fieldClass} /></label>
-    <Card className="gap-2 rounded-2xl border-border bg-muted/50 p-4 md:col-span-2"><Scale className="size-5 text-primary" /><p className="text-sm text-muted-foreground">Untuk CV, sistem akan meminta sekutu aktif dan pasif. Untuk PT, total kepemilikan dan hak suara direkonsiliasi sebelum review notaris.</p></Card>
+    <label className="space-y-2 text-sm font-semibold">Modal dasar (IDR)<Input required type="number" min="0" value={draft.authorizedCapitalIdr} onChange={(event) => onChange({ authorizedCapitalIdr: event.target.value })} className="min-h-10 rounded-xl border-border bg-background" /></label>
+    <label className="space-y-2 text-sm font-semibold">Modal disetor (IDR)<Input required type="number" min="0" value={draft.paidUpCapitalIdr} onChange={(event) => onChange({ paidUpCapitalIdr: event.target.value })} className="min-h-10 rounded-xl border-border bg-background" /></label>
+    <CorporatePartyFields parties={draft.corporateParties} onChange={(corporateParties) => onChange({ corporateParties })} onAdd={() => onChange({ corporateParties: addCorporateParty(draft).corporateParties })} onRemove={(index) => onChange({ corporateParties: removeCorporateParty(draft, index).corporateParties })} />
   </div>;
 
   if (step === 3) return <div className="grid gap-4 md:grid-cols-2">
-    <label className="space-y-2 text-sm font-semibold">Nama orang Pemilik Manfaat<Input required value={draft.boName} onChange={(e) => onChange({ boName: e.target.value })} className={fieldClass} /></label>
-    <label className="space-y-2 text-sm font-semibold">Dasar kendali<select value={draft.controlBasis} onChange={(e) => onChange({ controlBasis: e.target.value })} className={`${fieldClass} w-full px-3 text-sm`}><option value="OWNERSHIP">Kepemilikan</option><option value="VOTING_RIGHTS">Hak suara</option><option value="APPOINTMENT_REMOVAL">Pengangkatan/pemberhentian</option><option value="EFFECTIVE_CONTROL">Kendali efektif lain</option></select></label>
-    <Card className="gap-2 rounded-2xl border-primary/30 bg-primary/5 p-4 md:col-span-2"><ShieldCheck className="size-5 text-primary" /><p className="text-sm">BO wajib orang perseorangan. Bukti dilindungi dan direkam dengan digest SHA-256; status compliance rahasia tidak ditampilkan kepada klien.</p></Card>
+    <BeneficialOwnerFields owners={draft.beneficialOwners} onChange={(beneficialOwners) => onChange({ beneficialOwners })} onAdd={() => onChange({ beneficialOwners: addBeneficialOwner(draft).beneficialOwners })} onRemove={(index) => onChange({ beneficialOwners: removeBeneficialOwner(draft, index).beneficialOwners })} />
+    <Card className="gap-2 rounded-2xl border-primary/30 bg-primary/5 p-4 md:col-span-2"><ShieldCheck className="size-5 text-primary" /><p className="text-sm">Verifikasi dan bukti pemilik manfaat diproses pada workflow kepatuhan terpisah.</p></Card>
   </div>;
 
   return <div className="grid gap-4 md:grid-cols-2">
-    <Card className="gap-3 rounded-2xl border-border bg-muted/40 p-5"><Badge variant="outline">Ringkasan intake</Badge><p className="font-semibold">{draft.businessName || 'Nama belum diisi'}</p><p className="text-sm text-muted-foreground">{draft.entityType} · {draft.kbli || 'KBLI belum diisi'} · BO: {draft.boName || 'belum diisi'}</p></Card>
-    <Card className="gap-3 rounded-2xl border-border bg-muted/40 p-5"><CircleDollarSign className="size-5 text-primary" /><p className="font-semibold">Milestone escrow</p><p className="text-sm text-muted-foreground">Dana dilepas per hasil kerja yang disetujui. Biaya final muncul setelah notaris memeriksa ruang lingkup dan dokumen.</p></Card>
-    <label className="flex items-start gap-3 rounded-xl border border-border bg-background p-4 text-sm font-semibold md:col-span-2"><input type="checkbox" checked={draft.acceptedScope} onChange={(e) => onChange({ acceptedScope: e.target.checked })} className="mt-0.5 size-5 shrink-0 accent-primary" />Saya menyetujui ruang lingkup layanan dan memahami bahwa pengajuan pemerintah tunduk pada pemeriksaan Notaris.</label>
+    <Card className="gap-3 rounded-2xl border-border bg-muted/40 p-5"><Badge variant="outline">Ringkasan intake</Badge><p className="font-semibold">{draft.businessName || 'Nama belum diisi'}</p><p className="text-sm text-muted-foreground">{draft.entityType} · {draft.kbliCodes.filter(Boolean).join(', ') || 'KBLI belum diisi'} · Pihak: {draft.corporateParties.length} · BO: {draft.beneficialOwners.length}</p></Card>
+    <Card className="gap-3 rounded-2xl border-border bg-muted/40 p-5"><CircleDollarSign className="size-5 text-primary" /><p className="font-semibold">Tahap pembayaran terpisah</p><p className="text-sm text-muted-foreground">Nilai penawaran, milestone, dan referensi pembayaran ditentukan oleh boundary server pada workflow berikutnya.</p></Card>
+    <label className="flex items-start gap-3 rounded-xl border border-border bg-background p-4 text-sm font-semibold md:col-span-2"><input type="checkbox" checked={draft.acceptedScope} onChange={(event) => onChange({ acceptedScope: event.target.checked })} className="mt-0.5 size-5 shrink-0 accent-primary" />Saya menyetujui ruang lingkup layanan dan memahami bahwa pengajuan pemerintah tunduk pada pemeriksaan Notaris.</label>
   </div>;
 }

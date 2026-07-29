@@ -21,7 +21,6 @@ export function ClientCorporateSuiteTab() {
         onComplete={integration.intake.execute}
         submitting={integration.intake.isLoading}
         error={integration.intake.error}
-        success={integration.intake.status === 'success'}
         onRetry={() => { void integration.intake.retry().catch(() => undefined); }}
       />
       {integration.workspace.isLoading && <p role="status" className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">Memuat kasus Corporate Intake terotorisasi...</p>}

@@ -3,7 +3,7 @@
 > GENERATED FILE — jangan edit manual. Baca file ini secara on-demand setelah `SYMBOLS_MAP.md` mengarahkan ke area database.
 > Perbarui/verifikasi bersama peta utama memakai `node Tools/generate_symbol_map.mjs [--check]`.
 
-- 140 canonical policies/triggers.
+- 146 canonical policies/triggers.
 - Lokasi memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 
 | Kind | Symbol/relation | Deklarasi pilihan/terbaru |
@@ -117,6 +117,9 @@
 | trigger | trg_audit_signing_global_transition ON public.signing_envelopes | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L246 |
 | trigger | trg_guard_corporate_case_stage_mutation ON public.corporate_service_cases | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L320 |
 | trigger | trg_guard_corporate_notary_assignment ON public.corporate_service_cases | S/20260728000025_phase2_backend_forensic_hardening.sql:L267 |
+| trigger | trg_guard_corporate_pricing_catalog_mutation ON public.corporate_pricing_catalogs | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L349 |
+| trigger | trg_guard_corporate_pricing_fee_lines_mutation ON public.corporate_pricing_fee_lines | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L353 |
+| trigger | trg_guard_corporate_pricing_milestones_mutation ON public.corporate_pricing_milestones | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L357 |
 | trigger | trg_guard_ekyc_log_mutation ON public.ekyc_verification_logs | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L253 |
 | trigger | trg_guard_escrow_financial_state ON public.escrow_transactions | S/20260728000025_phase2_backend_forensic_hardening.sql:L83 |
 | trigger | trg_guard_payout_idempotency_mutation ON public.payout_idempotency_keys | S/20260728000025_phase2_backend_forensic_hardening.sql:L978 |
@@ -132,6 +135,9 @@
 | trigger | trg_touch_beneficial_owners ON public.beneficial_owners | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L296 |
 | trigger | trg_touch_compliance_assessments ON public.compliance_assessments | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L299 |
 | trigger | trg_touch_corporate_parties ON public.corporate_parties | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L293 |
+| trigger | trg_touch_corporate_pricing_catalogs ON public.corporate_pricing_catalogs | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L361 |
+| trigger | trg_touch_corporate_pricing_fee_lines ON public.corporate_pricing_fee_lines | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L365 |
+| trigger | trg_touch_corporate_pricing_milestones ON public.corporate_pricing_milestones | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L369 |
 | trigger | trg_touch_corporate_service_cases ON public.corporate_service_cases | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L290 |
 | trigger | trg_touch_government_submission_jobs ON public.government_submission_jobs | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L302 |
 | trigger | trg_validate_corporate_service_case_order ON public.corporate_service_cases | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L275 |

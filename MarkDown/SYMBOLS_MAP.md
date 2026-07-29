@@ -5,10 +5,10 @@
 
 ## Cakupan
 
-- 201 source files dipindai.
-- 278 exported TypeScript symbols dalam 168 files.
-- 104 core PostgreSQL objects dari 353 deklarasi migrasi.
-- 140 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
+- 206 source files dipindai.
+- 318 exported TypeScript symbols dalam 172 files.
+- 112 core PostgreSQL objects dari 367 deklarasi migrasi.
+- 146 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 - Migrasi `supabase/` diprioritaskan di atas salinan `database/`; peta deklarasi ini bukan rekonstruksi state database setelah seluruh migrasi.
 - Indeks SQL sengaja tidak dimuat agar peta tetap ringkas; cari dengan `rg "CREATE .*INDEX" database supabase` bila diperlukan.
@@ -104,12 +104,15 @@
 | components/consultation/ConsultationBookingForm.tsx | 17f ConsultationBookingForm |
 | components/consultation/ConsultationBookingReceipt.tsx | 6f ConsultationBookingReceipt |
 | components/corporate/AdvocateCorporateCaseManager.tsx | 9f AdvocateCorporateCaseManager |
+| components/corporate/BeneficialOwnerFields.tsx | 25f BeneficialOwnerFields |
 | components/corporate/ClientCorporateSuiteTab.tsx | 15f ClientCorporateSuiteTab |
 | components/corporate/CorporateCaseTrackerPanel.tsx | 13f CorporateCaseTrackerPanel |
 | components/corporate/CorporateEscrowCheckoutPanel.tsx | 37f CorporateEscrowCheckoutPanel |
-| components/corporate/CorporateIntakeStepFields.tsx | 22f CorporateIntakeStepFields |
-| components/corporate/CorporateIntakeWizard.tsx | 17f CorporateIntakeWizard |
-| components/corporate/corporateUiModel.ts | 1t CorporateEntityType, 2t CorporateCaseStage, 10t CorporateIntakeDraft, 21v INTAKE_STEPS, 29v CORPORATE_STAGES, 38v CLIENT_STAGE_COPY, 47v EMPTY_INTAKE_DRAFT |
+| components/corporate/CorporateIntakeStepFields.tsx | 32f CorporateIntakeStepFields |
+| components/corporate/CorporateIntakeWizard.tsx | 21f CorporateIntakeWizard |
+| components/corporate/CorporateKbliCodeFields.tsx | 12f CorporateKbliCodeFields |
+| components/corporate/CorporatePartyFields.tsx | 27f CorporatePartyFields |
+| components/corporate/corporateUiModel.ts | 1x EMPTY_INTAKE_DRAFT, 1x addBeneficialOwner, 1x addCorporateParty, 1x addKbliCode, 1x removeBeneficialOwner, 1x removeCorporateParty, 1x removeKbliCode, 1x validateCorporateIntake, 1x validateCorporateIntakeStep, 12x BeneficialOwnerControlBasis, 12x BeneficialOwnerDraft, 12x CorporateEntityType, 12x CorporateIntakeDraft, 12x CorporateIntakeValidationIssue, 12x CorporatePartyDraft, 12x CorporatePartyRole, 12x CorporatePartyType, 23t CorporateCaseStage, 31v INTAKE_STEPS, 39v CORPORATE_STAGES, 48v CLIENT_STAGE_COPY |
 | components/corporate/notary/KemenkumhamStampingModal.tsx | 8t NotaryStampingRequest, 23f KemenkumhamStampingModal |
 | components/corporate/notary/NotaryCaseWorkspacePanel.tsx | 23f NotaryCaseWorkspacePanel |
 | components/document/DocumentDraftActions.tsx | 6f DocumentDraftActions |
@@ -156,6 +159,7 @@
 | hooks/useVaultDelivery.ts | 4f useVaultDelivery |
 | lib/supabase.ts | 20v supabase |
 | lib/utils.ts | 4f cn |
+| models/corporateIntake.ts | 1v CORPORATE_ENTITY_TYPES, 2v CORPORATE_PARTY_TYPES, 3v CORPORATE_PARTY_ROLES, 11v BENEFICIAL_OWNER_CONTROL_BASES, 19t CorporateEntityType, 20t CorporatePartyType, 21t CorporatePartyRole, 22t BeneficialOwnerControlBasis, 24t CorporatePartyDraft, 34t BeneficialOwnerDraft, 41t CorporateIntakeDraft, 54t CorporateIntakeValidationIssue, 59v createEmptyCorporateParty, 69v createEmptyBeneficialOwner, 76v EMPTY_INTAKE_DRAFT, 105v addCorporateParty, 110v removeCorporateParty, 118v addBeneficialOwner, 123v removeBeneficialOwner, 131v addKbliCode, 136v removeKbliCode, 146f validateCorporateIntake, 184f validateCorporateIntakeStep |
 | pages/AdminDashboardPage.tsx | 10f AdminDashboardPage |
 | pages/AdvocateAuthPage.tsx | 15v AdvocateAuthPage |
 | pages/AdvocateDashboardPage.tsx | 20v AdvocateDashboardPage |
@@ -175,7 +179,7 @@
 | services/consultationService.ts | 15f getAvailableConsultationSlots, 52f checkoutConsultation |
 | services/mockConsultationService.ts | 8v TIER_CATALOG, 65v MOCK_ADVOCATE_SLOTS, 98c MockConsultationService |
 | services/mockIracService.ts | 8c MockIracService |
-| services/phase2IntegrationService.ts | 3t Phase2PortalRole, 4t Phase2Actor, 6t CorporateEscrowStatus, 17t CorporateEscrowProjection, 25t ClientCorporateWorkspace, 35t NotaryWorkspace, 65t EkycWorkspace, 95i Phase2IntegrationGateway, 106t CorporateIntakeInput, 118t Phase2IntegrationErrorCode, 133c Phase2IntegrationError, 168f createPhase2IntegrationService |
+| services/phase2IntegrationService.ts | 7t Phase2PortalRole, 8t Phase2Actor, 10t CorporateEscrowStatus, 21t CorporateEscrowProjection, 29t ClientCorporateWorkspace, 39t NotaryWorkspace, 69t EkycWorkspace, 99i Phase2IntegrationGateway, 110t CorporateIntakeInput, 112t Phase2IntegrationErrorCode, 127c Phase2IntegrationError, 162f createPhase2IntegrationService |
 | services/phase2SupabaseGateway.ts | 42v phase2SupabaseGateway, 250v phase2IntegrationService |
 | services/portalAuthService.ts | 12f signInPortal, 22f registerPortal, 39f signOutPortal, 44f authErrorMessage |
 | services/roomSessionService.ts | 3i RoomSession, 11f resolveRoomSession |
@@ -184,7 +188,7 @@
 | types/authForms.ts | 1t ThemeMode, 2t AuthTab, 3t SyncStatus, 5i ClientLoginFields, 6i ClientRegistrationFields, 7i AdvocateLoginFields, 8i AdvocateRegistrationFields |
 | types/client.ts | 4t ClientTabKey, 6i ActiveConsultation, 15i HistoryDocument, 23i ServiceOption, 32i Advocate, 49i TimeSlot, 54i CheckoutDraft |
 | types/consultation.ts | 1t ConsultationTierId, 3t EscrowStatus, 5i ConsultationTier, 18i ConsultationSlot, 29i LiveConsultationSlot, 31i ConsultationCheckout, 46i EscrowTransaction, 59i BookingRequest |
-| types/database.types.ts | 1t Json, 9t Database, 2544t Tables, 2573t TablesInsert, 2598t TablesUpdate, 2623t Enums, 2640t CompositeTypes, 2657v Constants |
+| types/database.types.ts | 1t Json, 9t Database, 2750t Tables, 2779t TablesInsert, 2804t TablesUpdate, 2829t Enums, 2846t CompositeTypes, 2863v Constants |
 | types/irac.ts | 1t LegalDocumentTemplateId, 3i IracAnalysis, 16i DocumentClause, 22i LegalDocumentDraft |
 | types/portalAuth.ts | 3t PortalRole, 5v portalHome, 11v portalLogin, 17f getPortalRole, 22f safePortalRedirect |
 
@@ -192,6 +196,7 @@
 
 | Kind | Symbol/signature | Deklarasi pilihan/terbaru |
 | --- | --- | --- |
+| function | public.fn_activate_corporate_pricing_catalog( p_catalog_id UUID ) | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L242 |
 | function | public.fn_append_compliance_workflow_event( p_corporate_case_id UUID, p_escrow_id UUID, p… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L30 |
 | function | public.fn_assert_completed_envelope_anchor() | S/20260722000021_phase2_holistic_security_hardening.sql:L55 |
 | function | public.fn_assert_service_order_financial_reconciliation() | S/20260722000016_p2_b3_service_orders_expand_only.sql:L439 |
@@ -208,6 +213,8 @@
 | function | public.fn_global_halt_ekyc_and_refund_atomic( p_envelope_id UUID, p_party_id UUID, p_veri… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L961 |
 | function | public.fn_guard_corporate_case_stage_mutation() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L306 |
 | function | public.fn_guard_corporate_notary_assignment() | S/20260728000025_phase2_backend_forensic_hardening.sql:L233 |
+| function | public.fn_guard_corporate_pricing_catalog_child_mutation() | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L204 |
+| function | public.fn_guard_corporate_pricing_catalog_mutation() | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L138 |
 | function | public.fn_guard_ekyc_log_mutation() | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L136 |
 | function | public.fn_guard_escrow_financial_state() | S/20260728000025_phase2_backend_forensic_hardening.sql:L37 |
 | function | public.fn_guard_government_submission_transition() | S/20260728000025_phase2_backend_forensic_hardening.sql:L277 |
@@ -226,7 +233,9 @@
 | function | public.fn_record_immutable_audit_log( p_actor_user_id UUID, p_actor_type VARCHAR, p_actio… | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L212 +3 |
 | function | public.fn_refund_escrow_to_client_mutex( p_escrow_id UUID, p_refund_reason TEXT ) | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L149 +3 |
 | function | public.fn_release_escrow_to_advocate_mutex( p_escrow_id UUID ) | S/20260728000025_phase2_backend_forensic_hardening.sql:L419 +4 |
+| function | public.fn_retire_corporate_pricing_catalog( p_catalog_id UUID ) | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L313 |
 | function | public.fn_sync_notary_submission_contract() | S/20260722000020_p2_b8_notary_workspace_and_kemenkumham_seams.sql:L56 |
+| function | public.fn_touch_corporate_pricing_record_updated_at() | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L126 |
 | function | public.fn_touch_corporate_record_updated_at() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L279 |
 | function | public.fn_transition_corporate_service_case( p_case_id UUID, p_expected_stage VARCHAR, p_… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L748 +1 |
 | function | public.fn_validate_corporate_service_case_order() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L250 |
@@ -257,6 +266,9 @@
 | table | public.compliance_assessments | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L145 |
 | table | public.compliance_workflow_events_worm | S/20260722000022_p2_b5a_ekyc_and_escrow_schema.sql:L233 |
 | table | public.corporate_parties | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L56 |
+| table | public.corporate_pricing_catalogs | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L4 |
+| table | public.corporate_pricing_fee_lines | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L45 |
+| table | public.corporate_pricing_milestones | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L73 |
 | table | public.corporate_service_cases | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L7 |
 | table | public.document_integrity_anchors | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L39 |
 | table | public.ekyc_verification_logs | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L17 |

@@ -125,12 +125,26 @@ class FakeGateway implements Phase2IntegrationGateway {
 const intakeDraft = {
   entityType: 'PT_ORDINARY' as const,
   businessName: 'PT Uji Integrasi',
-  domicile: 'Jakarta Selatan, DKI Jakarta',
-  kbli: '62019',
-  founderName: 'Siti Rahma',
-  ownership: '100',
-  boName: 'Siti Rahma',
-  controlBasis: 'OWNERSHIP',
+  domicileCity: 'Jakarta Selatan',
+  domicileProvince: 'DKI Jakarta',
+  kbliCodes: ['62019'],
+  authorizedCapitalIdr: '100000000',
+  paidUpCapitalIdr: '50000000',
+  corporateParties: [{
+    partyType: 'NATURAL_PERSON' as const,
+    role: 'FOUNDER' as const,
+    displayName: 'Siti Rahma',
+    identityReference: 'NIK-TEST-101',
+    ownershipPercentage: '100',
+    votingPercentage: '100',
+    effectiveDate: '2026-07-29',
+  }],
+  beneficialOwners: [{
+    naturalPersonName: 'Budi Santoso',
+    identityReference: 'NIK-TEST-102',
+    controlBasis: 'OWNERSHIP' as const,
+    percentage: '100',
+  }],
   acceptedScope: true,
 };
 

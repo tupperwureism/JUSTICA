@@ -1,4 +1,8 @@
 import type { Database } from '@/types/database.types';
+import {
+  validateCorporateIntake,
+  type CorporateIntakeDraft,
+} from '../models/corporateIntake.ts';
 
 export type Phase2PortalRole = 'CLIENT' | 'ADVOCATE' | 'ADMIN';
 export type Phase2Actor = { userId: string; role: Phase2PortalRole };
@@ -103,17 +107,7 @@ export interface Phase2IntegrationGateway {
   }>;
 }
 
-export type CorporateIntakeInput = {
-  entityType: 'PT_ORDINARY' | 'PT_INDIVIDUAL_UMK' | 'CV';
-  businessName: string;
-  domicile: string;
-  kbli: string;
-  founderName: string;
-  ownership: string;
-  boName: string;
-  controlBasis: string;
-  acceptedScope: boolean;
-};
+export type CorporateIntakeInput = CorporateIntakeDraft;
 
 export type Phase2IntegrationErrorCode =
   | 'SESSION_REQUIRED'
@@ -174,14 +168,9 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
 
     async submitCorporateIntake(input: CorporateIntakeInput): Promise<never> {
       await requireActor(gateway, ['CLIENT']);
-      requireText(input.businessName);
-      requireText(input.domicile);
-      requireText(input.kbli, 32);
-      requireText(input.founderName);
-      requireText(input.ownership, 8);
-      requireText(input.boName);
-      requireText(input.controlBasis, 32);
-      if (!input.acceptedScope) throw new Phase2IntegrationError('INVALID_PAYLOAD');
+      if (validateCorporateIntake(input).length) {
+        throw new Phase2IntegrationError('INVALID_PAYLOAD');
+      }
       throw new Phase2IntegrationError('BROWSER_BOUNDARY_UNAVAILABLE');
     },
 

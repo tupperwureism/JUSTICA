@@ -44,18 +44,21 @@ export type Database = {
           {
             foreignKeyName: "fk_review_advocate"
             columns: ["advocate_id"]
+            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_review_booking"
             columns: ["booking_id"]
+            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "fk_review_client"
             columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "users_client"
             referencedColumns: ["client_id"]
           },
@@ -93,12 +96,14 @@ export type Database = {
           {
             foreignKeyName: "fk_sanction_admin"
             columns: ["issued_by_admin_id"]
+            isOneToOne: false
             referencedRelation: "users_admin"
             referencedColumns: ["admin_id"]
           },
           {
             foreignKeyName: "fk_sanction_advocate"
             columns: ["advocate_id"]
+            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
@@ -163,6 +168,7 @@ export type Database = {
           {
             foreignKeyName: "fk_tier_advocate"
             columns: ["advocate_id"]
+            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
@@ -260,6 +266,7 @@ export type Database = {
           {
             foreignKeyName: "fk_beneficial_owners_case"
             columns: ["case_id"]
+            isOneToOne: false
             referencedRelation: "corporate_service_cases"
             referencedColumns: ["case_id"]
           },
@@ -318,18 +325,21 @@ export type Database = {
           {
             foreignKeyName: "fk_booking_advocate"
             columns: ["advocate_id"]
+            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_booking_client"
             columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "users_client"
             referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "fk_booking_slot"
             columns: ["slot_id"]
+            isOneToOne: false
             referencedRelation: "consultation_slots"
             referencedColumns: ["slot_id"]
           },
@@ -385,12 +395,14 @@ export type Database = {
           {
             foreignKeyName: "fk_irac_advocate"
             columns: ["advocate_id"]
+            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_irac_booking"
             columns: ["booking_id"]
+            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
@@ -428,6 +440,7 @@ export type Database = {
           {
             foreignKeyName: "fk_chat_meta_booking"
             columns: ["booking_id"]
+            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
@@ -486,6 +499,7 @@ export type Database = {
           {
             foreignKeyName: "fk_compliance_assessments_case"
             columns: ["case_id"]
+            isOneToOne: false
             referencedRelation: "corporate_service_cases"
             referencedColumns: ["case_id"]
           },
@@ -535,24 +549,28 @@ export type Database = {
           {
             foreignKeyName: "compliance_workflow_events_worm_corporate_case_id_fkey"
             columns: ["corporate_case_id"]
+            isOneToOne: false
             referencedRelation: "corporate_service_cases"
             referencedColumns: ["case_id"]
           },
           {
             foreignKeyName: "compliance_workflow_events_worm_envelope_id_fkey"
             columns: ["envelope_id"]
+            isOneToOne: false
             referencedRelation: "signing_envelopes"
             referencedColumns: ["envelope_id"]
           },
           {
             foreignKeyName: "compliance_workflow_events_worm_escrow_id_fkey"
             columns: ["escrow_id"]
+            isOneToOne: false
             referencedRelation: "escrow_transactions"
             referencedColumns: ["escrow_id"]
           },
           {
             foreignKeyName: "compliance_workflow_events_worm_verification_id_fkey"
             columns: ["verification_id"]
+            isOneToOne: false
             referencedRelation: "ekyc_verification_logs"
             referencedColumns: ["verification_id"]
           },
@@ -593,12 +611,14 @@ export type Database = {
           {
             foreignKeyName: "fk_slot_advocate"
             columns: ["advocate_id"]
+            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_slot_tier"
             columns: ["tier_id"]
+            isOneToOne: false
             referencedRelation: "advocate_service_tiers"
             referencedColumns: ["tier_id"]
           },
@@ -651,8 +671,145 @@ export type Database = {
           {
             foreignKeyName: "fk_corporate_parties_case"
             columns: ["case_id"]
+            isOneToOne: false
             referencedRelation: "corporate_service_cases"
             referencedColumns: ["case_id"]
+          },
+        ]
+      }
+      corporate_pricing_catalogs: {
+        Row: {
+          catalog_id: string
+          created_at: string
+          currency: string
+          effective_from: string
+          effective_until: string | null
+          legal_scope_version: string
+          quote_version: number
+          service_type: string
+          status: string
+          total_amount_idr: number
+          updated_at: string
+        }
+        Insert: {
+          catalog_id?: string
+          created_at?: string
+          currency?: string
+          effective_from: string
+          effective_until?: string | null
+          legal_scope_version: string
+          quote_version: number
+          service_type: string
+          status?: string
+          total_amount_idr: number
+          updated_at?: string
+        }
+        Update: {
+          catalog_id?: string
+          created_at?: string
+          currency?: string
+          effective_from?: string
+          effective_until?: string | null
+          legal_scope_version?: string
+          quote_version?: number
+          service_type?: string
+          status?: string
+          total_amount_idr?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      corporate_pricing_fee_lines: {
+        Row: {
+          amount: number
+          catalog_id: string
+          created_at: string
+          description: string
+          fee_line_code: string
+          fee_line_id: string
+          fee_type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          catalog_id: string
+          created_at?: string
+          description: string
+          fee_line_code: string
+          fee_line_id?: string
+          fee_type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          catalog_id?: string
+          created_at?: string
+          description?: string
+          fee_line_code?: string
+          fee_line_id?: string
+          fee_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_corporate_pricing_fee_lines_catalog"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "corporate_pricing_catalogs"
+            referencedColumns: ["catalog_id"]
+          },
+        ]
+      }
+      corporate_pricing_milestones: {
+        Row: {
+          amount: number
+          catalog_id: string
+          created_at: string
+          dispute_refund_rule: string
+          due_offset_anchor: string | null
+          due_offset_days: number | null
+          evidence_condition: string
+          milestone_id: string
+          milestone_type: string
+          releasable_party: string
+          sequence_number: number
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          catalog_id: string
+          created_at?: string
+          dispute_refund_rule: string
+          due_offset_anchor?: string | null
+          due_offset_days?: number | null
+          evidence_condition: string
+          milestone_id?: string
+          milestone_type: string
+          releasable_party: string
+          sequence_number: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          catalog_id?: string
+          created_at?: string
+          dispute_refund_rule?: string
+          due_offset_anchor?: string | null
+          due_offset_days?: number | null
+          evidence_condition?: string
+          milestone_id?: string
+          milestone_type?: string
+          releasable_party?: string
+          sequence_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_corporate_pricing_milestones_catalog"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "corporate_pricing_catalogs"
+            referencedColumns: ["catalog_id"]
           },
         ]
       }
@@ -715,18 +872,21 @@ export type Database = {
           {
             foreignKeyName: "fk_corporate_cases_compliance_reviewer"
             columns: ["assigned_compliance_reviewer_id"]
+            isOneToOne: false
             referencedRelation: "users_admin"
             referencedColumns: ["admin_id"]
           },
           {
             foreignKeyName: "fk_corporate_cases_notary"
             columns: ["assigned_notary_id"]
+            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_corporate_cases_order"
             columns: ["order_id"]
+            isOneToOne: true
             referencedRelation: "service_orders"
             referencedColumns: ["order_id"]
           },
@@ -776,18 +936,21 @@ export type Database = {
           {
             foreignKeyName: "dispute_cases_reported_by_client_id_fkey"
             columns: ["reported_by_client_id"]
+            isOneToOne: false
             referencedRelation: "users_client"
             referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "fk_dispute_booking"
             columns: ["booking_id"]
+            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "fk_dispute_escrow"
             columns: ["escrow_id"]
+            isOneToOne: false
             referencedRelation: "escrow_transactions"
             referencedColumns: ["escrow_id"]
           },
@@ -822,12 +985,14 @@ export type Database = {
           {
             foreignKeyName: "fk_signature_admin"
             columns: ["mediator_admin_id"]
+            isOneToOne: false
             referencedRelation: "users_admin"
             referencedColumns: ["admin_id"]
           },
           {
             foreignKeyName: "fk_signature_dispute"
             columns: ["dispute_id"]
+            isOneToOne: false
             referencedRelation: "dispute_cases"
             referencedColumns: ["dispute_id"]
           },
@@ -874,12 +1039,14 @@ export type Database = {
           {
             foreignKeyName: "fk_document_integrity_anchor_case"
             columns: ["case_id"]
+            isOneToOne: false
             referencedRelation: "corporate_service_cases"
             referencedColumns: ["case_id"]
           },
           {
             foreignKeyName: "fk_document_integrity_anchor_envelope"
             columns: ["signing_envelope_id"]
+            isOneToOne: false
             referencedRelation: "signing_envelopes"
             referencedColumns: ["envelope_id"]
           },
@@ -911,6 +1078,7 @@ export type Database = {
           {
             foreignKeyName: "fk_revision_opinion"
             columns: ["opinion_id"]
+            isOneToOne: false
             referencedRelation: "legal_opinions"
             referencedColumns: ["opinion_id"]
           },
@@ -966,6 +1134,7 @@ export type Database = {
           {
             foreignKeyName: "fk_ekyc_signing_party"
             columns: ["envelope_id", "party_id"]
+            isOneToOne: false
             referencedRelation: "signing_envelope_parties"
             referencedColumns: ["envelope_id", "party_id"]
           },
@@ -1003,6 +1172,7 @@ export type Database = {
           {
             foreignKeyName: "fk_emeterai_opinion"
             columns: ["opinion_id"]
+            isOneToOne: false
             referencedRelation: "legal_opinions"
             referencedColumns: ["opinion_id"]
           },
@@ -1040,12 +1210,14 @@ export type Database = {
           {
             foreignKeyName: "fk_ledger_escrow"
             columns: ["escrow_id"]
+            isOneToOne: false
             referencedRelation: "escrow_transactions"
             referencedColumns: ["escrow_id"]
           },
           {
             foreignKeyName: "fk_ledger_wallet"
             columns: ["wallet_id"]
+            isOneToOne: false
             referencedRelation: "wallet_balances"
             referencedColumns: ["wallet_id"]
           },
@@ -1119,24 +1291,28 @@ export type Database = {
           {
             foreignKeyName: "fk_escrow_advocate"
             columns: ["advocate_id"]
+            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_escrow_booking"
             columns: ["booking_id"]
+            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "fk_escrow_client"
             columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "users_client"
             referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "fk_escrow_corporate_case"
             columns: ["corporate_case_id"]
+            isOneToOne: false
             referencedRelation: "corporate_service_cases"
             referencedColumns: ["case_id"]
           },
@@ -1219,12 +1395,14 @@ export type Database = {
           {
             foreignKeyName: "fk_government_submission_jobs_case"
             columns: ["case_id"]
+            isOneToOne: false
             referencedRelation: "corporate_service_cases"
             referencedColumns: ["case_id"]
           },
           {
             foreignKeyName: "fk_government_submission_jobs_submitter"
             columns: ["authorized_submitter_id"]
+            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
@@ -1280,18 +1458,21 @@ export type Database = {
           {
             foreignKeyName: "fk_opinion_advocate"
             columns: ["advocate_id"]
+            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_opinion_booking"
             columns: ["booking_id"]
+            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "fk_opinion_client"
             columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "users_client"
             referencedColumns: ["client_id"]
           },
@@ -1326,6 +1507,7 @@ export type Database = {
           {
             foreignKeyName: "fk_handshake_booking"
             columns: ["booking_id"]
+            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
@@ -1390,6 +1572,7 @@ export type Database = {
           {
             foreignKeyName: "fk_payment_milestones_order"
             columns: ["order_id"]
+            isOneToOne: false
             referencedRelation: "service_orders"
             referencedColumns: ["order_id"]
           },
@@ -1430,6 +1613,7 @@ export type Database = {
           {
             foreignKeyName: "payout_idempotency_keys_escrow_transaction_id_fkey"
             columns: ["escrow_transaction_id"]
+            isOneToOne: false
             referencedRelation: "escrow_transactions"
             referencedColumns: ["escrow_id"]
           },
@@ -1461,6 +1645,7 @@ export type Database = {
           {
             foreignKeyName: "fk_config_admin"
             columns: ["updated_by_admin_id"]
+            isOneToOne: false
             referencedRelation: "users_admin"
             referencedColumns: ["admin_id"]
           },
@@ -1495,12 +1680,14 @@ export type Database = {
           {
             foreignKeyName: "fk_probono_admin"
             columns: ["verified_by_admin_id"]
+            isOneToOne: false
             referencedRelation: "users_admin"
             referencedColumns: ["admin_id"]
           },
           {
             foreignKeyName: "fk_probono_client"
             columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "users_client"
             referencedColumns: ["client_id"]
           },
@@ -1547,6 +1734,7 @@ export type Database = {
           {
             foreignKeyName: "provider_webhook_events_order_id_fkey"
             columns: ["order_id"]
+            isOneToOne: false
             referencedRelation: "service_orders"
             referencedColumns: ["order_id"]
           },
@@ -1596,6 +1784,7 @@ export type Database = {
           {
             foreignKeyName: "fk_service_fee_lines_order"
             columns: ["order_id"]
+            isOneToOne: false
             referencedRelation: "service_orders"
             referencedColumns: ["order_id"]
           },
@@ -1648,18 +1837,21 @@ export type Database = {
           {
             foreignKeyName: "fk_service_orders_client"
             columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "users_client"
             referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "fk_service_orders_origin_booking"
             columns: ["origin_booking_id"]
+            isOneToOne: false
             referencedRelation: "booking_sessions"
             referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "fk_service_orders_professional"
             columns: ["assigned_professional_id"]
+            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
@@ -1709,6 +1901,7 @@ export type Database = {
           {
             foreignKeyName: "signing_envelope_parties_envelope_id_fkey"
             columns: ["envelope_id"]
+            isOneToOne: false
             referencedRelation: "signing_envelopes"
             referencedColumns: ["envelope_id"]
           },
@@ -1791,6 +1984,7 @@ export type Database = {
           {
             foreignKeyName: "fk_signing_envelope_escrow"
             columns: ["escrow_id"]
+            isOneToOne: false
             referencedRelation: "escrow_transactions"
             referencedColumns: ["escrow_id"]
           },
@@ -1828,12 +2022,14 @@ export type Database = {
           {
             foreignKeyName: "fk_sipp_admin"
             columns: ["verified_by_admin_id"]
+            isOneToOne: false
             referencedRelation: "users_admin"
             referencedColumns: ["admin_id"]
           },
           {
             foreignKeyName: "fk_sipp_advocate"
             columns: ["advocate_id"]
+            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
@@ -1877,12 +2073,14 @@ export type Database = {
           {
             foreignKeyName: "fk_tax_advocate"
             columns: ["advocate_id"]
+            isOneToOne: false
             referencedRelation: "users_advocate"
             referencedColumns: ["advocate_id"]
           },
           {
             foreignKeyName: "fk_tax_escrow"
             columns: ["escrow_id"]
+            isOneToOne: false
             referencedRelation: "escrow_transactions"
             referencedColumns: ["escrow_id"]
           },
@@ -2231,6 +2429,10 @@ export type Database = {
       }
     }
     Functions: {
+      fn_activate_corporate_pricing_catalog: {
+        Args: { p_catalog_id: string }
+        Returns: undefined
+      }
       fn_append_compliance_workflow_event: {
         Args: {
           p_actor_user_id: string
@@ -2434,6 +2636,10 @@ export type Database = {
       fn_release_escrow_to_advocate_mutex: {
         Args: { p_escrow_id: string }
         Returns: boolean
+      }
+      fn_retire_corporate_pricing_catalog: {
+        Args: { p_catalog_id: string }
+        Returns: undefined
       }
       fn_transition_corporate_service_case: {
         Args: {

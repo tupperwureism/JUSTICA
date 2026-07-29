@@ -1,4 +1,25 @@
-export type CorporateEntityType = 'PT_ORDINARY' | 'PT_INDIVIDUAL_UMK' | 'CV';
+export {
+  EMPTY_INTAKE_DRAFT,
+  addBeneficialOwner,
+  addCorporateParty,
+  addKbliCode,
+  removeBeneficialOwner,
+  removeCorporateParty,
+  removeKbliCode,
+  validateCorporateIntake,
+  validateCorporateIntakeStep,
+} from '@/models/corporateIntake';
+export type {
+  BeneficialOwnerControlBasis,
+  BeneficialOwnerDraft,
+  CorporateEntityType,
+  CorporateIntakeDraft,
+  CorporateIntakeValidationIssue,
+  CorporatePartyDraft,
+  CorporatePartyRole,
+  CorporatePartyType,
+} from '@/models/corporateIntake';
+
 export type CorporateCaseStage =
   | 'DRAFT'
   | 'ESCROW_LOCKED'
@@ -7,17 +28,6 @@ export type CorporateCaseStage =
   | 'COMPLIANCE_HOLD'
   | 'COMPLETED';
 
-export type CorporateIntakeDraft = {
-  entityType: CorporateEntityType;
-  businessName: string;
-  domicile: string;
-  kbli: string;
-  founderName: string;
-  ownership: string;
-  boName: string;
-  controlBasis: string;
-  acceptedScope: boolean;
-};
 export const INTAKE_STEPS = [
   'Jenis Entitas',
   'Nama & KBLI',
@@ -42,16 +52,4 @@ export const CLIENT_STAGE_COPY: Record<CorporateCaseStage, { label: string; tone
   CUSTOMER_ACTION_REQUIRED: { label: 'Tindakan diperlukan', tone: 'warning', detail: 'Ada data atau dokumen yang perlu dilengkapi.' },
   COMPLIANCE_HOLD: { label: 'Hold', tone: 'danger', detail: 'Proses sementara ditahan. Tim akan menghubungi Anda bila ada tindakan.' },
   COMPLETED: { label: 'Selesai', tone: 'success', detail: 'Dokumen final tersedia melalui akses terotorisasi.' },
-};
-
-export const EMPTY_INTAKE_DRAFT: CorporateIntakeDraft = {
-  entityType: 'PT_ORDINARY',
-  businessName: '',
-  domicile: '',
-  kbli: '',
-  founderName: '',
-  ownership: '100',
-  boName: '',
-  controlBasis: 'OWNERSHIP',
-  acceptedScope: false,
 };

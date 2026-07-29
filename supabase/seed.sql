@@ -266,3 +266,113 @@ SET
     fido2_enabled = EXCLUDED.fido2_enabled;
 
 COMMIT;
+
+-- LOCAL_TEST_ONLY: deterministic synthetic quote fixture for local catalog and
+-- lifecycle tests. The amounts below are not commercial or production prices.
+BEGIN;
+
+INSERT INTO public.corporate_pricing_catalogs (
+    catalog_id,
+    service_type,
+    quote_version,
+    legal_scope_version,
+    currency,
+    total_amount_idr,
+    status,
+    effective_from
+)
+SELECT
+    'b1000000-0000-4000-8000-000000000001'::UUID,
+    'CV',
+    1,
+    'LOCAL_TEST_ONLY_SCOPE_V1',
+    'IDR',
+    300,
+    'DRAFT',
+    pg_catalog.clock_timestamp()
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.corporate_pricing_catalogs
+    WHERE catalog_id = 'b1000000-0000-4000-8000-000000000001'::UUID
+);
+
+INSERT INTO public.corporate_pricing_fee_lines (
+    catalog_id,
+    fee_line_code,
+    fee_type,
+    description,
+    amount
+)
+SELECT
+    'b1000000-0000-4000-8000-000000000001'::UUID,
+    fixture.fee_line_code,
+    fixture.fee_type,
+    fixture.description,
+    fixture.amount
+FROM (VALUES
+    ('LOCAL_TEST_ONLY_CORE', 'JUSTICA_FEE', 'Synthetic local test fee A', 100::NUMERIC),
+    ('LOCAL_TEST_ONLY_ADMIN', 'OTHER_APPROVED', 'Synthetic local test fee B', 200::NUMERIC)
+) AS fixture(fee_line_code, fee_type, description, amount)
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.corporate_pricing_fee_lines AS line
+    WHERE line.catalog_id = 'b1000000-0000-4000-8000-000000000001'::UUID
+      AND line.fee_line_code = fixture.fee_line_code
+);
+
+INSERT INTO public.corporate_pricing_milestones (
+    catalog_id,
+    milestone_type,
+    sequence_number,
+    amount,
+    releasable_party,
+    evidence_condition,
+    dispute_refund_rule,
+    due_offset_anchor,
+    due_offset_days
+)
+SELECT
+    'b1000000-0000-4000-8000-000000000001'::UUID,
+    fixture.milestone_type,
+    fixture.sequence_number,
+    fixture.amount,
+    fixture.releasable_party,
+    fixture.evidence_condition,
+    fixture.dispute_refund_rule,
+    'LOCAL_TEST_ONLY_EVENT',
+    fixture.due_offset_days
+FROM (VALUES
+    ('DEPOSIT_INTAKE', 1::SMALLINT, 150::NUMERIC, 'JUSTICA', 'Synthetic local condition A', 'Synthetic local refund rule A', 0::SMALLINT),
+    ('OSS_COMPLETE', 2::SMALLINT, 150::NUMERIC, 'GOVERNMENT', 'Synthetic local condition B', 'Synthetic local refund rule B', 7::SMALLINT)
+) AS fixture(
+    milestone_type,
+    sequence_number,
+    amount,
+    releasable_party,
+    evidence_condition,
+    dispute_refund_rule,
+    due_offset_days
+)
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.corporate_pricing_milestones AS milestone
+    WHERE milestone.catalog_id = 'b1000000-0000-4000-8000-000000000001'::UUID
+      AND milestone.milestone_type = fixture.milestone_type
+);
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM public.corporate_pricing_catalogs
+        WHERE catalog_id = 'b1000000-0000-4000-8000-000000000001'::UUID
+          AND status = 'DRAFT'
+    ) THEN
+        PERFORM public.fn_activate_corporate_pricing_catalog(
+            'b1000000-0000-4000-8000-000000000001'::UUID
+        );
+    END IF;
+END;
+$$;
+
+COMMIT;
