@@ -30,9 +30,11 @@ const validDraft = (): CorporateIntakeDraft => ({
   beneficialOwners: [{
     naturalPersonName: 'Budi Santoso',
     identityReference: 'NIK-TEST-002',
+    evidenceReference: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     controlBasis: 'OWNERSHIP',
     percentage: '100',
   }],
+  paymentGatewayRef: 'PG-TEST-001',
   acceptedScope: true,
 });
 
@@ -97,6 +99,7 @@ test('protected beneficial-owner references retain backend case-sensitive semant
     ...draft.beneficialOwners[0],
     naturalPersonName: 'Budi Santoso Referensi Lain',
     identityReference: draft.beneficialOwners[0].identityReference.toLowerCase(),
+    evidenceReference: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
   });
 
   assert.deepEqual(codesOf(draft), []);

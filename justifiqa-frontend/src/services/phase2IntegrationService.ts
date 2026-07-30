@@ -96,6 +96,48 @@ type CddAssessmentInput = {
   rulesVersion: string;
 };
 
+export type CorporateIntakeInput = CorporateIntakeDraft;
+
+export type SubmitCorporateIntakeResult = {
+  orderId: string;
+  corporateCaseId: string;
+  escrowId: string;
+  pricingCatalogId: string;
+  quoteVersion: number;
+  legalScopeVersion: string;
+  totalAmountIdr: string;
+  replayed: boolean;
+};
+
+export type IntakePayload = {
+  orderId: string;
+  entityType: string;
+  proposedName: string;
+  domicileCity: string;
+  domicileProvince: string;
+  kbliSnapshot: string[];
+  authorizedCapitalIdr: string;
+  paidUpCapitalIdr: string;
+  corporateParties: Array<{
+    partyType?: string;
+    role: string;
+    displayName: string;
+    identityReference: string;
+    ownershipPercentage?: number;
+    votingPercentage?: number;
+    effectiveFrom?: string;
+  }>;
+  beneficialOwners: Array<{
+    declarationVersion: number;
+    naturalPersonName: string;
+    evidenceReference: string;
+    controlBasis: string;
+    percentage?: number;
+  }>;
+  paymentGatewayRef: string;
+  idempotencyKey: string;
+};
+
 export interface Phase2IntegrationGateway {
   getActor(): Promise<Phase2Actor | null>;
   getClientCorporateWorkspace(userId: string): Promise<ClientCorporateWorkspace | null>;
@@ -105,15 +147,20 @@ export interface Phase2IntegrationGateway {
     assessmentId: string;
     replayed: boolean;
   }>;
+  invokeCorporateIntake(payload: IntakePayload): Promise<{
+    data: SubmitCorporateIntakeResult | null;
+    error: { code?: string } | null;
+  }>;
 }
-
-export type CorporateIntakeInput = CorporateIntakeDraft;
 
 export type Phase2IntegrationErrorCode =
   | 'SESSION_REQUIRED'
   | 'ROLE_FORBIDDEN'
   | 'INVALID_PAYLOAD'
   | 'RESOURCE_NOT_FOUND'
+  | 'INTAKE_IDEMPOTENCY_CONFLICT'
+  | 'INTAKE_EVIDENCE_CONFLICT'
+  | 'INTAKE_ACTOR_FORBIDDEN'
   | 'BROWSER_BOUNDARY_UNAVAILABLE';
 
 const ERROR_MESSAGES: Record<Phase2IntegrationErrorCode, string> = {
@@ -121,6 +168,9 @@ const ERROR_MESSAGES: Record<Phase2IntegrationErrorCode, string> = {
   ROLE_FORBIDDEN: 'Peran akun ini tidak diizinkan menjalankan tindakan tersebut.',
   INVALID_PAYLOAD: 'Data belum lengkap atau formatnya tidak valid. Periksa kembali isian Anda.',
   RESOURCE_NOT_FOUND: 'Data yang diminta tidak tersedia atau tidak dapat diakses oleh akun ini.',
+  INTAKE_IDEMPOTENCY_CONFLICT: 'Pengajuan dengan kunci idempotensi yang sama sudah diproses. Tidak bisa diulang dengan data berbeda.',
+  INTAKE_EVIDENCE_CONFLICT: 'Bukti sudah terpakai pada pengajuan lain atau tidak ditemukan.',
+  INTAKE_ACTOR_FORBIDDEN: 'Akun tidak berwenang mengirim pengajuan ini.',
   BROWSER_BOUNDARY_UNAVAILABLE: 'Tindakan ini memerlukan endpoint server terotorisasi yang belum tersedia untuk browser.',
 };
 
@@ -166,12 +216,28 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
       return gateway.getClientCorporateWorkspace(actor.userId);
     },
 
-    async submitCorporateIntake(input: CorporateIntakeInput): Promise<never> {
+    async submitCorporateIntake(input: {
+      draft: CorporateIntakeInput;
+      orderId: string;
+      idempotencyKey: string;
+    }): Promise<SubmitCorporateIntakeResult> {
       await requireActor(gateway, ['CLIENT']);
-      if (validateCorporateIntake(input).length) {
+      if (validateCorporateIntake(input.draft).length) {
         throw new Phase2IntegrationError('INVALID_PAYLOAD');
       }
-      throw new Phase2IntegrationError('BROWSER_BOUNDARY_UNAVAILABLE');
+      const payload = toIntakePayload(input.draft, input.orderId, input.idempotencyKey);
+      const { data, error } = await gateway.invokeCorporateIntake(payload);
+      if (error) {
+        const code = error.code ?? '';
+        if (code === 'IDEMPOTENCY_CONFLICT') throw new Phase2IntegrationError('INTAKE_IDEMPOTENCY_CONFLICT');
+        if (code === 'EVIDENCE_CONFLICT' || code === 'EVIDENCE_INVALID') throw new Phase2IntegrationError('INTAKE_EVIDENCE_CONFLICT');
+        if (code === 'ACTOR_MISMATCH') throw new Phase2IntegrationError('INTAKE_ACTOR_FORBIDDEN');
+        throw new Phase2IntegrationError('INVALID_PAYLOAD');
+      }
+      if (!data || !data.corporateCaseId) {
+        throw new Phase2IntegrationError('INVALID_PAYLOAD');
+      }
+      return data;
     },
 
     async refreshCorporateEscrow(caseId: string) {
@@ -269,5 +335,40 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
       }
       throw new Phase2IntegrationError('BROWSER_BOUNDARY_UNAVAILABLE');
     },
+  };
+}
+
+function toIntakePayload(
+  draft: CorporateIntakeDraft,
+  orderId: string,
+  idempotencyKey: string,
+): IntakePayload {
+  return {
+    orderId,
+    entityType: draft.entityType,
+    proposedName: draft.businessName.trim(),
+    domicileCity: draft.domicileCity.trim(),
+    domicileProvince: draft.domicileProvince.trim(),
+    kbliSnapshot: draft.kbliCodes.map((c) => c.trim()).filter(Boolean),
+    authorizedCapitalIdr: draft.authorizedCapitalIdr,
+    paidUpCapitalIdr: draft.paidUpCapitalIdr,
+    corporateParties: draft.corporateParties.map((p) => ({
+      partyType: p.partyType,
+      role: p.role,
+      displayName: p.displayName.trim(),
+      identityReference: p.identityReference.trim(),
+      ownershipPercentage: p.ownershipPercentage ? Number(p.ownershipPercentage) : undefined,
+      votingPercentage: p.votingPercentage ? Number(p.votingPercentage) : undefined,
+      effectiveFrom: p.effectiveDate || undefined,
+    })),
+    beneficialOwners: draft.beneficialOwners.map((o) => ({
+      declarationVersion: 1,
+      naturalPersonName: o.naturalPersonName.trim(),
+      evidenceReference: o.evidenceReference ?? '',
+      controlBasis: o.controlBasis,
+      percentage: o.percentage ? Number(o.percentage) : undefined,
+    })),
+    paymentGatewayRef: draft.paymentGatewayRef.trim(),
+    idempotencyKey,
   };
 }

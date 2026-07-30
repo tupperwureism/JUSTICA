@@ -34,6 +34,7 @@ export type CorporatePartyDraft = {
 export type BeneficialOwnerDraft = {
   naturalPersonName: string;
   identityReference: string;
+  evidenceReference?: string;
   controlBasis: BeneficialOwnerControlBasis;
   percentage: string;
 };
@@ -48,6 +49,7 @@ export type CorporateIntakeDraft = {
   paidUpCapitalIdr: string;
   corporateParties: CorporatePartyDraft[];
   beneficialOwners: BeneficialOwnerDraft[];
+  paymentGatewayRef: string;
   acceptedScope: boolean;
 };
 
@@ -83,6 +85,7 @@ export const EMPTY_INTAKE_DRAFT: CorporateIntakeDraft = {
   paidUpCapitalIdr: '',
   corporateParties: [createEmptyCorporateParty()],
   beneficialOwners: [createEmptyBeneficialOwner()],
+  paymentGatewayRef: '',
   acceptedScope: false,
 };
 
@@ -187,6 +190,7 @@ const validateBeneficialOwners = (draft: CorporateIntakeDraft): CorporateIntakeV
     if (!isPresent(owner.identityReference)) issues.push(issue('BENEFICIAL_OWNER_IDENTITY_REFERENCE_REQUIRED', `Referensi identitas pemilik manfaat pada baris ${index + 1} wajib diisi.`));
     if (!isAllowed(BENEFICIAL_OWNER_CONTROL_BASES, owner.controlBasis)) issues.push(issue('CONTROL_BASIS_INVALID', `Dasar kendali pada baris ${index + 1} tidak valid.`));
     if (!isPercentage(owner.percentage)) issues.push(issue('BENEFICIAL_OWNER_PERCENTAGE_INVALID', `Persentase pemilik manfaat pada baris ${index + 1} harus 0–100.`));
+    if (!isPresent(owner.evidenceReference ?? '')) issues.push(issue('BENEFICIAL_OWNER_EVIDENCE_REQUIRED', `Bukti identitas pemilik manfaat pada baris ${index + 1} wajib diunggah.`));
   });
   const beneficialOwnerIdentities = draft.beneficialOwners
     .map((owner) => owner.identityReference.trim())
@@ -197,7 +201,23 @@ const validateBeneficialOwners = (draft: CorporateIntakeDraft): CorporateIntakeV
       'Referensi identitas pemilik manfaat tidak boleh duplikat.',
     ));
   }
+  const evidenceReferences = draft.beneficialOwners
+    .map((owner) => (owner.evidenceReference ?? '').trim())
+    .filter(Boolean);
+  if (new Set(evidenceReferences).size !== evidenceReferences.length) {
+    issues.push(issue(
+      'DUPLICATE_BENEFICIAL_OWNER_EVIDENCE_REFERENCE',
+      'Referensi bukti pemilik manfaat tidak boleh duplikat.',
+    ));
+  }
   return issues;
+};
+
+const validatePaymentGatewayRef = (draft: CorporateIntakeDraft): CorporateIntakeValidationIssue[] => {
+  const ref = (draft.paymentGatewayRef ?? '').trim();
+  if (!ref) return [issue('PAYMENT_GATEWAY_REF_REQUIRED', 'Referensi pembayaran wajib diisi sebelum mengirim.')];
+  if (ref.length > 64) return [issue('PAYMENT_GATEWAY_REF_TOO_LONG', 'Referensi pembayaran maksimal 64 karakter.')];
+  return [];
 };
 
 const validateScopeAcceptance = (draft: CorporateIntakeDraft): CorporateIntakeValidationIssue[] => (
@@ -211,7 +231,7 @@ const intakeStepValidators: Readonly<Record<number, (draft: CorporateIntakeDraft
   1: validateBusinessDetails,
   2: validateCorporateParties,
   3: validateBeneficialOwners,
-  4: validateScopeAcceptance,
+  4: (draft) => [...validatePaymentGatewayRef(draft), ...validateScopeAcceptance(draft)],
 };
 
 export function validateCorporateIntake(draft: CorporateIntakeDraft): CorporateIntakeValidationIssue[] {
@@ -220,6 +240,7 @@ export function validateCorporateIntake(draft: CorporateIntakeDraft): CorporateI
     ...validateBusinessDetails(draft),
     ...validateCorporateParties(draft),
     ...validateBeneficialOwners(draft),
+    ...validatePaymentGatewayRef(draft),
     ...validateScopeAcceptance(draft),
   ];
 }

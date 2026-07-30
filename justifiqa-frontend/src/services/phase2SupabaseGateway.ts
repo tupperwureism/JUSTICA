@@ -5,8 +5,10 @@ import {
   type ClientCorporateWorkspace,
   type CorporateEscrowStatus,
   type EkycWorkspace,
+  type IntakePayload,
   type NotaryWorkspace,
   type Phase2IntegrationGateway,
+  type SubmitCorporateIntakeResult,
 } from './phase2IntegrationService';
 
 const CORPORATE_SERVICE_TYPES = ['PT_ORDINARY', 'PT_INDIVIDUAL_UMK', 'CV'];
@@ -244,6 +246,19 @@ export const phase2SupabaseGateway: Phase2IntegrationGateway = {
       return { assessmentId: replay.data.assessment_id, replayed: true };
     }
     throw queryError('CDD_ASSESSMENT_STATE_CONFLICT');
+  },
+
+  async invokeCorporateIntake(payload: IntakePayload) {
+    const { data, error } = await supabase.functions.invoke<SubmitCorporateIntakeResult>(
+      'corporate-intake',
+      { body: payload },
+    );
+    if (error) {
+      const code = (error as { context?: { code?: string } }).context?.code
+        ?? (error as unknown as { code?: string }).code;
+      return { data: null, error: { code } };
+    }
+    return { data, error: null };
   },
 };
 

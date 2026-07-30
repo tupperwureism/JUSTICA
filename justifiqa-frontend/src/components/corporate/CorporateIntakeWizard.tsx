@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,19 +12,25 @@ import {
 } from './corporateUiModel';
 
 type Props = {
-  onComplete?: (draft: CorporateIntakeDraft) => void | Promise<void>;
+  orderId?: string;
+  onComplete?: (
+    draft: CorporateIntakeDraft,
+    orderId: string,
+    idempotencyKey: string,
+  ) => void | Promise<void>;
   submitting?: boolean;
   error?: string | null;
   onRetry?: () => void;
 };
 
 export function CorporateIntakeWizard({
-  onComplete, submitting = false, error, onRetry,
+  orderId, onComplete, submitting = false, error, onRetry,
 }: Props) {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState(EMPTY_INTAKE_DRAFT);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [localBlocker, setLocalBlocker] = useState<string | null>(null);
+  const idempotencyKey = useMemo(() => crypto.randomUUID(), []);
   const isLast = step === INTAKE_STEPS.length - 1;
   const continueFlow = () => {
     const issue = validateCorporateIntakeStep(draft, step);
@@ -37,11 +43,11 @@ export function CorporateIntakeWizard({
       setStep((value) => value + 1);
       return;
     }
-    if (!onComplete) {
+    if (!onComplete || !orderId) {
       setLocalBlocker('Endpoint server terotorisasi untuk Corporate Intake belum tersedia di browser.');
       return;
     }
-    void Promise.resolve(onComplete?.(draft)).catch(() => undefined);
+    void Promise.resolve(onComplete?.(draft, orderId, idempotencyKey)).catch(() => undefined);
   };
 
   const updateDraft = (patch: Partial<CorporateIntakeDraft>) => {

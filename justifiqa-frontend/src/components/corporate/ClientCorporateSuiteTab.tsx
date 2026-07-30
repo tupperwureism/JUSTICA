@@ -4,6 +4,7 @@ import { CorporateCaseTrackerPanel } from './CorporateCaseTrackerPanel';
 import { CorporateEscrowCheckoutPanel } from './CorporateEscrowCheckoutPanel';
 import { CorporateIntakeWizard } from './CorporateIntakeWizard';
 import type { CorporateCaseStage } from './corporateUiModel';
+import type { CorporateIntakeDraft } from './corporateUiModel';
 
 const clientStage = (stage: string): CorporateCaseStage => {
   if (stage === 'CUSTOMER_ACTION_REQUIRED' || stage === 'COMPLIANCE_HOLD' || stage === 'COMPLETED') return stage;
@@ -15,10 +16,14 @@ const clientStage = (stage: string): CorporateCaseStage => {
 export function ClientCorporateSuiteTab() {
   const integration = useClientCorporateIntegration();
   const workspace = integration.workspace.data;
+  const handleComplete = (draft: CorporateIntakeDraft, orderId: string, idempotencyKey: string) => {
+    void integration.intake.execute({ draft, orderId, idempotencyKey });
+  };
   return (
     <div className="corporate-suite-shell animate-fade-in">
       <CorporateIntakeWizard
-        onComplete={integration.intake.execute}
+        orderId={workspace?.orderId}
+        onComplete={handleComplete}
         submitting={integration.intake.isLoading}
         error={integration.intake.error}
         onRetry={() => { void integration.intake.retry().catch(() => undefined); }}

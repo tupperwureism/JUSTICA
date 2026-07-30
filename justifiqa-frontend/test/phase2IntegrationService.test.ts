@@ -91,6 +91,7 @@ class FakeGateway implements Phase2IntegrationGateway {
   clientWorkspace: ClientCorporateWorkspace | null = clientWorkspace;
   notaryWorkspace: NotaryWorkspace | null = notaryWorkspace;
   ekycWorkspace: EkycWorkspace | null = ekycWorkspace;
+  invokeError: string | null = null;
 
   async getActor() {
     return this.actor;
@@ -120,6 +121,17 @@ class FakeGateway implements Phase2IntegrationGateway {
     }
     return { assessmentId: input.assessmentId, replayed: false };
   }
+
+  async invokeCorporateIntake(_payload: {
+    orderId: string;
+    idempotencyKey: string;
+    [key: string]: unknown;
+  }) {
+    return {
+      data: null,
+      error: { code: this.invokeError ?? 'INVALID_PAYLOAD' },
+    };
+  }
 }
 
 const intakeDraft = {
@@ -142,26 +154,52 @@ const intakeDraft = {
   beneficialOwners: [{
     naturalPersonName: 'Budi Santoso',
     identityReference: 'NIK-TEST-102',
+    evidenceReference: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     controlBasis: 'OWNERSHIP' as const,
     percentage: '100',
   }],
+  paymentGatewayRef: 'PG-TEST-101',
   acceptedScope: true,
 };
 
-test('corporate intake validates the client and refuses a fake browser success', async () => {
+test('corporate intake validates the client and refuses invalid gateway responses', async () => {
   const gateway = new FakeGateway();
+  gateway.invokeError = 'INVALID_PAYLOAD';
   const service = createPhase2IntegrationService(gateway);
-
-  await assert.rejects(
-    service.submitCorporateIntake(intakeDraft),
-    (error) => error instanceof Phase2IntegrationError
-      && error.code === 'BROWSER_BOUNDARY_UNAVAILABLE',
-  );
 
   gateway.actor = NOTARY;
   await assert.rejects(
-    service.submitCorporateIntake(intakeDraft),
+    service.submitCorporateIntake({
+      draft: intakeDraft,
+      orderId: '11111111-1111-4111-8111-111111111111',
+      idempotencyKey: 'k-1',
+    }),
     (error) => error instanceof Phase2IntegrationError && error.code === 'ROLE_FORBIDDEN',
+  );
+
+  gateway.actor = CLIENT;
+  await assert.rejects(
+    service.submitCorporateIntake({
+      draft: intakeDraft,
+      orderId: '11111111-1111-4111-8111-111111111111',
+      idempotencyKey: 'k-1',
+    }),
+    (error) => error instanceof Phase2IntegrationError && error.code === 'INVALID_PAYLOAD',
+  );
+});
+
+test('corporate intake surfaces idempotency conflict from gateway', async () => {
+  const gateway = new FakeGateway();
+  gateway.actor = CLIENT;
+  gateway.invokeError = 'IDEMPOTENCY_CONFLICT';
+  const service = createPhase2IntegrationService(gateway);
+  await assert.rejects(
+    service.submitCorporateIntake({
+      draft: intakeDraft,
+      orderId: '11111111-1111-4111-8111-111111111111',
+      idempotencyKey: 'k-1',
+    }),
+    (error) => error instanceof Phase2IntegrationError && error.code === 'INTAKE_IDEMPOTENCY_CONFLICT',
   );
 });
 
