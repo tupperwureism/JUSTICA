@@ -13,7 +13,7 @@ Dokumen ini berisi kumpulan kode PlantUML untuk diagram Use Case pada dua aplika
 ---
 
 ### 1. Use Case Diagram - Aplikasi Mandiri Justifiqa (Domain Hukum)
-*Representasi sistem mandiri Justifiqa yang mencakup seluruh alur pengguna (Klien, Advokat, Admin Justifiqa, dan Payment Gateway) dari registrasi, konsultasi hukum, e-Meterai, pro bono, hingga manajemen administratif independen.*
+*Representasi sistem mandiri Justifiqa yang mencakup seluruh alur pengguna (Klien, Advokat, Notaris, Admin Justifiqa, Escrow System, CV AI, Payment Gateway) dari registrasi, konsultasi hukum, e-Meterai, pro bono, corporate intake, notary stamping, e-KYC forensik, hingga manajemen administratif independen.*
 
 ```plantuml
 @startuml
@@ -22,9 +22,13 @@ skinparam packageStyle rectangle
 
 actor "Klien (Pencari Keadilan)" as Klien
 actor "Advokat / Notaris (Mitra Profesional)" as Mitra
+actor "Klien Korporat (Pendirian PT/CV)" as CorpClient
+actor "Notaris Terdaftar" as Notaris
 actor "Admin Justifiqa (System & Legal Admin)" as Admin
 actor "Payment Gateway" as PG
 actor "API Mekari Sign (Peruri)" as Mekari
+actor "Escrow System" as Escrow
+actor "Computer Vision AI (Forensic Verification)" as CVAI
 
 rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   ' Client & Partner Core Flows
@@ -47,6 +51,14 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   usecase "J-UC15: Pengajuan Konsultasi Pro Bono (Verifikasi SKTM)" as UC15
   usecase "J-UC22: Mengisi Saldo Dompet Advokat (Top-Up)" as UC22
   
+  ' Phase 2: Corporate Intake, Notary & e-KYC
+  usecase "J-UC23: Mendirikan PT/CV Berstandar PPATK (Corporate Intake)" as UC23
+  usecase "J-UC24: Notary Stamping & Submission AHU/OSS" as UC24
+  usecase "J-UC25: e-KYC Forensik Multi-Pihak (Computer Vision AI)" as UC25
+  usecase "J-UC26: Escrow Lock, TTL 7 Hari & Global Halt" as UC26
+  usecase "J-UC27: Submission AHU/OSS Rejection Loop & Rekonsiliasi" as UC27
+  usecase "J-UC28: WORM Anchoring Dokumen Final & Payout Notaris" as UC28
+  
   ' Independent Admin Flows
   usecase "J-UC20: Autentikasi Portal Backoffice Admin (TOTP 2FA)" as UC20
   usecase "J-UC21: Melaporkan Dugaan Pelanggaran Etik Advokat" as UC21
@@ -59,7 +71,17 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   UC12 .> UC11 : <<extend>>
   UC12 .> UC22 : <<include>>
   UC15 .> UC04 : <<extend>>
-
+  
+  ' Phase 2 Relationships
+  UC23 .> UC24 : <<include>>
+  UC24 .> UC25 : <<include>>
+  UC25 .> UC26 : <<include>>
+  UC26 .> UC27 : <<include>>
+  UC27 .> UC28 : <<include>>
+  UC23 .> UC26 : <<include>>
+  UC24 .> UC26 : <<include>>
+  UC25 .> UC26 : <<include>>
+  
   ' User Access Relationships
   Klien -- UC01
   Klien -- UC02
@@ -71,6 +93,10 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   Klien -- UC13
   Klien -- UC15
   Klien -- UC21
+  
+  CorpClient -- UC23
+  CorpClient -- UC25
+  CorpClient -- UC28
   
   Mitra -- UC04
   Mitra -- UC07
@@ -84,6 +110,10 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   Mitra -- UC19
   Mitra -- UC22
   
+  Notaris -- UC24
+  Notaris -- UC27
+  Notaris -- UC28
+  
   Admin -- UC20
   Admin -- UC16
   Admin -- UC17
@@ -92,7 +122,18 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   UC05 -- PG
   UC19 -- PG
   UC22 -- PG
+  
+  UC23 -- Escrow
+  UC24 -- Escrow
+  UC26 -- Escrow
+  UC28 -- Escrow
+  
+  UC25 -- CVAI
+  UC26 -- CVAI
+  
   UC12 -- Mekari
+  UC24 -- Mekari
+  UC28 -- Mekari
 }
 @enduml
 ```
