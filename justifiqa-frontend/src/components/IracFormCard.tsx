@@ -1,6 +1,7 @@
 import React from 'react';
-import { FileText, AlertCircle, Loader2, Sparkles } from 'lucide-react';
+import { AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { IracPresetButtons } from './IracPresetButtons';
 
 export interface PresetFact {
   label: string;
@@ -32,28 +33,7 @@ export const IracFormCard: React.FC<IracFormCardProps> = ({
 }) => {
   return (
     <Card className="max-w-4xl mx-auto p-6 md:p-8 bg-card border border-border shadow-xl space-y-6">
-      <div className="space-y-3">
-        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
-          Pilih Kasus Prasetel Instan (Untuk Uji Coba Cepat):
-        </label>
-        <div className="flex flex-wrap gap-2.5">
-          {presetFacts.map((preset, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => onPresetSelect(preset)}
-              className={`text-xs px-3.5 py-2 rounded-xl border transition-all font-semibold flex items-center gap-2 min-h-[38px] whitespace-nowrap ${
-                caseTitleInput === preset.label
-                  ? 'bg-amber-500/20 border-amber-500 text-amber-600 dark:text-amber-400 shadow-sm'
-                  : 'bg-secondary border-border text-muted-foreground hover:border-primary hover:text-foreground'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5 flex-shrink-0" />
-              <span>{preset.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      <IracPresetButtons presets={presetFacts} selectedLabel={caseTitleInput} onSelect={onPresetSelect} />
 
       <form onSubmit={onSubmit} className="space-y-4 pt-4 border-t border-border">
         {errorMsg && (

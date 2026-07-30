@@ -50,9 +50,8 @@ export const IracSection: React.FC<IracSectionProps> = ({ onProceedToDraft }) =>
     try {
       const result = await MockIracService.analyzeFactsToIrac(factsInput, caseTitleInput);
       setAnalysisResult(result);
-    } catch (err) {
+    } catch {
       setErrorMsg('Gagal melakukan analisis neural IRAC. Silakan coba lagi.');
-      console.error(err);
     } finally {
       setIsAnalyzing(false);
     }
