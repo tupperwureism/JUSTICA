@@ -1,4 +1,4 @@
-# Kumpulan Kode PlantUML - Justica (Domain Hukum)
+# Kumpulan Kode PlantUML - Justifiqa Standalone Application (Domain Hukum)
 
 Dokumen ini berisi kode PlantUML untuk Use Case Diagram **Aplikasi Mandiri Justifiqa** (Platform Konsultasi, Transaksi, Corporate Intake, & Legal-Tek Digital). Seluruh Use Case di sini selaras 1-to-1 dengan **22 Use Case Kanonik + 2 Target Phase 2** pada `TRACEABILITY_MATRIX.md`.
 
@@ -47,6 +47,7 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   
   ' Domain Specific Legal Flows (J-UC13 - J-UC15, J-UC22)
   usecase "J-UC13: Mengunggah Bukti Perkara Zero-Knowledge" as UC13
+  usecase "J-UC14: Merender Draf Kontrak & e-Meterai Peruri" as UC14
   usecase "J-UC15: Mengajukan Konsultasi Pro Bono SKTM" as UC15
   usecase "J-UC22: Top-Up Saldo Dompet Advokat" as UC22
   
@@ -62,10 +63,19 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   usecase "J-UC20: Autentikasi Portal Backoffice Admin (TOTP 2FA)" as UC20
   usecase "J-UC21: Melaporkan Pelanggaran Etik Advokat" as UC21
   
+  ' PlantUML Architectural Notes
+  note right of UC15
+    Permohonan Pro Bono SKTM tetap menerbitkan
+    Invoice/Escrow Ledger Rp0 (J-UC05) untuk pencatatan
+    kuota bulanan advokat & kepatuhan UU 16/2011.
+  end note
+
   ' UML Inclusion & Extension Relationships
   UC04 ..> UC05 : <<include>>
   UC12 ..> UC11 : <<extend>>
-  UC15 ..> UC04 : <<extend>>
+  UC14 ..> UC12 : <<include>>
+  UC15 ..> UC05 : <<include>>
+  UC15 ..> UC04 : <<include>>
   UC23 ..> UC05 : <<include>>
   UC24 ..> UC05 : <<include>>
   
@@ -77,6 +87,7 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   Klien -- UC05
   Klien -- UC06
   Klien -- UC13
+  Klien -- UC14
   Klien -- UC15
   Klien -- UC21
   Klien -- UC23
@@ -91,6 +102,7 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   Mitra -- UC11
   Mitra -- UC12
   Mitra -- UC13
+  Mitra -- UC14
   Mitra -- UC19
   Mitra -- UC22
   Mitra -- UC23
@@ -111,6 +123,7 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   UC23 -- Escrow
   UC24 -- Escrow
   
+  UC14 -- Mekari
   UC23 -- Mekari
   
   UC24 -- CVAI
