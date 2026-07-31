@@ -30,37 +30,42 @@ actor "API Mekari Sign (Peruri)" as Mekari
 actor "Computer Vision AI (Forensic Verification)" as CVAI
 
 rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
-  ' Client & Partner Core Flows (J-UC01 - J-UC12)
-  usecase "J-UC01: Registrasi Akun Klien (Verifikasi NIK Dukcapil)" as UC01
-  usecase "J-UC02: Login Akun Klien (MFA / 2FA)" as UC02
-  usecase "J-UC03: Memilih & Memfilter Katalog Advokat" as UC03
-  usecase "J-UC04: Melakukan Konsultasi Hukum (E2EE Chat)" as UC04
-  usecase "J-UC05: Membayar Biaya Konsultasi Escrow" as UC05
-  usecase "J-UC06: Memberikan Ulasan & Rating Advokat" as UC06
-  
-  usecase "J-UC07: Registrasi Akun Advokat / Notaris" as UC07
-  usecase "J-UC08: Login Akun Advokat / Notaris (MFA / TOTP)" as UC08
-  usecase "J-UC09: Mengatur Status Online & Jam Praktik" as UC09
-  usecase "J-UC10: Melayani Sesi Konsultasi Hukum" as UC10
-  usecase "J-UC11: Membuat Catatan Sesi IRAC Note" as UC11
-  usecase "J-UC12: Membuat & Memfinalisasi Draf Kontrak Hukum Bermeterai (UC12 + UC14 digabung)" as UC12
-  
-  ' Domain Specific Legal Flows (J-UC13 - J-UC15, J-UC22)
-  usecase "J-UC13: Mengunggah Bukti Perkara Zero-Knowledge" as UC13
-  usecase "J-UC15: Mengajukan Konsultasi Pro Bono SKTM" as UC15
-  usecase "J-UC22: Top-Up Saldo Dompet Advokat" as UC22
-  
-  ' Phase 2 Canonical Target Flows (J-UC23 & J-UC24)
-  usecase "J-UC23: Corporate Intake & Notary Stamping PT/CV" as UC23
-  usecase "J-UC24: Transaksi Properti & e-KYC Forensik Multi-Pihak" as UC24
-  
-  ' Independent Admin Flows (J-UC16 - J-UC21)
-  usecase "J-UC16: Memverifikasi Kredensial & Lisensi Advokat" as UC16
-  usecase "J-UC17: Moderasi Etik & Suspend Due Process" as UC17
-  usecase "J-UC18: Memantau Laporan Keuangan Escrow & WORM Log" as UC18
-  usecase "J-UC19: Mencairkan Dana Escrow & PPh 21" as UC19
-  usecase "J-UC20: Autentikasi Portal Backoffice Admin (TOTP 2FA)" as UC20
-  usecase "J-UC21: Melaporkan Pelanggaran Etik Advokat" as UC21
+  ' Use Case clusters grouped by thematic function for visual clarity
+
+  package "Authentication & Discovery" {
+    usecase "J-UC01: Registrasi Akun Klien (Verifikasi NIK Dukcapil)" as UC01
+    usecase "J-UC02: Login Akun Klien (MFA / 2FA)" as UC02
+    usecase "J-UC07: Registrasi Akun Advokat / Notaris" as UC07
+    usecase "J-UC08: Login Akun Advokat / Notaris (MFA / TOTP)" as UC08
+    usecase "J-UC03: Memilih & Memfilter Katalog Advokat" as UC03
+  }
+
+  package "Konsultasi & Pembayaran" {
+    usecase "J-UC04: Melakukan Konsultasi Hukum (E2EE Chat)" as UC04
+    usecase "J-UC05: Membayar Biaya Konsultasi Escrow" as UC05
+    usecase "J-UC10: Melayani Sesi Konsultasi Hukum" as UC10
+    usecase "J-UC15: Mengajukan Konsultasi Pro Bono SKTM" as UC15
+  }
+
+  package "Deliverable Pro Tier (Premium IRAC + Pro Document)" {
+    usecase "J-UC06: Memberikan Ulasan & Rating Advokat" as UC06
+    usecase "J-UC09: Mengatur Status Online & Jam Praktik" as UC09
+    usecase "J-UC11: Membuat Catatan Sesi IRAC Note" as UC11
+    usecase "J-UC12: Membuat & Memfinalisasi Draf Kontrak Hukum Bermeterai (UC12 + UC14 digabung)" as UC12
+    usecase "J-UC13: Mengunggah Bukti Perkara Zero-Knowledge" as UC13
+    usecase "J-UC22: Top-Up Saldo Dompet Advokat" as UC22
+  }
+
+  package "Compliance, Admin & Phase 2" {
+    usecase "J-UC16: Memverifikasi Kredensial & Lisensi Advokat" as UC16
+    usecase "J-UC17: Moderasi Etik & Suspend Due Process" as UC17
+    usecase "J-UC18: Memantau Laporan Keuangan Escrow & WORM Log" as UC18
+    usecase "J-UC19: Mencairkan Dana Escrow & PPh 21" as UC19
+    usecase "J-UC20: Autentikasi Portal Backoffice Admin (TOTP 2FA)" as UC20
+    usecase "J-UC21: Melaporkan Pelanggaran Etik Advokat" as UC21
+    usecase "J-UC23: Corporate Intake & Notary Stamping PT/CV" as UC23
+    usecase "J-UC24: Transaksi Properti & e-KYC Forensik Multi-Pihak" as UC24
+  }
   
   ' PlantUML Architectural Notes
   note right of UC15
