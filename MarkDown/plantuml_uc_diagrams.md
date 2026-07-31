@@ -43,11 +43,10 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   usecase "J-UC09: Mengatur Status Online & Jam Praktik" as UC09
   usecase "J-UC10: Melayani Sesi Konsultasi Hukum" as UC10
   usecase "J-UC11: Membuat Catatan Sesi IRAC Note" as UC11
-  usecase "J-UC12: Membuat Draf Opini Hukum / Kontrak" as UC12
+  usecase "J-UC12: Membuat & Memfinalisasi Draf Kontrak Hukum Bermeterai (UC12 + UC14 digabung)" as UC12
   
   ' Domain Specific Legal Flows (J-UC13 - J-UC15, J-UC22)
   usecase "J-UC13: Mengunggah Bukti Perkara Zero-Knowledge" as UC13
-  usecase "J-UC14: Merender Draf Kontrak & e-Meterai Peruri" as UC14
   usecase "J-UC15: Mengajukan Konsultasi Pro Bono SKTM" as UC15
   usecase "J-UC22: Top-Up Saldo Dompet Advokat" as UC22
   
@@ -72,8 +71,10 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
 
   ' UML Inclusion & Extension Relationships
   UC04 ..> UC05 : <<include>>
+  UC04 ..> UC11 : <<extend>>
+  UC11 ..> UC04 : <<include>>
+  UC11 ..> UC12 : <<extend>>
   UC12 ..> UC11 : <<include>>
-  UC12 ..> UC14 : <<include>>
   UC15 ..> UC05 : <<include>>
   UC15 ..> UC04 : <<include>>
   UC23 ..> UC05 : <<include>>
@@ -87,7 +88,6 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   Klien -- UC05
   Klien -- UC06
   Klien -- UC13
-  Klien -- UC14
   Klien -- UC15
   Klien -- UC21
   Klien -- UC23
@@ -102,7 +102,6 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   Mitra -- UC11
   Mitra -- UC12
   Mitra -- UC13
-  Mitra -- UC14
   Mitra -- UC19
   Mitra -- UC22
   Mitra -- UC23
