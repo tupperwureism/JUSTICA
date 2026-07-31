@@ -13,24 +13,27 @@ Dokumen ini berisi kode PlantUML untuk Use Case Diagram **Aplikasi Mandiri Justi
 ---
 
 ### Use Case Diagram - Aplikasi Mandiri Justifiqa (Domain Hukum)
-*Representasi sistem mandiri Justifiqa yang mencakup seluruh alur pengguna (Klien Hukum, Advokat/Notaris Mitra, Admin Backoffice Justifiqa) beserta sistem eksternal pendukung (Payment Gateway, Escrow System, API Mekari Sign e-Meterai, Computer Vision AI).*
+*Representasi sistem mandiri Justifiqa yang mencakup seluruh alur pengguna (Klien Hukum, Advokat/Notaris Mitra, Admin Backoffice Justifiqa) beserta sistem eksternal pendukung (Payment Gateway, Escrow System, API Mekari Sign e-Meterai, Computer Vision AI). Untuk keterbacaan visual, diagram dipecah menjadi 2 bagian dengan teknik orthogonal lines (linetype ortho) dan spacing lebih longgar.*
+
+#### Diagram 1: User Flows (Klien + Mitra)
+*Alur pengguna dari registrasi hingga delivery dokumen, termasuk konsultasi, pembayaran escrow, dan operasional advokat.*
 
 ```plantuml
-@startuml
+@startuml Diagram-1-User-Flows
 left to right direction
 skinparam packageStyle rectangle
 skinparam rankdir LR
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 80
 
 actor "Klien (Pencari Keadilan)" as Klien
 actor "Advokat / Notaris (Mitra Profesional)" as Mitra
-actor "Admin Justifiqa (System & Legal Admin)" as Admin
 actor "Payment Gateway" as PG
 actor "Escrow System" as Escrow
 actor "API Mekari Sign (Peruri)" as Mekari
-actor "Computer Vision AI (Forensic Verification)" as CVAI
 
-rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
-  ' Use Case clusters grouped by thematic function for visual clarity
+rectangle "Aplikasi Mandiri Justifiqa - User Flows (Klien + Mitra)" {
 
   package "Authentication & Discovery" {
     usecase "J-UC01: Registrasi Akun Klien (Verifikasi NIK Dukcapil)" as UC01
@@ -56,22 +59,16 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
     usecase "J-UC22: Top-Up Saldo Dompet Advokat" as UC22
   }
 
-  package "Compliance, Admin & Phase 2" {
-    usecase "J-UC16: Memverifikasi Kredensial & Lisensi Advokat" as UC16
-    usecase "J-UC17: Moderasi Etik & Suspend Due Process" as UC17
-    usecase "J-UC18: Memantau Laporan Keuangan Escrow & WORM Log" as UC18
+  package "Mitra Pencairan" {
     usecase "J-UC19: Mencairkan Dana Escrow & PPh 21" as UC19
-    usecase "J-UC20: Autentikasi Portal Backoffice Admin (TOTP 2FA)" as UC20
-    usecase "J-UC21: Melaporkan Pelanggaran Etik Advokat" as UC21
-    usecase "J-UC23: Corporate Intake & Notary Stamping PT/CV" as UC23
-    usecase "J-UC24: Transaksi Properti & e-KYC Forensik Multi-Pihak" as UC24
   }
-  
+
   ' PlantUML Architectural Notes
   note right of UC15
-    Permohonan Pro Bono SKTM tetap menerbitkan
-    Invoice/Escrow Ledger Rp0 (J-UC05) untuk pencatatan
-    kuota bulanan advokat & kepatuhan UU 16/2011.
+    Pro Bono SKTM tetap menerbitkan
+    Invoice/Escrow Ledger Rp0 (J-UC05)
+    untuk pencatatan kuota advokat &
+    kepatuhan UU 16/2011.
   end note
 
   ' UML Inclusion & Extension Relationships
@@ -82,9 +79,7 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   UC12 ..> UC11 : <<include>>
   UC15 ..> UC05 : <<include>>
   UC15 ..> UC04 : <<include>>
-  UC23 ..> UC05 : <<include>>
-  UC24 ..> UC05 : <<include>>
-  
+
   ' Primary Actor Associations (Klien)
   Klien -- UC01
   Klien -- UC02
@@ -94,10 +89,7 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   Klien -- UC06
   Klien -- UC13
   Klien -- UC15
-  Klien -- UC21
-  Klien -- UC23
-  Klien -- UC24
-  
+
   ' Primary Actor Associations (Mitra Advokat / Notaris)
   Mitra -- UC04
   Mitra -- UC07
@@ -109,27 +101,83 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   Mitra -- UC13
   Mitra -- UC19
   Mitra -- UC22
-  Mitra -- UC23
-  Mitra -- UC24
-  
-  ' Admin Backoffice Associations
-  Admin -- UC16
-  Admin -- UC17
-  Admin -- UC18
-  Admin -- UC20
-  
+
   ' Supporting System Relationships
   UC05 -- PG
   UC19 -- PG
   UC22 -- PG
-  
+
   UC05 -- Escrow
+
+  UC12 -- Mekari
+}
+@enduml
+```
+
+#### Diagram 2: Admin Backoffice & Phase 2
+*Alur admin backoffice (verifikasi kredensial, moderasi etik, laporan keuangan, autentikasi portal), pelaporan etik dari klien, dan fitur Phase 2 (Corporate Intake, e-KYC Forensik).*
+
+```plantuml
+@startuml Diagram-2-Admin-Phase2
+left to right direction
+skinparam packageStyle rectangle
+skinparam rankdir LR
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 80
+
+actor "Klien (Pencari Keadilan)" as Klien
+actor "Advokat / Notaris (Mitra Profesional)" as Mitra
+actor "Admin Justifiqa (System & Legal Admin)" as Admin
+actor "Escrow System" as Escrow
+actor "API Mekari Sign (Peruri)" as Mekari
+actor "Computer Vision AI (Forensic Verification)" as CVAI
+
+rectangle "Aplikasi Mandiri Justifiqa - Admin Backoffice & Phase 2" {
+
+  package "Compliance & Admin Backoffice" {
+    usecase "J-UC16: Memverifikasi Kredensial & Lisensi Advokat" as UC16
+    usecase "J-UC17: Moderasi Etik & Suspend Due Process" as UC17
+    usecase "J-UC18: Memantau Laporan Keuangan Escrow & WORM Log" as UC18
+    usecase "J-UC20: Autentikasi Portal Backoffice Admin (TOTP 2FA)" as UC20
+  }
+
+  package "Phase 2 - Corporate & e-KYC" {
+    usecase "J-UC21: Melaporkan Pelanggaran Etik Advokat" as UC21
+    usecase "J-UC23: Corporate Intake & Notary Stamping PT/CV" as UC23
+    usecase "J-UC24: Transaksi Properti & e-KYC Forensik Multi-Pihak" as UC24
+  }
+
+  ' PlantUML Architectural Notes
+  note top of UC21
+    UC21 (Pelaporan Etik) diprakarsai Klien
+    lalu dialihkan ke Admin (J-UC17) untuk investigasi.
+  end note
+
+  note top of UC23
+    UC23 & UC24 mewajibkan escrow lock
+    terlebih dahulu (lihat J-UC05 di Diagram 1).
+  end note
+
+  ' Primary Actor Associations
+  Klien -- UC21
+  Klien -- UC23
+  Klien -- UC24
+
+  Mitra -- UC23
+  Mitra -- UC24
+
+  Admin -- UC16
+  Admin -- UC17
+  Admin -- UC18
+  Admin -- UC20
+
+  ' Supporting System Relationships
   UC23 -- Escrow
   UC24 -- Escrow
-  
-  UC12 -- Mekari
+
   UC23 -- Mekari
-  
+
   UC24 -- CVAI
 }
 @enduml
