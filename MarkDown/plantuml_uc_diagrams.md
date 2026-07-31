@@ -72,8 +72,8 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
 
   ' UML Inclusion & Extension Relationships
   UC04 ..> UC05 : <<include>>
-  UC12 ..> UC11 : <<extend>>
-  UC14 ..> UC12 : <<include>>
+  UC12 ..> UC11 : <<include>>
+  UC12 ..> UC14 : <<include>>
   UC15 ..> UC05 : <<include>>
   UC15 ..> UC04 : <<include>>
   UC23 ..> UC05 : <<include>>
@@ -123,7 +123,7 @@ rectangle "Aplikasi Mandiri Justifiqa (Domain Hukum)" {
   UC23 -- Escrow
   UC24 -- Escrow
   
-  UC14 -- Mekari
+  UC12 -- Mekari
   UC23 -- Mekari
   
   UC24 -- CVAI
