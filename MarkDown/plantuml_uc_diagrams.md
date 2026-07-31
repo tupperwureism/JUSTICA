@@ -77,7 +77,6 @@ rectangle "Aplikasi Mandiri Justifiqa - User Flows (Klien + Mitra)" {
   UC11 ..> UC04 : <<include>>
   UC11 ..> UC12 : <<extend>>
   UC12 ..> UC11 : <<include>>
-  UC15 ..> UC05 : <<include>>
   UC15 ..> UC04 : <<include>>
 
   ' Primary Actor Associations (Klien)
