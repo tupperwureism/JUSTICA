@@ -24,9 +24,9 @@ Dokumen ini berisi kumpulan kode PlantUML untuk seluruh Sequence Diagram pada du
 
 ## Target-Service Mapping
 
-Tabel ini memetakan setiap diagram Sequence Diagram ke **target capability Supabase** (bukan klaim status implementasi). Setiap baris adalah **1-to-1 dengan AD** (lihat `plantuml_activity_diagrams.md`). Status implementasi aktual — `TARGET` / `PARTIAL` / `IMPLEMENTED` / `DEPRECATED` — disepakati hanya ada di `TRACEABILITY_MATRIX.md — BAGIAN III.B`.
+Tabel ini memetakan setiap diagram Sequence Diagram **aktif** (domain Justifiqa + Phase 2) ke **target capability Supabase** (bukan klaim status implementasi). Setiap baris adalah **1-to-1 dengan AD** (lihat `plantuml_activity_diagrams.md`). Status implementasi aktual — `IMPLEMENTED` / `PARTIAL` / `DEPRECATED` / `OUT_OF_SCOPE` (serta `TARGET` untuk sisa roadmap aktif yang belum ada evidence) — disepakati hanya ada di `TRACEABILITY_MATRIX.md — BAGIAN III.B.1`. Mapping Qualifa dipindahkan ke subsection arsip di bawah karena **bukan roadmap aktif** (lihat `Archived Qualifa Reference Mapping — OUT OF SCOPE`).
 
-| Diagram ID | Use Case | Target Supabase Capability | Target Adapter / Seam |
+| Diagram ID | Use Case | Target Supabase Capability | Target Adapter/Seam |
 |---|---|---|---|
 | **SD-J-01** | J-UC01, J-UC07 (Registrasi) | GoTrue + PostgREST + RPC verify credential | Trigger auto-create profile via DB trigger |
 | **SD-J-02** | J-UC02, J-UC08 (Login) | GoTrue + RPC OTP + Edge Function sender | MFA via custom Edge Function |
@@ -47,6 +47,27 @@ Tabel ini memetakan setiap diagram Sequence Diagram ke **target capability Supab
 | **SD-J-22** | J-UC22 (Top-Up) | Edge Fn create-topup + Payment Gateway webhook | Idempotency via DB unique constraint |
 | **SD-P2-01** | UC-23 (Corporate Intake) | PostgREST + Edge Fn corporate-* + Storage + WORM | Multi-step atomic via RPC transaction |
 | **SD-P2-02** | UC-24 (Property e-KYC) | PostgREST + Edge Fn kyc-* + Storage + Realtime | TTL watchdog via pg_cron |
+
+**Status implementasi:** lihat `TRACEABILITY_MATRIX.md — BAGIAN III.B.1` untuk status `IMPLEMENTED` / `PARTIAL` / `DEPRECATED` / `OUT_OF_SCOPE` (serta `TARGET` untuk sisa roadmap aktif yang belum ada evidence) per diagram dan bukti kode.
+
+**Catatan penamaan diagram:** SD-J-14 (J-UC14: Pembubuhan e-Meterai Peruri) secara eksplisit **dilebur ke dalam SD-J-06** sebagai alur kerja terpadu (*Platform-Facilitated Stamping*). Header `### SD-J-14: [DILEBUR KE DALAM SD-J-06]` dipertahankan sebagai penanda referensi, bukan sebagai diagram mandiri. Tabel mapping aktif memuat **19 baris** (18 diagram mandiri Justifiqa/Phase 2 + 1 stub `SD-J-14`). Bersama **12 entri arsip Qualifa** (`SD-Q-01`..`SD-Q-11`, `SD-Q-20`) = **31 logical mapping entries**. Karena `SD-J-14` adalah stub merger (tidak dirender), jumlah diagram yang benar-benar dirender adalah **30** (18 Justifiqa/Phase 2 + 12 Qualifa). Per `TRACEABILITY_MATRIX.md`, aktif Justifiqa/Phase 2 berstatus `PARTIAL`×18 + `DEPRECATED`×1, dan seluruh 12 entri Qualifa berstatus `OUT_OF_SCOPE`.
+
+**Legend (target capability):**
+- **GoTrue** = Supabase Auth service (`/auth/v1/...`)
+- **PostgREST** = Auto-generated REST API (`/rest/v1/{table}`, `/rest/v1/rpc/{fn}`)
+- **Storage** = File storage (`/storage/v1/object/{bucket}/...`)
+- **Realtime** = WebSocket channels (`/realtime/v1/websocket`)
+- **Edge Fn** = Deno-based serverless (`/functions/v1/{name}`)
+- **WORM** = Append-only audit storage (Storage bucket dengan RLS INSERT-only atau external S3 Object Lock)
+
+### Archived Qualifa Reference Mapping — OUT OF SCOPE
+
+> **⚠️ ARCHIVED / OUT OF SCOPE — Research provenance only.**
+>
+> Mapping Qualifa di bawah disimpan semata sebagai **historical/research reference**. Domain Qualifa **bukan** roadmap aktif, **bukan** target implementasi Justifiqa, dan **tidak masuk** status implementasi atau Definition of Done Justifiqa. Diagram body Qualifa tetap dipertahankan di bagian diagram untuk provenance; tidak diperbaiki, diperluas, atau diimplementasikan pada batch ini. Status `OUT_OF_SCOPE` resmi ada di `TRACEABILITY_MATRIX.md`.
+
+| Diagram ID | Use Case | Target Supabase Capability | Target Adapter/Seam |
+|---|---|---|---|
 | **SD-Q-01** | Q-UC01, Q-UC07 (Registrasi Q) | GoTrue + PostgREST + RPC STR/HIMPSI verify | Similar pattern dengan SD-J-01 |
 | **SD-Q-02** | Q-UC02, Q-UC08 (Login Q) | GoTrue + Edge Fn OTP | MFA pattern reuse |
 | **SD-Q-03** | Q-UC03-05, Q-UC10 (Konseling Q) | PostgREST + Realtime + Edge Fn payment | Counseling room via Realtime channels |
@@ -60,17 +81,7 @@ Tabel ini memetakan setiap diagram Sequence Diagram ke **target capability Supab
 | **SD-Q-11** | Q-UC18 (Laporan Keuangan Q) | PostgREST + WORM | Read-only materialized view |
 | **SD-Q-20** | Q-UC20 (Admin Q Login TOTP) | GoTrue + Edge Fn TOTP + WORM | Same pattern as SD-J-20 |
 
-**Status implementasi:** lihat `TRACEABILITY_MATRIX.md — BAGIAN III.B` untuk status `TARGET` / `PARTIAL` / `IMPLEMENTED` / `DEPRECATED` per diagram dan bukti kode.
-
-**Catatan penamaan diagram:** SD-J-14 (J-UC14: Pembubuhan e-Meterai Peruri) secara eksplisit **dilebur ke dalam SD-J-06** sebagai alur kerja terpadu (*Platform-Facilitated Stamping*). Header `### SD-J-14: [DILEBUR KE DALAM SD-J-06]` dipertahankan sebagai penanda referensi, bukan sebagai diagram mandiri. Oleh karena itu, total diagram Sequence Diagram mandiri yang dirender adalah **30** (dari 31 ID yang dideklarasikan).
-
-**Legend (target capability):**
-- **GoTrue** = Supabase Auth service (`/auth/v1/...`)
-- **PostgREST** = Auto-generated REST API (`/rest/v1/{table}`, `/rest/v1/rpc/{fn}`)
-- **Storage** = File storage (`/storage/v1/object/{bucket}/...`)
-- **Realtime** = WebSocket channels (`/realtime/v1/websocket`)
-- **Edge Fn** = Deno-based serverless (`/functions/v1/{name}`)
-- **WORM** = Append-only audit storage (Storage bucket dengan RLS INSERT-only atau external S3 Object Lock)
+**Penting:** Tidak ada `SD-Q-22` dan tidak ada `AD-Q-22`. Diagram tersebut tidak ada dalam dokumen ini maupun dalam `plantuml_activity_diagrams.md`. Status `OUT_OF_SCOPE` per diagram Qualifa resmi ada di `TRACEABILITY_MATRIX.md — BAGIAN III.B.1`.
 
 ---
 
@@ -1189,20 +1200,8 @@ deactivate SVC
 deactivate CTRL
 deactivate FE
 
-note over Admin, FE : [Manual Verification] Admin membuka portal resmi Peradi secara langsung & membaca: Status SIPP Aktif/Non-Aktif, Berita Acara Sumpah terakhir, Riwayat Pelanggaran Etik (jika publik)
-Admin -> FE ++ : Input Hasil Verifikasi Manual Peradi (Verdict: Sah/Tidak + Catatan Auditor)
-FE -> CTRL ++ : POST /api/v1/admin/audits/peradi-result (Advocate ID, Verdict, Notes)
-CTRL -> SVC ++ : recordPeradiVerification(advocateId, verdict, notes)
-SVC -> REPO : updatePeradiVerificationResult(advocateId, verdict)
-activate REPO
-REPO --> SVC : 200 OK
-deactivate REPO
-SVC --> CTRL : PeradiVerificationRecorded
-deactivate SVC
-CTRL --> FE : 200 OK
-deactivate CTRL
-FE --> Admin : Hasil Verifikasi Manual Peradi Tersimpan
-deactivate FE
+Admin -> Peradi ++ : Verifikasi Keabsahan Nomor SIPP & Berita Acara Sumpah
+Peradi --> Admin -- : Hasil Verifikasi Status Advokat
 
 alt Kredensial Palsu / Kadaluarsa
     Admin -> FE ++ : Klik Tolak Kredensial & Isi Alasan
@@ -2091,11 +2090,8 @@ loop [Maksimal 3x Percobaan Pembayaran & Verifikasi Webhook]
         activate Mitra
         BE -> Mitra : Kirim Push Notification Jadwal Sesi Baru
         deactivate BE
-        BE -> FE ++ : Realtime SSE/WebSocket Push Payment Status = PAID
-        FE --> Klien : Tampilkan Status Pembayaran Sukses & Lanjut ke Sesi Konseling
-        deactivate FE
-        deactivate BE
-        note over Klien, FE : [BREAK LOOP: Pembayaran Sukses Lanjut ke Sesi Konseling]
+        PG --> Klien : 200 OK (Payment Status Verified)
+        note over Klien, PG : [BREAK LOOP: Pembayaran Sukses Lanjut ke Sesi Konseling]
 
         note over Klien, Mitra : Sesi Konseling Klinis Dimulai Sesuai Waktu Reservasi
     else Webhook Status Transaksi = FAILED / EXPIRED / CANCELLED
@@ -2103,11 +2099,8 @@ loop [Maksimal 3x Percobaan Pembayaran & Verifikasi Webhook]
         BE -> BE ++ : Batalkan Invoice & Update Booking Status = CANCELLED
         BE --> BE -- : Return Computed Result / State
         BE --> PG -- : 200 OK (Webhook Processed)
-        BE -> FE ++ : Realtime SSE/WebSocket Push Payment Status = FAILED
-        FE --> Klien : Tampilkan Error Pembayaran Gagal & Opsi Bayar Ulang
-        deactivate FE
-        deactivate BE
-        
+        PG --> Klien : 402 Payment Required / 400 Payment Failed
+
         opt [Pengguna Meminta Bayar Ulang / Ganti Metode Pembayaran]
             Klien -> FE : Pilih Ulang Metode Pembayaran / Ganti Jadwal
             FE -> BE : POST /api/v1/counseling/retry-payment (Booking ID, New Method)
@@ -2358,15 +2351,8 @@ Admin -> FE ++ : Buka Antrean Verifikasi Psikolog Baru
 FE -> BE ++ : GET /api/v1/admin/audits/psychologists (Pending List)
 BE --> FE -- : Return Dokumen STR, SIPP, & Kartu HIMPSI
 FE --> Admin : Tampilkan Dokumen STR & HIMPSI
-note over Admin, FE : [Manual Verification] Admin membuka portal resmi HIMPSI secara langsung & membaca: Status STR Aktif/Non-Aktif, Status Keanggotaan HIMPSI, Riwayat Pelanggaran Kode Etik (jika publik)
-Admin -> FE ++ : Input Hasil Verifikasi Manual HIMPSI (Verdict: Sah/Tidak + Catatan Auditor)
-FE -> BE ++ : POST /api/v1/admin/audits/himpsi-result (Psychologist ID, Verdict, Notes)
-BE -> DB ++ : recordHimpsiVerification(psychologistId, verdict, notes)
-DB --> BE -- : 200 OK (Success / Rows Affected)
-BE --> FE : 200 OK
-deactivate BE
-FE --> Admin : Hasil Verifikasi Manual HIMPSI Tersimpan
-deactivate FE
+Admin -> HIMPSI ++ : Cek Keabsahan STR & Status Keanggotaan HIMPSI
+HIMPSI --> Admin : Hasil Verifikasi Status STR
 
 alt STR Tidak Sah / Kadaluarsa
     Admin -> FE ++ : Tolak Verifikasi & Isi Alasan
@@ -2378,15 +2364,14 @@ activate Mitra
     BE --> FE : 200 OK (Status Rejected)
     FE --> Admin : Notifikasi Penolakan Terkirim
 else STR Sah & Aktif
-    Admin -> FE ++ : Setujui Verifikasi
-    FE -> BE ++ : POST /api/v1/admin/audits/approve (Psychologist ID)
+    Admin -> FE : Setujui Verifikasi
+    FE -> BE : POST /api/v1/admin/audits/approve (Psychologist ID)
     BE -> DB ++ : Update Status = AKTIF / VERIFIED
     DB --> BE -- : 200 OK (Success / Rows Affected)
     BE -> Mitra ++ : Kirim Email Selamat Datang & Panduan Etik
     BE --> FE : 200 OK (Status Approved)
     FE --> Admin : Notifikasi Persetujuan Terkirim
     deactivate BE
-    deactivate FE
 end
 
 note over Admin, Mitra : Alur Pemeriksaan Pelanggaran Kode Etik / Malpraktik

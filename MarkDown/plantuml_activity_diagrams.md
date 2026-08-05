@@ -1038,6 +1038,10 @@ endif
 
 ## BAGIAN II: ACTIVITY DIAGRAMS - APLIKASI MANDIRI QUALIFA (DOMAIN PSIKOLOGI)
 
+> **⚠️ ARCHIVED / OUT OF SCOPE — Research provenance only.**
+>
+> Seluruh Activity Diagram Qualifa (`AD-Q-01`..`AD-Q-11`, `AD-Q-20`) di bawah adalah **historical / research reference** semata. Domain Qualifa **bukan** roadmap aktif, **bukan** target implementasi Justifiqa, dan **tidak masuk** status implementasi atau Definition of Done Justifiqa. Diagram body tetap dipertahankan apa adanya untuk provenance — **tidak diperbaiki, diperluas, atau diimplementasikan** pada batch ini. Status `OUT_OF_SCOPE` resmi per diagram ada di `MarkDown/TRACEABILITY_MATRIX.md — BAGIAN III.B.1`. Disclaimer **TARGET ARCHITECTURE** pada header dokumen ini tetap berlaku untuk seluruh diagram (termasuk arsip Qualifa) sebagai representasi alur bisnis target, bukan as-built documentation.
+
 ### AD-Q-01: Registrasi Akun Klien & Psikolog Klinis (Q-UC01, Q-UC07)
 *Diagram alur pendaftaran akun mandiri Klien dan Psikolog Klinis (verifikasi STR & SIPP HIMPSI) di platform Qualifa.*
 
