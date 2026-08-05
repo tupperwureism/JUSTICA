@@ -4,6 +4,16 @@ Dokumen ini berisi kumpulan kode PlantUML untuk seluruh Activity Diagram pada du
 
 ---
 
+> **⚠️ STATUS: TARGET ARCHITECTURE**
+>
+> Diagram dalam dokumen ini mendeskripsikan **arsitektur target / alur bisnis utama yang dimaksudkan**. Aktivitas yang ditampilkan murni berupa keputusan bisnis, swimlane peran, dan alur pengulangan/exception handling. Diagram ini **bukan as-built documentation** dan tidak menegaskan bahwa setiap adapter/seam saat ini telah ada.
+>
+> Implementasi aktual (as-built) menggunakan **Supabase BaaS** (PostgREST, GoTrue, Storage, Realtime, Edge Functions). Pemetaan target capability dan status implementasi aktual **hanya** ada di `MarkDown/TRACEABILITY_MATRIX.md`.
+>
+> **Untuk presentasi:** diagram AMAN dipamerkan sebagai representasi alur bisnis target. Setiap penyebutan `API Mekari Sign`, `Payment Gateway`, `WORM Storage` di AD adalah referensi dependency eksternal target, bukan endpoint internal yang sudah ter-deploy.
+
+---
+
 ## Cara Import ke Draw.io
 1. Buka Draw.io (`app.diagrams.net`).
 2. Pada toolbar bagian atas, klik tombol **+ (Insert)** atau pilih menu **Arrange -> Insert**.

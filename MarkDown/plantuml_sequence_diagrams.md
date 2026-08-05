@@ -4,11 +4,73 @@ Dokumen ini berisi kumpulan kode PlantUML untuk seluruh Sequence Diagram pada du
 
 ---
 
+> **⚠️ STATUS: TARGET ARCHITECTURE**
+>
+> Diagram dalam dokumen ini mendeskripsikan **arsitektur target / alur bisnis yang dimaksudkan**. Penyebutan endpoint konseptual `/api/v1/...` adalah **konsep target endpoint** (kontrak desain Business Logic Layer), bukan klaim bahwa endpoint tersebut sudah ter-deploy saat ini. Diagram ini **bukan as-built documentation** dan tidak menegaskan bahwa setiap adapter/seam saat ini telah ada.
+>
+> Status implementasi aktual (as-built) — termasuk sejauh mana target capability, adapter, atau seam sudah diwujudkan — **hanya** tertulis di `MarkDown/TRACEABILITY_MATRIX.md`. Tabel *Target-Service Mapping* di bawah memetakan diagram ke **target** Supabase capability, bukan ke status implementasi.
+>
+> **Untuk presentasi:** diagram aman dipamerkan sebagai representasi alur bisnis target. Untuk developer/auditor, lihat `TRACEABILITY_MATRIX.md — BAGIAN III.B` untuk status implementasi aktual dan bukti kode.
+
+---
+
 ## Cara Import ke Draw.io
 1. Buka Draw.io (`app.diagrams.net`).
 2. Pada toolbar bagian atas, klik tombol **+ (Insert)** atau pilih menu **Arrange -> Insert**.
 3. Pilih **Advanced -> PlantUML...**.
 4. Salin dan tempel kode di bawah ini, lalu klik **Insert**.
+
+---
+
+## Target-Service Mapping
+
+Tabel ini memetakan setiap diagram Sequence Diagram ke **target capability Supabase** (bukan klaim status implementasi). Setiap baris adalah **1-to-1 dengan AD** (lihat `plantuml_activity_diagrams.md`). Status implementasi aktual — `TARGET` / `PARTIAL` / `IMPLEMENTED` / `DEPRECATED` — disepakati hanya ada di `TRACEABILITY_MATRIX.md — BAGIAN III.B`.
+
+| Diagram ID | Use Case | Target Supabase Capability | Target Adapter / Seam |
+|---|---|---|---|
+| **SD-J-01** | J-UC01, J-UC07 (Registrasi) | GoTrue + PostgREST + RPC verify credential | Trigger auto-create profile via DB trigger |
+| **SD-J-02** | J-UC02, J-UC08 (Login) | GoTrue + RPC OTP + Edge Function sender | MFA via custom Edge Function |
+| **SD-J-03** | J-UC03-05, J-UC10 (Konsultasi+Escrow) | PostgREST + Realtime + Edge Fn webhook + RPC escrow | Fair Clock Engine = pg_cron + Edge Fn |
+| **SD-J-04** | J-UC09 (Slot Kalender) | PostgREST + RPC conflict-check | DB constraint `EXCLUDE USING gist` |
+| **SD-J-05** | J-UC13 (E2EE Upload) | Storage (encrypted-evidence) + RPC key-rotation | Client-side encrypt, server-side blind |
+| **SD-J-06** | J-UC12 (Stamping) | Storage + Edge Fn stamp-document + External (Mekari Sign) + WORM | e-Meterai via Edge Fn outbound call |
+| **SD-J-07** | J-UC15 (Pro Bono SKTM) | PostgREST + RPC SKTM verify | Trigger eligibility check |
+| **SD-J-08** | J-UC11 (IRAC Note) | PostgREST + Storage + RLS policy | Field-level encryption via pgcrypto |
+| **SD-J-09** | J-UC16 (KYC Verifikasi) | PostgREST + Edge Fn audit-decision + WORM | Manual review via Admin Portal |
+| **SD-J-10** | J-UC17 (Due Process Suspend) | PostgREST + RPC + Edge Fn suspend-account + WORM | State machine via DB trigger |
+| **SD-J-11** | J-UC19 (Pencairan+PPh21) | PostgREST + Edge Fn payout-pph21 | PPh 21 calc via Edge Fn |
+| **SD-J-12** | J-UC18 (Laporan Keuangan) | PostgREST (read-only) + WORM audit trail | Materialized view untuk dashboard |
+| **SD-J-13** | J-UC06 (Rating) | PostgREST + RPC rating recalculation | Aggregated via DB trigger |
+| **SD-J-14** | — (sudah dilebur ke SD-J-06) | — | Diagram mandiri ditiadakan; J-UC14 dilebur ke SD-J-06 (J-UC12 + J-UC14). Lihat catatan DILEBUR pada header diagram. |
+| **SD-J-20** | J-UC20 (Admin Login TOTP) | GoTrue + Edge Fn verify-totp + WORM | TOTP via Edge Fn |
+| **SD-J-21** | J-UC21 (Laporan Etik) | PostgREST + WORM + Edge Fn dispute-triage | Anonymized reporter via RLS |
+| **SD-J-22** | J-UC22 (Top-Up) | Edge Fn create-topup + Payment Gateway webhook | Idempotency via DB unique constraint |
+| **SD-P2-01** | UC-23 (Corporate Intake) | PostgREST + Edge Fn corporate-* + Storage + WORM | Multi-step atomic via RPC transaction |
+| **SD-P2-02** | UC-24 (Property e-KYC) | PostgREST + Edge Fn kyc-* + Storage + Realtime | TTL watchdog via pg_cron |
+| **SD-Q-01** | Q-UC01, Q-UC07 (Registrasi Q) | GoTrue + PostgREST + RPC STR/HIMPSI verify | Similar pattern dengan SD-J-01 |
+| **SD-Q-02** | Q-UC02, Q-UC08 (Login Q) | GoTrue + Edge Fn OTP | MFA pattern reuse |
+| **SD-Q-03** | Q-UC03-05, Q-UC10 (Konseling Q) | PostgREST + Realtime + Edge Fn payment | Counseling room via Realtime channels |
+| **SD-Q-04** | Q-UC09 (Slot Psikolog+Buffer) | PostgREST + RPC buffer-rule validation | Buffer 30 min via DB constraint |
+| **SD-Q-05** | Q-UC13 (Mood Tracker) | PostgREST + Edge Fn proactive-alert | Daily trigger via pg_cron |
+| **SD-Q-06** | Q-UC14 (Audio Meditasi) | Storage (audio) + PostgREST metadata | CDN via Supabase Storage public URL |
+| **SD-Q-07** | Q-UC15 (DASS-21+Crisis 119) | PostgREST + Edge Fn crisis-protocol | Crisis Button = 119 hotline integration |
+| **SD-Q-08** | Q-UC11-12 (DAP Note+CCBT) | PostgREST + Storage + RLS | CCBT worksheet template storage |
+| **SD-Q-09** | Q-UC16-17 (Verifikasi Etik) | PostgREST + Edge Fn ethics-committee | Komite etik workflow |
+| **SD-Q-10** | Q-UC19 (Pencairan Honor Q) | PostgREST + Edge Fn payout-honor | PPh 21 calculation |
+| **SD-Q-11** | Q-UC18 (Laporan Keuangan Q) | PostgREST + WORM | Read-only materialized view |
+| **SD-Q-20** | Q-UC20 (Admin Q Login TOTP) | GoTrue + Edge Fn TOTP + WORM | Same pattern as SD-J-20 |
+
+**Status implementasi:** lihat `TRACEABILITY_MATRIX.md — BAGIAN III.B` untuk status `TARGET` / `PARTIAL` / `IMPLEMENTED` / `DEPRECATED` per diagram dan bukti kode.
+
+**Catatan penamaan diagram:** SD-J-14 (J-UC14: Pembubuhan e-Meterai Peruri) secara eksplisit **dilebur ke dalam SD-J-06** sebagai alur kerja terpadu (*Platform-Facilitated Stamping*). Header `### SD-J-14: [DILEBUR KE DALAM SD-J-06]` dipertahankan sebagai penanda referensi, bukan sebagai diagram mandiri. Oleh karena itu, total diagram Sequence Diagram mandiri yang dirender adalah **30** (dari 31 ID yang dideklarasikan).
+
+**Legend (target capability):**
+- **GoTrue** = Supabase Auth service (`/auth/v1/...`)
+- **PostgREST** = Auto-generated REST API (`/rest/v1/{table}`, `/rest/v1/rpc/{fn}`)
+- **Storage** = File storage (`/storage/v1/object/{bucket}/...`)
+- **Realtime** = WebSocket channels (`/realtime/v1/websocket`)
+- **Edge Fn** = Deno-based serverless (`/functions/v1/{name}`)
+- **WORM** = Append-only audit storage (Storage bucket dengan RLS INSERT-only atau external S3 Object Lock)
 
 ---
 
@@ -1127,8 +1189,20 @@ deactivate SVC
 deactivate CTRL
 deactivate FE
 
-Admin -> Peradi ++ : Verifikasi Keabsahan Nomor SIPP & Berita Acara Sumpah
-Peradi --> Admin -- : Hasil Verifikasi Status Advokat
+note over Admin, FE : [Manual Verification] Admin membuka portal resmi Peradi secara langsung & membaca: Status SIPP Aktif/Non-Aktif, Berita Acara Sumpah terakhir, Riwayat Pelanggaran Etik (jika publik)
+Admin -> FE ++ : Input Hasil Verifikasi Manual Peradi (Verdict: Sah/Tidak + Catatan Auditor)
+FE -> CTRL ++ : POST /api/v1/admin/audits/peradi-result (Advocate ID, Verdict, Notes)
+CTRL -> SVC ++ : recordPeradiVerification(advocateId, verdict, notes)
+SVC -> REPO : updatePeradiVerificationResult(advocateId, verdict)
+activate REPO
+REPO --> SVC : 200 OK
+deactivate REPO
+SVC --> CTRL : PeradiVerificationRecorded
+deactivate SVC
+CTRL --> FE : 200 OK
+deactivate CTRL
+FE --> Admin : Hasil Verifikasi Manual Peradi Tersimpan
+deactivate FE
 
 alt Kredensial Palsu / Kadaluarsa
     Admin -> FE ++ : Klik Tolak Kredensial & Isi Alasan
@@ -1698,7 +1772,7 @@ deactivate CTRL
 FE --> Mitra : Tampilkan Halaman Pembayaran (Snap Checkout UI)
 
 Mitra -> PG ++ : Selesaikan Pembayaran via M-Banking / E-Wallet Eksternal
-PG --> Mitra -- : Tampilkan Status Pembayaran / Redirect ke Aplikasi Dompet
+PG --> Mitra : Tampilkan Status Pembayaran / Redirect ke Aplikasi Dompet
 
 alt Pembayaran Sukses Diterima Payment Gateway
     PG -> CTRL ++ : Webhook Callback (POST /api/v1/webhooks/payment) {order_id, status: 'PAID', signature}
@@ -2017,16 +2091,22 @@ loop [Maksimal 3x Percobaan Pembayaran & Verifikasi Webhook]
         activate Mitra
         BE -> Mitra : Kirim Push Notification Jadwal Sesi Baru
         deactivate BE
-        PG --> Klien : 200 OK (Payment Status Verified)
-        note over Klien, PG : [BREAK LOOP: Pembayaran Sukses Lanjut ke Sesi Konseling]
-        
+        BE -> FE ++ : Realtime SSE/WebSocket Push Payment Status = PAID
+        FE --> Klien : Tampilkan Status Pembayaran Sukses & Lanjut ke Sesi Konseling
+        deactivate FE
+        deactivate BE
+        note over Klien, FE : [BREAK LOOP: Pembayaran Sukses Lanjut ke Sesi Konseling]
+
         note over Klien, Mitra : Sesi Konseling Klinis Dimulai Sesuai Waktu Reservasi
     else Webhook Status Transaksi = FAILED / EXPIRED / CANCELLED
         PG -> BE ++ : Webhook Notification (POST /webhook/payment FAILED / EXPIRED)
         BE -> BE ++ : Batalkan Invoice & Update Booking Status = CANCELLED
         BE --> BE -- : Return Computed Result / State
         BE --> PG -- : 200 OK (Webhook Processed)
-        PG --> Klien : 402 Payment Required / 400 Payment Failed
+        BE -> FE ++ : Realtime SSE/WebSocket Push Payment Status = FAILED
+        FE --> Klien : Tampilkan Error Pembayaran Gagal & Opsi Bayar Ulang
+        deactivate FE
+        deactivate BE
         
         opt [Pengguna Meminta Bayar Ulang / Ganti Metode Pembayaran]
             Klien -> FE : Pilih Ulang Metode Pembayaran / Ganti Jadwal
@@ -2278,8 +2358,15 @@ Admin -> FE ++ : Buka Antrean Verifikasi Psikolog Baru
 FE -> BE ++ : GET /api/v1/admin/audits/psychologists (Pending List)
 BE --> FE -- : Return Dokumen STR, SIPP, & Kartu HIMPSI
 FE --> Admin : Tampilkan Dokumen STR & HIMPSI
-Admin -> HIMPSI ++ : Cek Keabsahan STR & Status Keanggotaan HIMPSI
-HIMPSI --> Admin : Hasil Verifikasi Status STR
+note over Admin, FE : [Manual Verification] Admin membuka portal resmi HIMPSI secara langsung & membaca: Status STR Aktif/Non-Aktif, Status Keanggotaan HIMPSI, Riwayat Pelanggaran Kode Etik (jika publik)
+Admin -> FE ++ : Input Hasil Verifikasi Manual HIMPSI (Verdict: Sah/Tidak + Catatan Auditor)
+FE -> BE ++ : POST /api/v1/admin/audits/himpsi-result (Psychologist ID, Verdict, Notes)
+BE -> DB ++ : recordHimpsiVerification(psychologistId, verdict, notes)
+DB --> BE -- : 200 OK (Success / Rows Affected)
+BE --> FE : 200 OK
+deactivate BE
+FE --> Admin : Hasil Verifikasi Manual HIMPSI Tersimpan
+deactivate FE
 
 alt STR Tidak Sah / Kadaluarsa
     Admin -> FE ++ : Tolak Verifikasi & Isi Alasan
@@ -2291,14 +2378,15 @@ activate Mitra
     BE --> FE : 200 OK (Status Rejected)
     FE --> Admin : Notifikasi Penolakan Terkirim
 else STR Sah & Aktif
-    Admin -> FE : Setujui Verifikasi
-    FE -> BE : POST /api/v1/admin/audits/approve (Psychologist ID)
+    Admin -> FE ++ : Setujui Verifikasi
+    FE -> BE ++ : POST /api/v1/admin/audits/approve (Psychologist ID)
     BE -> DB ++ : Update Status = AKTIF / VERIFIED
     DB --> BE -- : 200 OK (Success / Rows Affected)
     BE -> Mitra ++ : Kirim Email Selamat Datang & Panduan Etik
     BE --> FE : 200 OK (Status Approved)
     FE --> Admin : Notifikasi Persetujuan Terkirim
     deactivate BE
+    deactivate FE
 end
 
 note over Admin, Mitra : Alur Pemeriksaan Pelanggaran Kode Etik / Malpraktik
@@ -2474,10 +2562,10 @@ deactivate Admin
 title SD-P2-01: Corporate Intake & Notary Stamping — BCE 5 Lifeline
 
 actor "Klien / Notaris Terdaftar" as Actor
-boundary "CorporateIntakeUI\n<<Boundary Client>>" as FE
-boundary "CorporateController\n<<Boundary Server>>" as CTRL
-control "CorporateEscrowNotaryService\n<<Control>>" as SVC
-entity "CorporateRepository + DB\n+ WORM Vault <<Entity>>" as REPO
+boundary "CorporateIntakeUI <<Boundary Client>>" as FE
+boundary "CorporateController <<Boundary Server>>" as CTRL
+control "CorporateEscrowNotaryService <<Control>>" as SVC
+entity "CorporateRepository DB WORM Vault <<Entity>>" as REPO
 
 activate Actor
 
@@ -2661,10 +2749,10 @@ deactivate Actor
 title SD-P2-02: Property e-KYC — TTL 7 Hari, Global Halt & Refund — BCE 5 Lifeline
 
 actor "Pihak Transaksi" as Actor
-boundary "PropertySigningUI\n<<Boundary Client>>" as FE
-boundary "PropertyKycController\n<<Boundary Server>>" as CTRL
-control "PropertyKycEscrowService\n<<Control>>" as SVC
-entity "KycEscrowRepository + DB\n+ WORM Vault <<Entity>>" as REPO
+boundary "PropertySigningUI <<Boundary Client>>" as FE
+boundary "PropertyKycController <<Boundary Server>>" as CTRL
+control "PropertyKycEscrowService <<Control>>" as SVC
+entity "KycEscrowRepository DB WORM Vault <<Entity>>" as REPO
 
 activate Actor
 Actor -> FE ++ : [AD02-01] Buat transaksi, pihak, dan e-kertas
@@ -2918,9 +3006,8 @@ loop Untuk setiap pihak sampai semua PASSED
     deactivate FE
   end
 end
-end
 
-note over SVC, REPO
+  note over SVC, REPO
   Watchdog memanggil POST /internal/v1/ekyc/expiry-sweeps
   dan menerima HTTP 204 setelah expireOverdueEnvelopes(now).
   Handler memakai [AD02-15, AD02-17] yang sama, row lock,
