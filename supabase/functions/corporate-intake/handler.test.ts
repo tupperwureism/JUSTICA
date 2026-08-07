@@ -377,3 +377,42 @@ test("response body does not leak SQL stack trace", async () => {
   assert.equal(text.includes("SQLSTATE"), false);
   assert.equal(text.includes("PL/pgSQL"), false);
 });
+
+test("RPC pricing catalog not found maps to 409 PRICING_CATALOG_UNAVAILABLE", async () => {
+  const handler = createCorporateIntakeHandler({
+    verifyUser: async () => userId,
+    callRpc: async () => {
+      const err = new Error("Supabase REST request failed with status 409");
+      (err as Error & { details?: unknown }).details = {
+        code: "P0001",
+        message: "CORPORATE_PRICING_ACTIVE_CATALOG_NOT_FOUND",
+      };
+      throw err;
+    },
+  });
+  const response = await invoke(handler, validPayload);
+  assert.equal(response.status, 409);
+  const text = await response.text();
+  const body = JSON.parse(text) as { code: string; message: string };
+  assert.equal(body.code, "PRICING_CATALOG_UNAVAILABLE");
+  assert.equal(body.message, "Pricing catalog is not available.");
+  assert.equal(text.includes("CORPORATE_PRICING_ACTIVE_CATALOG_NOT_FOUND"), false);
+});
+
+test("RPC unknown error maps to 500 INTAKE_BACKEND_FAILURE", async () => {
+  const handler = createCorporateIntakeHandler({
+    verifyUser: async () => userId,
+    callRpc: async () => {
+      const err = new Error("Supabase REST request failed with status 500");
+      (err as Error & { details?: unknown }).details = {
+        code: "P0001",
+        message: "SOME_OTHER_ERROR",
+      };
+      throw err;
+    },
+  });
+  const response = await invoke(handler, validPayload);
+  assert.equal(response.status, 500);
+  const body = await response.json() as { code: string };
+  assert.equal(body.code, "INTAKE_BACKEND_FAILURE");
+});

@@ -184,7 +184,7 @@ test('corporate intake validates the client and refuses invalid gateway response
       orderId: '11111111-1111-4111-8111-111111111111',
       idempotencyKey: 'k-1',
     }),
-    (error) => error instanceof Phase2IntegrationError && error.code === 'INVALID_PAYLOAD',
+    (error) => error instanceof Phase2IntegrationError && error.code === 'INTAKE_SERVER_UNAVAILABLE',
   );
 });
 
@@ -200,6 +200,38 @@ test('corporate intake surfaces idempotency conflict from gateway', async () => 
       idempotencyKey: 'k-1',
     }),
     (error) => error instanceof Phase2IntegrationError && error.code === 'INTAKE_IDEMPOTENCY_CONFLICT',
+  );
+});
+
+// TDD_RED_MISSED_DUE_INTERRUPTED_WIP: Regression test for PRICING_CATALOG_UNAVAILABLE mapping
+test('corporate intake maps PRICING_CATALOG_UNAVAILABLE from gateway', async () => {
+  const gateway = new FakeGateway();
+  gateway.actor = CLIENT;
+  gateway.invokeError = 'PRICING_CATALOG_UNAVAILABLE';
+  const service = createPhase2IntegrationService(gateway);
+  await assert.rejects(
+    service.submitCorporateIntake({
+      draft: intakeDraft,
+      orderId: '11111111-1111-4111-8111-111111111111',
+      idempotencyKey: 'k-1',
+    }),
+    (error) => error instanceof Phase2IntegrationError && error.code === 'PRICING_CATALOG_UNAVAILABLE',
+  );
+});
+
+// TDD_RED_MISSED_DUE_INTERRUPTED_WIP: Regression test for INTAKE_SERVER_UNAVAILABLE fallback
+test('corporate intake maps unknown gateway error to INTAKE_SERVER_UNAVAILABLE', async () => {
+  const gateway = new FakeGateway();
+  gateway.actor = CLIENT;
+  gateway.invokeError = 'SOME_UNKNOWN_ERROR';
+  const service = createPhase2IntegrationService(gateway);
+  await assert.rejects(
+    service.submitCorporateIntake({
+      draft: intakeDraft,
+      orderId: '11111111-1111-4111-8111-111111111111',
+      idempotencyKey: 'k-1',
+    }),
+    (error) => error instanceof Phase2IntegrationError && error.code === 'INTAKE_SERVER_UNAVAILABLE',
   );
 });
 

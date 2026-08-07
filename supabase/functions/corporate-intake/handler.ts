@@ -327,6 +327,7 @@ function mapIntakeRpcError(error: unknown): HttpError {
   const detail = error instanceof Error && "details" in error
     ? JSON.stringify((error as { details?: unknown }).details)
     : String(error.message);
+
   if (detail.includes("CORPORATE_INTAKE_CLIENT_ACTOR_MISMATCH")) {
     return new HttpError(403, "ACTOR_MISMATCH", "Actor does not match client.");
   }
@@ -355,6 +356,9 @@ function mapIntakeRpcError(error: unknown): HttpError {
     || detail.includes("CORPORATE_INTAKE_IDEMPOTENCY_KEY_INVALID")
   ) {
     return new HttpError(400, "INVALID_PAYLOAD", "Payload was rejected by intake service.");
+  }
+  if (detail.includes("CORPORATE_PRICING_ACTIVE_CATALOG_NOT_FOUND")) {
+    return new HttpError(409, "PRICING_CATALOG_UNAVAILABLE", "Pricing catalog is not available.");
   }
   return new HttpError(500, "INTAKE_BACKEND_FAILURE", "Intake service is unavailable.");
 }

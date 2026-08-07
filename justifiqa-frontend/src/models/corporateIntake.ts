@@ -33,7 +33,6 @@ export type CorporatePartyDraft = {
 
 export type BeneficialOwnerDraft = {
   naturalPersonName: string;
-  identityReference: string;
   evidenceReference?: string;
   controlBasis: BeneficialOwnerControlBasis;
   percentage: string;
@@ -70,7 +69,6 @@ export const createEmptyCorporateParty = (): CorporatePartyDraft => ({
 
 export const createEmptyBeneficialOwner = (): BeneficialOwnerDraft => ({
   naturalPersonName: '',
-  identityReference: '',
   controlBasis: 'OWNERSHIP',
   percentage: '',
 });
@@ -187,22 +185,12 @@ const validateBeneficialOwners = (draft: CorporateIntakeDraft): CorporateIntakeV
   if (!draft.beneficialOwners.length) issues.push(issue('BENEFICIAL_OWNER_REQUIRED', 'Minimal satu pemilik manfaat wajib diisi.'));
   draft.beneficialOwners.forEach((owner, index) => {
     if (!isPresent(owner.naturalPersonName)) issues.push(issue('BENEFICIAL_OWNER_NAME_REQUIRED', `Nama pemilik manfaat pada baris ${index + 1} wajib diisi.`));
-    if (!isPresent(owner.identityReference)) issues.push(issue('BENEFICIAL_OWNER_IDENTITY_REFERENCE_REQUIRED', `Referensi identitas pemilik manfaat pada baris ${index + 1} wajib diisi.`));
     if (!isAllowed(BENEFICIAL_OWNER_CONTROL_BASES, owner.controlBasis)) issues.push(issue('CONTROL_BASIS_INVALID', `Dasar kendali pada baris ${index + 1} tidak valid.`));
     if (!isPercentage(owner.percentage)) issues.push(issue('BENEFICIAL_OWNER_PERCENTAGE_INVALID', `Persentase pemilik manfaat pada baris ${index + 1} harus 0–100.`));
-    if (!isPresent(owner.evidenceReference ?? '')) issues.push(issue('BENEFICIAL_OWNER_EVIDENCE_REQUIRED', `Bukti identitas pemilik manfaat pada baris ${index + 1} wajib diunggah.`));
+    // evidenceReference boleh kosong di client (server akan generate digest saat upload)
   });
-  const beneficialOwnerIdentities = draft.beneficialOwners
-    .map((owner) => owner.identityReference.trim())
-    .filter(Boolean);
-  if (new Set(beneficialOwnerIdentities).size !== beneficialOwnerIdentities.length) {
-    issues.push(issue(
-      'DUPLICATE_BENEFICIAL_OWNER_IDENTITY_REFERENCE',
-      'Referensi identitas pemilik manfaat tidak boleh duplikat.',
-    ));
-  }
   const evidenceReferences = draft.beneficialOwners
-    .map((owner) => (owner.evidenceReference ?? '').trim())
+    .map((owner) => (owner.evidenceReference ?? '').trim().toLowerCase())
     .filter(Boolean);
   if (new Set(evidenceReferences).size !== evidenceReferences.length) {
     issues.push(issue(

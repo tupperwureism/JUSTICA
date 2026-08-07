@@ -102,10 +102,6 @@ export function BeneficialOwnerFields({ owners, onChange, onAdd, onRemove }: Pro
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-2 text-sm font-semibold">Nama orang<Input required value={owner.naturalPersonName} onChange={(event) => updateOwner(index, { naturalPersonName: event.target.value })} className="min-h-10 rounded-xl border-border bg-background" /></label>
-              <label className="space-y-2 text-sm font-semibold">Referensi bukti identitas
-                <Input required aria-describedby={`owner-identity-help-${index}`} value={owner.identityReference} onChange={(event) => updateOwner(index, { identityReference: event.target.value })} className="min-h-10 rounded-xl border-border bg-background" />
-                <span id={`owner-identity-help-${index}`} className="block text-xs font-normal text-muted-foreground">Gunakan referensi bukti terproteksi. Jangan masukkan NIK, nomor KTP, atau data identitas mentah.</span>
-              </label>
               <label className="space-y-2 text-sm font-semibold">Dasar kendali
                 <select value={owner.controlBasis} onChange={(event) => updateOwner(index, { controlBasis: event.target.value as BeneficialOwnerDraft['controlBasis'] })} className="min-h-10 w-full rounded-xl border border-border bg-background px-3 text-sm">
                   {BENEFICIAL_OWNER_CONTROL_BASES.map((basis) => <option key={basis} value={basis}>{controlBasisLabels[basis]}</option>)}

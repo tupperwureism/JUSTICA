@@ -16,13 +16,13 @@ const clientStage = (stage: string): CorporateCaseStage => {
 export function ClientCorporateSuiteTab() {
   const integration = useClientCorporateIntegration();
   const workspace = integration.workspace.data;
-  const handleComplete = (draft: CorporateIntakeDraft, orderId: string, idempotencyKey: string) => {
-    void integration.intake.execute({ draft, orderId, idempotencyKey });
+
+  const handleComplete = (draft: CorporateIntakeDraft) => {
+    void integration.intake.execute(draft);
   };
   return (
     <div className="corporate-suite-shell animate-fade-in">
       <CorporateIntakeWizard
-        orderId={workspace?.orderId}
         onComplete={handleComplete}
         submitting={integration.intake.isLoading}
         error={integration.intake.error}

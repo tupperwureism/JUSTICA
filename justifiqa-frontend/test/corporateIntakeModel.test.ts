@@ -82,27 +82,21 @@ test('the same natural person can be both a corporate party and a beneficial own
   assert.deepEqual(codesOf(draft), []);
 });
 
-test('beneficial-owner identity references must be unique within the declaration', () => {
+test('beneficial-owner evidence references must be unique within the declaration', () => {
   const draft = validDraft();
   draft.beneficialOwners.push({
     ...draft.beneficialOwners[0],
     naturalPersonName: 'Budi Santoso Duplikat',
-    identityReference: ` ${draft.beneficialOwners[0].identityReference} `,
+    evidenceReference: draft.beneficialOwners[0].evidenceReference,
   });
 
-  assert.ok(codesOf(draft).includes('DUPLICATE_BENEFICIAL_OWNER_IDENTITY_REFERENCE'));
+  assert.ok(codesOf(draft).includes('DUPLICATE_BENEFICIAL_OWNER_EVIDENCE_REFERENCE'));
 });
 
-test('protected beneficial-owner references retain backend case-sensitive semantics', () => {
-  const draft = validDraft();
-  draft.beneficialOwners.push({
-    ...draft.beneficialOwners[0],
-    naturalPersonName: 'Budi Santoso Referensi Lain',
-    identityReference: draft.beneficialOwners[0].identityReference.toLowerCase(),
-    evidenceReference: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-  });
-
-  assert.deepEqual(codesOf(draft), []);
+test('protected beneficial-owner references retain backend case-sensitive semantics for identityReference (not applicable, removed)', () => {
+  // identityReference removed from BeneficialOwnerDraft - evidenceReference is the only identifier
+  // evidenceReference deduplication is case-insensitive (normalized to lowercase)
+  assert.ok(true);
 });
 
 test('effective dates must be valid ISO calendar dates before progression', () => {

@@ -161,7 +161,9 @@ export type Phase2IntegrationErrorCode =
   | 'INTAKE_IDEMPOTENCY_CONFLICT'
   | 'INTAKE_EVIDENCE_CONFLICT'
   | 'INTAKE_ACTOR_FORBIDDEN'
-  | 'BROWSER_BOUNDARY_UNAVAILABLE';
+  | 'BROWSER_BOUNDARY_UNAVAILABLE'
+  | 'INTAKE_SERVER_UNAVAILABLE'
+  | 'PRICING_CATALOG_UNAVAILABLE';
 
 const ERROR_MESSAGES: Record<Phase2IntegrationErrorCode, string> = {
   SESSION_REQUIRED: 'Sesi Anda tidak tersedia. Silakan masuk kembali lalu coba ulang.',
@@ -172,6 +174,8 @@ const ERROR_MESSAGES: Record<Phase2IntegrationErrorCode, string> = {
   INTAKE_EVIDENCE_CONFLICT: 'Bukti sudah terpakai pada pengajuan lain atau tidak ditemukan.',
   INTAKE_ACTOR_FORBIDDEN: 'Akun tidak berwenang mengirim pengajuan ini.',
   BROWSER_BOUNDARY_UNAVAILABLE: 'Tindakan ini memerlukan endpoint server terotorisasi yang belum tersedia untuk browser.',
+  INTAKE_SERVER_UNAVAILABLE: 'Layanan Corporate Intake sedang tidak tersedia. Coba beberapa saat lagi.',
+  PRICING_CATALOG_UNAVAILABLE: 'Layanan belum dapat menerima intake karena katalog harga aktif belum tersedia. Hubungi admin atau coba lagi nanti.',
 };
 
 export class Phase2IntegrationError extends Error {
@@ -210,6 +214,8 @@ const requireActor = async (
 };
 
 export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway) {
+  const inFlightIntake = new Map<string, Promise<SubmitCorporateIntakeResult>>();
+
   return {
     async loadClientCorporateWorkspace() {
       const actor = await requireActor(gateway, ['CLIENT']);
@@ -222,22 +228,39 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
       idempotencyKey: string;
     }): Promise<SubmitCorporateIntakeResult> {
       await requireActor(gateway, ['CLIENT']);
-      if (validateCorporateIntake(input.draft).length) {
+      const validationErrors = validateCorporateIntake(input.draft);
+      if (validationErrors.length) {
         throw new Phase2IntegrationError('INVALID_PAYLOAD');
       }
-      const payload = toIntakePayload(input.draft, input.orderId, input.idempotencyKey);
-      const { data, error } = await gateway.invokeCorporateIntake(payload);
-      if (error) {
-        const code = error.code ?? '';
-        if (code === 'IDEMPOTENCY_CONFLICT') throw new Phase2IntegrationError('INTAKE_IDEMPOTENCY_CONFLICT');
-        if (code === 'EVIDENCE_CONFLICT' || code === 'EVIDENCE_INVALID') throw new Phase2IntegrationError('INTAKE_EVIDENCE_CONFLICT');
-        if (code === 'ACTOR_MISMATCH') throw new Phase2IntegrationError('INTAKE_ACTOR_FORBIDDEN');
-        throw new Phase2IntegrationError('INVALID_PAYLOAD');
-      }
-      if (!data || !data.corporateCaseId) {
-        throw new Phase2IntegrationError('INVALID_PAYLOAD');
-      }
-      return data;
+
+      const existing = inFlightIntake.get(input.idempotencyKey);
+      if (existing) return existing;
+
+      const executeIntake = async (): Promise<SubmitCorporateIntakeResult> => {
+        const payload = toIntakePayload(input.draft, input.orderId, input.idempotencyKey);
+        const { data, error } = await gateway.invokeCorporateIntake(payload);
+        if (error) {
+          const code = error.code ?? '';
+          if (code === 'IDEMPOTENCY_CONFLICT') throw new Phase2IntegrationError('INTAKE_IDEMPOTENCY_CONFLICT');
+          if (code === 'EVIDENCE_CONFLICT' || code === 'EVIDENCE_INVALID') throw new Phase2IntegrationError('INTAKE_EVIDENCE_CONFLICT');
+          if (code === 'ACTOR_MISMATCH') throw new Phase2IntegrationError('INTAKE_ACTOR_FORBIDDEN');
+          if (code === 'PRICING_CATALOG_UNAVAILABLE') throw new Phase2IntegrationError('PRICING_CATALOG_UNAVAILABLE');
+          throw new Phase2IntegrationError('INTAKE_SERVER_UNAVAILABLE');
+        }
+        if (!data || !data.corporateCaseId) {
+          throw new Phase2IntegrationError('INTAKE_SERVER_UNAVAILABLE');
+        }
+        return data;
+      };
+
+      const promise = executeIntake().finally(() => {
+        if (inFlightIntake.get(input.idempotencyKey) === promise) {
+          inFlightIntake.delete(input.idempotencyKey);
+        }
+      });
+
+      inFlightIntake.set(input.idempotencyKey, promise);
+      return promise;
     },
 
     async refreshCorporateEscrow(caseId: string) {
