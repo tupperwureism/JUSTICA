@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,26 +12,20 @@ import {
 } from './corporateUiModel';
 
 type Props = {
-  orderId?: string;
-  onComplete?: (
-    draft: CorporateIntakeDraft,
-    orderId: string,
-    idempotencyKey: string,
-  ) => void | Promise<void>;
+  onComplete: (draft: CorporateIntakeDraft) => void | Promise<void>;
   submitting?: boolean;
   error?: string | null;
   onRetry?: () => void;
 };
 
 export function CorporateIntakeWizard({
-  orderId, onComplete, submitting = false, error, onRetry,
+  onComplete, submitting = false, error, onRetry,
 }: Props) {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState(EMPTY_INTAKE_DRAFT);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [localBlocker, setLocalBlocker] = useState<string | null>(null);
-  const idempotencyKey = useMemo(() => crypto.randomUUID(), []);
   const isLast = step === INTAKE_STEPS.length - 1;
+
   const continueFlow = () => {
     const issue = validateCorporateIntakeStep(draft, step);
     if (issue) {
@@ -43,19 +37,13 @@ export function CorporateIntakeWizard({
       setStep((value) => value + 1);
       return;
     }
-    if (!onComplete || !orderId) {
-      setLocalBlocker('Endpoint server terotorisasi untuk Corporate Intake belum tersedia di browser.');
-      return;
-    }
-    void Promise.resolve(onComplete?.(draft, orderId, idempotencyKey)).catch(() => undefined);
+    void Promise.resolve(onComplete(draft)).catch(() => undefined);
   };
 
   const updateDraft = (patch: Partial<CorporateIntakeDraft>) => {
     setDraft((value) => ({ ...value, ...patch }));
     setValidationError(null);
-    setLocalBlocker(null);
   };
-  const displayError = error ?? localBlocker;
 
   return (
     <Card className="mx-auto w-full max-w-4xl gap-6 rounded-2xl border-border bg-card p-6 shadow-md sm:p-8">
@@ -71,7 +59,7 @@ export function CorporateIntakeWizard({
         <Button type="button" size="lg" disabled={submitting} onClick={continueFlow} className="min-h-10 rounded-xl">{isLast ? <Check /> : <ArrowRight />}{submitting ? 'Mengirim intake...' : isLast ? 'Kirim Corporate Intake' : 'Lanjutkan'}</Button>
       </CardFooter>
       {validationError && <p role="alert" className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm">{validationError}</p>}
-      {displayError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm"><span>{displayError}</span>{onRetry && <Button type="button" variant="outline" size="sm" onClick={onRetry} disabled={submitting}>Coba lagi</Button>}</div>}
+      {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm"><span>{error}</span>{onRetry && <Button type="button" variant="outline" size="sm" onClick={onRetry} disabled={submitting}>Coba lagi</Button>}</div>}
     </Card>
   );
 }

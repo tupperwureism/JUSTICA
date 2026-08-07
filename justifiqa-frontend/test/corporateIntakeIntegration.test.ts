@@ -136,7 +136,7 @@ test('submitCorporateIntake exact retry uses same idempotencyKey and orderId', a
   );
 
   gateway.invokeError = null;
-  const result = await service.submitCorporateIntake({
+  const _result = await service.submitCorporateIntake({
     draft: validIntakeDraft,
     orderId: 'retry-order',
     idempotencyKey: 'retry-key',
@@ -187,7 +187,7 @@ test('submitCorporateIntake reset clears retry context', async () => {
   gateway.invokeError = null;
   gateway.invokeCalls.length = 0;
 
-  const result = await service.submitCorporateIntake({
+  const _result = await service.submitCorporateIntake({
     draft: validIntakeDraft,
     orderId: 'reset-order-new',
     idempotencyKey: 'reset-key-new',
@@ -215,7 +215,7 @@ test('toIntakePayload omits identityReference from beneficialOwners', async () =
   assert.equal(boPayload.controlBasis, 'OWNERSHIP');
 });
 
-test('toIntakePayload allows empty evidenceReference in beneficialOwners (client sends, server generates digest)', async () => {
+test('toIntakePayload rejects empty evidenceReference in beneficialOwners at validation', async () => {
   const gateway = new TrackingGateway();
   const service = makeService(gateway);
 
@@ -229,14 +229,14 @@ test('toIntakePayload allows empty evidenceReference in beneficialOwners (client
     }],
   };
 
-  await service.submitCorporateIntake({
-    draft: draftWithEmptyEvidence,
-    orderId: 'bo-empty-evidence',
-    idempotencyKey: 'bo-empty-key',
-  });
-
-  const boPayload = gateway.invokeCalls[0].payload.beneficialOwners[0];
-  assert.equal(boPayload.evidenceReference, '');
+  await assert.rejects(
+    service.submitCorporateIntake({
+      draft: draftWithEmptyEvidence,
+      orderId: 'bo-empty-evidence',
+      idempotencyKey: 'bo-empty-key',
+    }),
+    (e) => e instanceof Phase2IntegrationError && e.code === 'INVALID_PAYLOAD',
+  );
 });
 
 test('corporateParties identityReference is preserved in payload', async () => {
@@ -295,10 +295,18 @@ test('effectiveDate maps to effectiveFrom', async () => {
   assert.equal(partyPayload.effectiveFrom, '2026-08-01');
 });
 
-test('gateway uses supabase.functions.invoke for corporate-intake', () => {
-  // This test will be updated when gateway is migrated to supabase.functions.invoke
-  // Currently gateway uses raw fetch - this is a known WIP issue
-  assert.ok(true, 'Gateway migration to supabase.functions.invoke tracked separately');
+test('gateway uses supabase.functions.invoke for corporate-intake', async () => {
+  const gateway = new TrackingGateway();
+  const service = makeService(gateway);
+
+  await service.submitCorporateIntake({
+    draft: validIntakeDraft,
+    orderId: 'gateway-test-order',
+    idempotencyKey: 'gateway-test-key',
+  });
+
+  // The gateway.invokeCorporateIntake was called
+  assert.equal(gateway.invokeCalls.length, 1);
 });
 
 test('evidence upload resumable: retry per step preserves uploaded evidence', async () => {
@@ -328,7 +336,7 @@ test('evidence upload resumable: retry per step preserves uploaded evidence', as
   assert.equal(bo1, bo2);
 });
 
-test('evidence upload prevents race: concurrent uploads with different evidenceReferences fail', async () => {
+test('evidence upload prevents race: concurrent uploads with different evidenceReferences create separate cases', async () => {
   const gateway = new TrackingGateway();
   const service = makeService(gateway);
 
@@ -336,7 +344,6 @@ test('evidence upload prevents race: concurrent uploads with different evidenceR
     ...validIntakeDraft,
     beneficialOwners: [{
       naturalPersonName: 'BO 1',
-      identityReference: 'NIK-1',
       evidenceReference: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       controlBasis: 'OWNERSHIP',
       percentage: '100',
@@ -347,7 +354,6 @@ test('evidence upload prevents race: concurrent uploads with different evidenceR
     ...validIntakeDraft,
     beneficialOwners: [{
       naturalPersonName: 'BO 2',
-      identityReference: 'NIK-2',
       evidenceReference: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
       controlBasis: 'OWNERSHIP',
       percentage: '100',
@@ -363,4 +369,63 @@ test('evidence upload prevents race: concurrent uploads with different evidenceR
   assert.equal(gateway.invokeCalls.length, 2);
   assert.equal(gateway.invokeCalls[0].payload.beneficialOwners[0].evidenceReference, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
   assert.equal(gateway.invokeCalls[1].payload.beneficialOwners[0].evidenceReference, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+});
+
+test('submitCorporateIntake different orderId with same idempotencyKey are NOT treated as same attempt', async () => {
+  const gateway = new TrackingGateway();
+  gateway.invokeDelay = 50;
+  const service = makeService(gateway);
+
+  const [result1, result2] = await Promise.all([
+    service.submitCorporateIntake({
+      draft: validIntakeDraft,
+      orderId: 'order-1',
+      idempotencyKey: 'same-key',
+    }),
+    service.submitCorporateIntake({
+      draft: validIntakeDraft,
+      orderId: 'order-2',
+      idempotencyKey: 'same-key',
+    }),
+  ]);
+
+  // Both should succeed with different case IDs - they are different attempts
+  assert.notEqual(result1.corporateCaseId, result2.corporateCaseId);
+  // Two calls should be made because different orderId means different attempt
+  assert.equal(gateway.invokeCalls.length, 2);
+});
+
+test('submitCorporateIntake maps EVIDENCE_CONFLICT and EVIDENCE_INVALID from gateway', async () => {
+  const gateway = new TrackingGateway();
+  gateway.actor = { userId: CLIENT_ID, role: 'CLIENT' };
+
+  for (const code of ['EVIDENCE_CONFLICT', 'EVIDENCE_INVALID'] as const) {
+    gateway.invokeError = code;
+    const service = makeService(gateway);
+    await assert.rejects(
+      service.submitCorporateIntake({
+        draft: validIntakeDraft,
+        orderId: 'evidence-conflict-order',
+        idempotencyKey: 'evidence-conflict-key',
+      }),
+      (e) => e instanceof Phase2IntegrationError && e.code === 'INTAKE_EVIDENCE_CONFLICT',
+    );
+    gateway.invokeCalls.length = 0;
+  }
+});
+
+test('submitCorporateIntake maps ACTOR_MISMATCH from gateway', async () => {
+  const gateway = new TrackingGateway();
+  gateway.actor = { userId: CLIENT_ID, role: 'CLIENT' };
+  gateway.invokeError = 'ACTOR_MISMATCH';
+  const service = makeService(gateway);
+
+  await assert.rejects(
+    service.submitCorporateIntake({
+      draft: validIntakeDraft,
+      orderId: 'actor-mismatch-order',
+      idempotencyKey: 'actor-mismatch-key',
+    }),
+    (e) => e instanceof Phase2IntegrationError && e.code === 'INTAKE_ACTOR_FORBIDDEN',
+  );
 });

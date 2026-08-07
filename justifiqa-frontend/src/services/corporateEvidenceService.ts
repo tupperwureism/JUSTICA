@@ -32,9 +32,22 @@ export async function uploadBeneficialOwnerEvidence(
   file: File,
   onProgress?: (step: EvidenceUploadStep) => void,
 ): Promise<EvidenceUploadOutcome> {
-  onProgress?.('prepare');
+  // These IDs must be stable across retries - generated once per file selection
+  // The caller (BeneficialOwnerFields) manages the stable IDs via task state
+  // This function is called with pre-generated IDs from the task
   const evidenceId = crypto.randomUUID();
   const idempotencyKey = crypto.randomUUID();
+
+  return uploadBeneficialOwnerEvidenceWithIds(file, evidenceId, idempotencyKey, onProgress);
+}
+
+export async function uploadBeneficialOwnerEvidenceWithIds(
+  file: File,
+  evidenceId: string,
+  idempotencyKey: string,
+  onProgress?: (step: EvidenceUploadStep) => void,
+): Promise<EvidenceUploadOutcome> {
+  onProgress?.('prepare');
   const declaredMime = file.type;
   const declaredByteSize = file.size;
   const { data: prep, error: prepErr } = await supabase.functions.invoke(

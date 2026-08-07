@@ -233,7 +233,7 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
         throw new Phase2IntegrationError('INVALID_PAYLOAD');
       }
 
-      const existing = inFlightIntake.get(input.idempotencyKey);
+      const existing = inFlightIntake.get(`${input.orderId}:${input.idempotencyKey}`);
       if (existing) return existing;
 
       const executeIntake = async (): Promise<SubmitCorporateIntakeResult> => {
@@ -254,12 +254,12 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
       };
 
       const promise = executeIntake().finally(() => {
-        if (inFlightIntake.get(input.idempotencyKey) === promise) {
-          inFlightIntake.delete(input.idempotencyKey);
+        if (inFlightIntake.get(`${input.orderId}:${input.idempotencyKey}`) === promise) {
+          inFlightIntake.delete(`${input.orderId}:${input.idempotencyKey}`);
         }
       });
 
-      inFlightIntake.set(input.idempotencyKey, promise);
+      inFlightIntake.set(`${input.orderId}:${input.idempotencyKey}`, promise);
       return promise;
     },
 

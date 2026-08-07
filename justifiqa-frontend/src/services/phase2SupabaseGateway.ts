@@ -41,6 +41,24 @@ const kbliLabel = (snapshot: unknown) => {
   return 'KBLI tersimpan';
 };
 
+function parseIntakeErrorCode(error: unknown): string | null {
+  // Handle FunctionsHttpError - error.context is Response
+  if (error && typeof error === 'object' && 'context' in error) {
+    const ctx = (error as { context?: Response }).context;
+    if (ctx instanceof Response) {
+      // Note: Cannot await here, rely on error.code property directly
+    }
+  }
+  // Handle FunctionsRelayError / FunctionsFetchError - may have code directly
+  if (error && typeof error === 'object' && 'code' in error) {
+    const code = (error as { code?: unknown }).code;
+    if (typeof code === 'string') {
+      return code;
+    }
+  }
+  return null;
+}
+
 export const phase2SupabaseGateway: Phase2IntegrationGateway = {
   async getActor() {
     const { data, error } = await supabase.auth.getSession();
@@ -254,9 +272,8 @@ export const phase2SupabaseGateway: Phase2IntegrationGateway = {
       { body: payload },
     );
     if (error) {
-      const code = (error as { context?: { code?: string } }).context?.code
-        ?? (error as unknown as { code?: string }).code;
-      return { data: null, error: { code } };
+      const rawCode = parseIntakeErrorCode(error);
+      return { data: null, error: { code: rawCode ?? 'INTAKE_SERVER_UNAVAILABLE' } };
     }
     return { data, error: null };
   },

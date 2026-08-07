@@ -102,6 +102,7 @@ const isIsoCalendarDate = (value: string) => {
   const parsed = new Date(`${value}T00:00:00.000Z`);
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 };
+const isValidUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
 export const addCorporateParty = (draft: CorporateIntakeDraft): CorporateIntakeDraft => ({
   ...draft,
@@ -187,7 +188,12 @@ const validateBeneficialOwners = (draft: CorporateIntakeDraft): CorporateIntakeV
     if (!isPresent(owner.naturalPersonName)) issues.push(issue('BENEFICIAL_OWNER_NAME_REQUIRED', `Nama pemilik manfaat pada baris ${index + 1} wajib diisi.`));
     if (!isAllowed(BENEFICIAL_OWNER_CONTROL_BASES, owner.controlBasis)) issues.push(issue('CONTROL_BASIS_INVALID', `Dasar kendali pada baris ${index + 1} tidak valid.`));
     if (!isPercentage(owner.percentage)) issues.push(issue('BENEFICIAL_OWNER_PERCENTAGE_INVALID', `Persentase pemilik manfaat pada baris ${index + 1} harus 0–100.`));
-    // evidenceReference boleh kosong di client (server akan generate digest saat upload)
+    const evidenceRef = (owner.evidenceReference ?? '').trim();
+    if (!evidenceRef) {
+      issues.push(issue('BENEFICIAL_OWNER_EVIDENCE_REFERENCE_REQUIRED', `Bukti identitas pemilik manfaat pada baris ${index + 1} belum diunggah/finalisasi.`));
+    } else if (!isValidUuid(evidenceRef)) {
+      issues.push(issue('BENEFICIAL_OWNER_EVIDENCE_REFERENCE_INVALID', `Referensi bukti pemilik manfaat pada baris ${index + 1} tidak valid.`));
+    }
   });
   const evidenceReferences = draft.beneficialOwners
     .map((owner) => (owner.evidenceReference ?? '').trim().toLowerCase())

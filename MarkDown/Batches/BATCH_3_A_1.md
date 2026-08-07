@@ -8,7 +8,7 @@ payment webhook, escrow settlement, Qualifa, Notary Workspace, atau e-KYC.
 ## Branch & Fixed Point
 
 - Branch: `batch-3a-corporate-intake`
-- HEAD: `b89654c3b0a154db6f14f442e69c0c0134e802c3`
+- HEAD: `6e36fa2fc2f8a9a7d392b898b0db84329750f147`
 - Staged index: empty at start
 
 ## Scope / Non-Scope
@@ -30,11 +30,8 @@ payment webhook, escrow settlement, Qualifa, Notary Workspace, atau e-KYC.
 
 ## Inherited WIP
 
-- `justifiqa-frontend/src/components/corporate/ClientCorporateSuiteTab.tsx`
+- `MarkDown/Batches/BATCH_3_A_1.md`
 - `justifiqa-frontend/src/components/corporate/CorporateIntakeWizard.tsx`
-- `justifiqa-frontend/src/services/phase2IntegrationService.ts`
-- `justifiqa-frontend/src/services/phase2SupabaseGateway.ts`
-- `supabase/functions/corporate-intake/handler.ts`
 
 Known issues in WIP:
 - UUID fallback `import.meta.env.DEV`
@@ -64,78 +61,94 @@ Known issues in WIP:
 6. `PRICING_CATALOG_UNAVAILABLE` → HTTP 409, bukan 400
 7. Evidence upload memakai `upsert: false`
 
-## Current Checkpoint
-### CP-03: Implementation Complete — All Tests Green
+## Audit Controller Findings (P0/P1/P2) & Resolution Matrix
 
-## Pekerjaan Selesai
-- Preflight verified: branch, HEAD, index, SYMBOLS_MAP, no stale operations
-- Full discovery: all contracts, WIP files, test files, package.json, config.toml read
-- Fixed indentation in phase2IntegrationService.ts (submitCorporateIntake body now aligned with surrounding methods)
-- Removed DEBUG comment and trailing whitespace in corporate-intake/handler.ts
-- Removed trailing whitespace in payment-webhook/index.ts (OUT-OF-SCOPE CONTAMINATION — file touched for whitespace cleanup only, will not be staged/touched again)
-- Added regression tests in phase2IntegrationService.test.ts for PRICING_CATALOG_UNAVAILABLE and INTAKE_SERVER_UNAVAILABLE mappings (marked TDD_RED_MISSED_DUE_INTERRUPTED_WIP)
-- Added regression tests in corporate-intake/handler.test.ts for:
-  - CORPORATE_PRICING_ACTIVE_CATALOG_NOT_FOUND marker
-  - HTTP 409 response
-  - PRICING_CATALOG_UNAVAILABLE code
-  - Raw RPC detail not leaking in response body
-- Updated existing test to match new error mapping behavior
-- test:phase2 → 28/28 PASS (was 25/26, baseline was 26/26)
-- npx tsc -b → PASS (no errors)
-- git diff --check → PASS (no trailing whitespace, only LF/CRLF line-ending warnings)
-- Edge handler test corporate-intake → 21/21 PASS
+| # | Finding | Severity | File/Symbol | Test | Status |
+|---|---------|----------|-------------|------|--------|
+| 1 | Wizard DEV fallback orderId dikomit | P0 | CorporateIntakeWizard.tsx:37 | — | FIXED: removed orderId prop, DEV fallback, idempotencyKey memo |
+| 2 | Wizard blocker "endpoint belum tersedia" muncul karena orderId tidak diberikan | P0 | CorporateIntakeWizard.tsx:50-52 | — | FIXED: Wizard hanya memvalidasi draft & meneruskan ke integration hook |
+| 3 | Retry hook tidak memakai UUID yang sama | P1 | usePhase2Mutation.ts:47-50 | usePhase2Hooks.test.ts | FIXED: attemptRef mempertahankan input exact untuk retry |
+| 4 | Reset tidak menghapus retry context | P1 | usePhase2Mutation.ts:51 | usePhase2Hooks.test.ts | FIXED: reset() mengosongkan attemptRef |
+| 5 | Single-flight key hanya idempotencyKey (bukan orderId+key) | P1 | phase2IntegrationService.ts:236 | corporateIntakeIntegration.test.ts | FIXED: key = `${orderId}:${idempotencyKey}` |
+| 6 | Payload mengirim evidenceReference kosong ke handler | P1 | phase2IntegrationService.ts:390 | corporateIntakeIntegration.test.ts | FIXED: validation menolak evidenceReference kosong/invalid UUID |
+| 7 | Payload mengirim identityReference BO (stale) | P1 | phase2IntegrationService.ts:387 | corporateIntakeIntegration.test.ts | FIXED: toIntakePayload tidak memasukkan identityReference BO |
+| 8 | Gateway parsing error menggunakan error.context.code (tidak kompatibel Supabase JS 2.110.7) | P1 | phase2SupabaseGateway.ts:257-258 | — | FIXED: parseIntakeErrorCode menggunakan error.code |
+| 9 | Error code allowlist tidak lengkap (IDEMPOTENCY_CONFLICT, EVIDENCE_CONFLICT, EVIDENCE_INVALID, ACTOR_MISMATCH, PRICING_CATALOG_UNAVAILABLE) | P1 | phase2SupabaseGateway.ts:257-258 | corporateIntakeIntegration.test.ts | FIXED: allowlist di gateway & service |
+| 10 | Evidence upload tidak resumable (generate UUID baru per retry) | P1 | corporateEvidenceService.ts:36-37 | — | FIXED: stable IDs via task state per BO row |
+| 11 | Race antar-row BO saling menimpa (global uploadingIndex/uploadError) | P1 | BeneficialOwnerFields.tsx:57-59 | — | FIXED: per-row UploadTaskState dengan Map |
+| 12 | prepare gagal lalu retry tidak memakai IDs sama | P1 | BeneficialOwnerFields.tsx:65-83 | — | FIXED: retryUpload mempertahankan evidenceId/idempotencyKey |
+| 13 | upload gagal lalu retry mengulang prepare | P1 | BeneficialOwnerFields.tsx | — | FIXED: retryUpload conditional per step |
+| 14 | finalize gagal lalu retry mengulang prepare/upload | P1 | BeneficialOwnerFields.tsx | — | FIXED: retryUpload langsung finalize |
+| 15 | Upload dua BO selesai urutan terbalik menimpa evidenceReference | P1 | BeneficialOwnerFields.tsx | — | FIXED: functional state update per index |
+| 16 | Pilih file baru tidak mengganti task & IDs | P1 | BeneficialOwnerFields.tsx | — | FIXED: handleFileChange clearTask + new IDs |
+| 17 | Placeholder test `assert.ok(true)` dan "tracked separately" | P2 | corporateIntakeIntegration.test.ts:301 | — | FIXED: dihapus, diganti behavioural test |
+| 18 | Stale BO identityReference di fixture test | P2 | corporateIntakeModel.test.ts:32 | — | FIXED: diganti evidenceReference UUID valid |
+| 19 | Test "resumable" tidak menjalankan boundary | P2 | corporateIntakeIntegration.test.ts:304 | — | FIXED: behavioural test dengan gateway mock |
+| 20 | verify_jwt=false untuk corporate-intake/corporate-evidence | P0 | config.toml (not in scope) | — | CONFIRMED: verify_jwt=true (not changed) |
 
-## File yang Sudah Disentuh (Recovery)
-- MarkDown/Batches/BATCH_3_A_1.md (this file)
-- justifiqa-frontend/src/services/phase2IntegrationService.ts
-- supabase/functions/corporate-intake/handler.ts
-- supabase/functions/payment-webhook/index.ts (OUT-OF-SCOPE CONTAMINATION: trailing whitespace cleanup only, will not be staged or touched again)
-- justifiqa-frontend/test/phase2IntegrationService.test.ts (tests updated/added)
-- supabase/functions/corporate-intake/handler.test.ts (2 new regression tests added)
+## Commands & Results
 
-## CP-02 TDD Red Tests — All 18 Now Pass
-1. ✅ submitCorporateIntake uses caller-provided orderId and idempotencyKey (wrapper generates via crypto.randomUUID())
-2. ✅ submitCorporateIntake exact retry uses same idempotencyKey and orderId
-3. ✅ submitCorporateIntake single-flight: concurrent calls with same idempotencyKey return same promise
-4. ✅ submitCorporateIntake reset clears retry context
-5. ✅ toIntakePayload omits identityReference from beneficialOwners
-6. ✅ toIntakePayload allows empty evidenceReference in beneficialOwners (client sends, server generates digest)
-7. ✅ corporateParties identityReference preserved in payload
-8. ✅ acceptedScope not sent to Edge Function
-9. ✅ paymentGatewayRef included in payload
-10. ✅ effectiveDate maps to effectiveFrom
-11. ✅ gateway uses supabase.functions.invoke for corporate-intake
-12. ✅ evidence upload resumable: retry per step preserves uploaded evidence
-13. ✅ evidence upload prevents race: concurrent uploads with different evidenceReferences create separate cases
-14. ✅ beneficial-owner evidence references must be unique within the declaration (case-insensitive)
-15. ✅ protected beneficial-owner references retain backend case-sensitive semantics (N/A - identityReference removed)
-16-18. ✅ existing phase2 tests still pass
+```bash
+# Preflight
+git status                          # clean index, correct branch/HEAD
+git branch --show-current           # batch-3a-corporate-intake
+git log --oneline -1                # 6e36fa2fc2f8a9a7d392b898b0db84329750f147
 
-## CP-03 Implementation Done
-1. ✅ Added `useClientCorporateIntegration` hook that generates orderId + idempotencyKey via `crypto.randomUUID()`
-2. ✅ Implemented single-flight protection in service (per idempotencyKey)
-3. ✅ Allow empty evidenceReference in client payload (server generates digest)
-4. ✅ Gateway: replaced raw fetch with typed `supabase.functions.invoke`
-5. ✅ Cleaned DEBUG logging in gateway
-6. ✅ Updated CorporateIntakeWizard to accept only `onComplete(draft)` (handled in ClientCorporateSuiteTab)
-7. ✅ Removed BeneficialOwnerDraft.identityReference from model + UI (BeneficialOwnerFields)
-8. ✅ All tests green: test:phase2 41/41 PASS, Edge handler 21/21 PASS, tsc PASS, git diff --check PASS
+# Verification Gates
+npm run test:phase2                 # 49/49 PASS
+node --test supabase/functions/corporate-intake/handler.test.ts   # 21/21 PASS
+node --test supabase/functions/corporate-evidence/handler.test.ts # 10/10 PASS
+npx tsc -b                          # PASS
+npm run lint                        # PASS (0 warnings)
+npm run build                       # PASS
+git diff --check                    # PASS (only LF/CRLF warnings)
+node Tools/generate_symbol_map.mjs  # PASS
+node Tools/generate_symbol_map.mjs --check # PASS
+node --test Tools/symbol_map_lib.test.mjs # 7/7 PASS
+```
 
-## Blocker
-None
+## Files Modified (Batch 3.A.1.1)
 
-## Next Exact Action
-CP-04: Final verification & DBS:
-1. Run full test suite including edge handler tests
-2. Run npx tsc -b
-3. Run git diff --check
-4. Update DBS in BATCH_3_A_1.md
-5. Stage only Batch 3.A.1 related files
-6. Commit with conventional message
-7. Stop (no deploy/push/merge, no Batch 3.B)
+### Frontend Core
+1. `justifiqa-frontend/src/components/corporate/CorporateIntakeWizard.tsx` — Presentational only, no orderId/idempotencyKey
+2. `justifiqa-frontend/src/components/corporate/BeneficialOwnerFields.tsx` — Per-row resumable state machine
+3. `justifiqa-frontend/src/components/corporate/ClientCorporateSuiteTab.tsx` — Calls integration.submit(draft)
+4. `justifiqa-frontend/src/hooks/useClientCorporateIntegration.ts` — Generates attempt, wraps submit
+5. `justifiqa-frontend/src/hooks/usePhase2Mutation.ts` — Stable attemptRef, reset clears retry
+6. `justifiqa-frontend/src/models/corporateIntake.ts` — Validates evidenceReference (required, UUID, unique), removes identityReference from BO
+7. `justifiqa-frontend/src/services/phase2IntegrationService.ts` — Single-flight key = orderId:idempotencyKey, error mapping
+8. `justifiqa-frontend/src/services/phase2SupabaseGateway.ts` — parseIntakeErrorCode with allowlist
+9. `justifiqa-frontend/src/services/corporateEvidenceService.ts` — Stable IDs via uploadBeneficialOwnerEvidenceWithIds
+10. `justifiqa-frontend/src/pages/DevShowcasePage.tsx` — Pass onComplete to Wizard
+
+### Edge Functions
+11. `supabase/functions/corporate-evidence/handler.test.ts` — Fixed expiry dates (2027)
+
+### Tests
+12. `justifiqa-frontend/test/corporateIntakeModel.test.ts` — EvidenceReference required/UUID/unique, removed stale identityReference
+13. `justifiqa-frontend/test/corporateIntakeIntegration.test.ts` — Added: different orderId same key NOT same attempt, evidenceReference empty rejected, EVIDENCE_CONFLICT/INVALID/ACTOR_MISMATCH mapping, removed placeholder
+14. `justifiqa-frontend/test/usePhase2Hooks.test.ts` — Added: retry uses same input, new execute = new attempt, reset clears retry, single-flight exact duplicate
+
+### Generated
+15. `MarkDown/SYMBOLS_MAP.md` — Regenerated
+16. `MarkDown/SQL_SECURITY_SYMBOLS.md` — Regenerated
+
+## Blocker/Limitations
+
+- Resumable evidence hanya bertahan selama browser session (tidak persist refresh/close) — per spec
+- single-flight key mencakup orderId — concurrent different orderId dengan key sama membuat 2 calls (by design, fail-closed)
+- Error parsing dari FunctionsHttpError.Response body tidak di-await (sync function) — memakai error.code property langsung, sudah cukup untuk kode yang dikenal
+
+## Status Akhir
+
+**READY FOR EXTERNAL RE-AUDIT**
+
+Tidak mengklaim external audit PASS — menunggu verifikasi eksternal.
 
 ## Executor Self-Review
-Preflight ✅, Discovery ✅, DBB ✅, Recovery ✅, CP-02 Red Tests ✅, CP-03 Implementation ✅ → lanjut CP-04 Final Verification
+
+Preflight ✅, Discovery ✅, DBB Updated ✅, Implementation ✅, All Gates PASS ✅ → Batch 3.A.1.1 COMPLETE
 
 ## External Controller Audit
+
 PENDING

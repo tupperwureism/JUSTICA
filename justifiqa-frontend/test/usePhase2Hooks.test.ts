@@ -137,3 +137,147 @@ test('usePhase2Mutation retains validated input for a safe retry after error', a
     renderer.unmount();
   });
 });
+
+test('usePhase2Mutation retry uses exact same input (stable attempt identity)', async () => {
+  const capturedInputs: string[] = [];
+  let view!: ReturnType<typeof usePhase2Mutation<string, string>>;
+  const Harness = () => {
+    view = usePhase2Mutation(async (value: string) => {
+      capturedInputs.push(value);
+      if (capturedInputs.length === 1) throw new Phase2IntegrationError('INTAKE_SERVER_UNAVAILABLE');
+      return value.toUpperCase();
+    });
+    return null;
+  };
+
+  let renderer!: TestRenderer.ReactTestRenderer;
+  await act(async () => {
+    renderer = TestRenderer.create(createElement(Harness));
+  });
+
+  await act(async () => {
+    await assert.rejects(view.execute('attempt-1'));
+  });
+
+  await act(async () => {
+    assert.equal(await view.retry(), 'ATTEMPT-1');
+  });
+
+  // Same input should be used for retry
+  assert.equal(capturedInputs.length, 2);
+  assert.equal(capturedInputs[0], 'attempt-1');
+  assert.equal(capturedInputs[1], 'attempt-1');
+
+  await act(async () => {
+    renderer.unmount();
+  });
+});
+
+test('usePhase2Mutation new execute after error creates new attempt', async () => {
+  let calls = 0;
+  let view!: ReturnType<typeof usePhase2Mutation<string, string>>;
+  const Harness = () => {
+    view = usePhase2Mutation(async (value: string) => {
+      calls += 1;
+      if (calls === 1) throw new Phase2IntegrationError('INTAKE_SERVER_UNAVAILABLE');
+      return value.toUpperCase();
+    });
+    return null;
+  };
+
+  let renderer!: TestRenderer.ReactTestRenderer;
+  await act(async () => {
+    renderer = TestRenderer.create(createElement(Harness));
+  });
+
+  await act(async () => {
+    await assert.rejects(view.execute('attempt-1'));
+  });
+
+  await act(async () => {
+    assert.equal(await view.execute('attempt-2'), 'ATTEMPT-2');
+  });
+
+  // New execute should use new input
+  assert.equal(calls, 2);
+
+  await act(async () => {
+    renderer.unmount();
+  });
+});
+
+test('usePhase2Mutation reset clears retry context and retry after reset fails safely', async () => {
+  let view!: ReturnType<typeof usePhase2Mutation<string, string>>;
+  const Harness = () => {
+    view = usePhase2Mutation(async (value: string) => value.toUpperCase());
+    return null;
+  };
+
+  let renderer!: TestRenderer.ReactTestRenderer;
+  await act(async () => {
+    renderer = TestRenderer.create(createElement(Harness));
+  });
+
+  await act(async () => {
+    assert.equal(await view.execute('before-reset'), 'BEFORE-RESET');
+  });
+
+  await act(async () => {
+    view.reset();
+  });
+
+  // After reset, retry should reject
+  await act(async () => {
+    await assert.rejects(view.retry(), /Tidak ada permintaan untuk diulang/);
+  });
+
+  // But new execute works
+  await act(async () => {
+    assert.equal(await view.execute('after-reset'), 'AFTER-RESET');
+  });
+
+  await act(async () => {
+    renderer.unmount();
+  });
+});
+
+test('usePhase2Mutation single-flight: concurrent exact duplicate returns same promise', async () => {
+  let calls = 0;
+  let release: (() => void) | undefined;
+  let view!: ReturnType<typeof usePhase2Mutation<string, string>>;
+  const Harness = () => {
+    view = usePhase2Mutation(async (value: string) => {
+      calls += 1;
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return value.toUpperCase();
+    });
+    return null;
+  };
+
+  let renderer!: TestRenderer.ReactTestRenderer;
+  await act(async () => {
+    renderer = TestRenderer.create(createElement(Harness));
+  });
+
+  let first!: Promise<string>;
+  let second!: Promise<string>;
+  await act(async () => {
+    first = view.execute('same-input');
+    second = view.execute('same-input');
+    await Promise.resolve();
+  });
+
+  assert.equal(first, second);
+  assert.equal(calls, 1);
+
+  await act(async () => {
+    release?.();
+    assert.equal(await first, 'SAME-INPUT');
+  });
+
+  await act(async () => {
+    renderer.unmount();
+  });
+});

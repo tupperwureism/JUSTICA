@@ -29,7 +29,6 @@ const validDraft = (): CorporateIntakeDraft => ({
   }],
   beneficialOwners: [{
     naturalPersonName: 'Budi Santoso',
-    identityReference: 'NIK-TEST-002',
     evidenceReference: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     controlBasis: 'OWNERSHIP',
     percentage: '100',
@@ -53,7 +52,7 @@ test('party step ignores untouched beneficial-owner fields from the next step', 
   draft.beneficialOwners[0] = {
     ...draft.beneficialOwners[0],
     naturalPersonName: '',
-    identityReference: '',
+    evidenceReference: '',
     percentage: '',
   };
 
@@ -78,7 +77,7 @@ test('beneficial owner rows can be added and cannot be removed below one', () =>
 
 test('the same natural person can be both a corporate party and a beneficial owner', () => {
   const draft = validDraft();
-  draft.beneficialOwners[0].identityReference = draft.corporateParties[0].identityReference;
+  draft.beneficialOwners[0].evidenceReference = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
   assert.deepEqual(codesOf(draft), []);
 });
 
@@ -93,10 +92,18 @@ test('beneficial-owner evidence references must be unique within the declaration
   assert.ok(codesOf(draft).includes('DUPLICATE_BENEFICIAL_OWNER_EVIDENCE_REFERENCE'));
 });
 
-test('protected beneficial-owner references retain backend case-sensitive semantics for identityReference (not applicable, removed)', () => {
-  // identityReference removed from BeneficialOwnerDraft - evidenceReference is the only identifier
-  // evidenceReference deduplication is case-insensitive (normalized to lowercase)
-  assert.ok(true);
+test('evidenceReference is required for beneficial owner at final validation', () => {
+  const draft = validDraft();
+  draft.beneficialOwners[0].evidenceReference = '';
+  const codes = codesOf(draft);
+  assert.ok(codes.includes('BENEFICIAL_OWNER_EVIDENCE_REFERENCE_REQUIRED'));
+});
+
+test('invalid evidenceReference format is rejected at final validation', () => {
+  const draft = validDraft();
+  draft.beneficialOwners[0].evidenceReference = 'not-a-uuid';
+  const codes = codesOf(draft);
+  assert.ok(codes.includes('BENEFICIAL_OWNER_EVIDENCE_REFERENCE_INVALID'));
 });
 
 test('effective dates must be valid ISO calendar dates before progression', () => {

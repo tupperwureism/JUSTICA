@@ -20,8 +20,7 @@ export function usePhase2Mutation<TInput, TData>(
   );
   const mutationRef = useRef(mutation);
   const onSuccessRef = useRef(options.onSuccess);
-  const lastInputRef = useRef<TInput | null>(null);
-  const hasLastInputRef = useRef(false);
+  const attemptRef = useRef<{ input: TInput; hasAttempt: boolean }>({ input: null as unknown as TInput, hasAttempt: false });
   const runnerRef = useRef<((input: TInput) => Promise<TData>) | null>(null);
   mutationRef.current = mutation;
   onSuccessRef.current = options.onSuccess;
@@ -29,8 +28,7 @@ export function usePhase2Mutation<TInput, TData>(
   if (!runnerRef.current) {
     runnerRef.current = createSingleFlightMutation(async (input: TInput) => {
       dispatch({ type: 'start' });
-      lastInputRef.current = input;
-      hasLastInputRef.current = true;
+      attemptRef.current = { input, hasAttempt: true };
       try {
         const data = await mutationRef.current(input);
         await onSuccessRef.current?.(data);
@@ -45,10 +43,15 @@ export function usePhase2Mutation<TInput, TData>(
 
   const execute = useCallback((input: TInput) => runnerRef.current!(input), []);
   const retry = useCallback(() => {
-    if (!hasLastInputRef.current) return Promise.reject(new Error('Tidak ada permintaan untuk diulang.'));
-    return runnerRef.current!(lastInputRef.current as TInput);
+    if (!attemptRef.current.hasAttempt) {
+      return Promise.reject(new Error('Tidak ada permintaan untuk diulang.'));
+    }
+    return runnerRef.current!(attemptRef.current.input);
   }, []);
-  const reset = useCallback(() => dispatch({ type: 'reset' }), []);
+  const reset = useCallback(() => {
+    attemptRef.current = { input: null as unknown as TInput, hasAttempt: false };
+    dispatch({ type: 'reset' });
+  }, []);
 
   return {
     ...state,
