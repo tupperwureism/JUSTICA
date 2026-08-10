@@ -40,8 +40,10 @@ export function CorporateIntakeWizard({
     void Promise.resolve(onComplete(draft)).catch(() => undefined);
   };
 
-  const updateDraft = (patch: Partial<CorporateIntakeDraft>) => {
-    setDraft((value) => ({ ...value, ...patch }));
+  const updateDraft = (
+    update: Partial<CorporateIntakeDraft> | ((current: CorporateIntakeDraft) => CorporateIntakeDraft),
+  ) => {
+    setDraft((value) => (typeof update === 'function' ? update(value) : { ...value, ...update }));
     setValidationError(null);
   };
 

@@ -1,5 +1,10 @@
 # BATCH 3.A.1 — Corporate Intake Integration Correction
 
+> **ERRATA / SUPERSEDED:** External audit terhadap commit
+> `490ca2691f7004cc941896ad5670a343aab3724c` berstatus **FAIL**. Temuan tersebut
+> ditangani oleh Batch 3.A.1.2. Dokumen lama di bawah dipertahankan sebagai
+> catatan historis dan bukan bukti kelulusan.
+
 ## Batch & Tujuan
 
 Menutup seluruh celah integrasi Corporate Intake Batch 3.A tanpa mengerjakan

@@ -20,7 +20,9 @@ import { CorporatePartyFields } from './CorporatePartyFields';
 type Props = {
   step: number;
   draft: CorporateIntakeDraft;
-  onChange: (patch: Partial<CorporateIntakeDraft>) => void;
+  onChange: (
+    update: Partial<CorporateIntakeDraft> | ((current: CorporateIntakeDraft) => CorporateIntakeDraft),
+  ) => void;
 };
 
 const entities: Array<{ value: CorporateEntityType; label: string; note: string }> = [
@@ -51,7 +53,7 @@ export function CorporateIntakeStepFields({ step, draft, onChange }: Props) {
   </div>;
 
   if (step === 3) return <div className="grid gap-4 md:grid-cols-2">
-    <BeneficialOwnerFields owners={draft.beneficialOwners} onChange={(beneficialOwners) => onChange({ beneficialOwners })} onAdd={() => onChange({ beneficialOwners: addBeneficialOwner(draft).beneficialOwners })} onRemove={(index) => onChange({ beneficialOwners: removeBeneficialOwner(draft, index).beneficialOwners })} />
+    <BeneficialOwnerFields owners={draft.beneficialOwners} onChange={(updateOwners) => onChange((current) => ({ ...current, beneficialOwners: updateOwners(current.beneficialOwners) }))} onAdd={() => onChange((current) => addBeneficialOwner(current))} onRemove={(clientRowId) => onChange((current) => removeBeneficialOwner(current, clientRowId))} />
     <Card className="gap-2 rounded-2xl border-primary/30 bg-primary/5 p-4 md:col-span-2"><ShieldCheck className="size-5 text-primary" /><p className="text-sm">Verifikasi dan bukti pemilik manfaat diproses pada workflow kepatuhan terpisah.</p></Card>
   </div>;
 

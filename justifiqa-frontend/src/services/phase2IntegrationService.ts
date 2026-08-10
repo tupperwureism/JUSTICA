@@ -214,7 +214,12 @@ const requireActor = async (
 };
 
 export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway) {
-  const inFlightIntake = new Map<string, Promise<SubmitCorporateIntakeResult>>();
+  type InFlightIntake = {
+    orderId: string;
+    fingerprint: string;
+    promise: Promise<SubmitCorporateIntakeResult>;
+  };
+  const inFlightIntake = new Map<string, InFlightIntake>();
 
   return {
     async loadClientCorporateWorkspace() {
@@ -222,22 +227,30 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
       return gateway.getClientCorporateWorkspace(actor.userId);
     },
 
-    async submitCorporateIntake(input: {
+    submitCorporateIntake(input: {
       draft: CorporateIntakeInput;
       orderId: string;
       idempotencyKey: string;
     }): Promise<SubmitCorporateIntakeResult> {
-      await requireActor(gateway, ['CLIENT']);
-      const validationErrors = validateCorporateIntake(input.draft);
-      if (validationErrors.length) {
-        throw new Phase2IntegrationError('INVALID_PAYLOAD');
+      const payload = toIntakePayload(input.draft, input.orderId, input.idempotencyKey);
+      const fingerprint = canonicalPayloadFingerprint(payload);
+      const existing = inFlightIntake.get(input.idempotencyKey);
+      if (existing) {
+        if (existing.orderId !== input.orderId || existing.fingerprint !== fingerprint) {
+          return requireActor(gateway, ['CLIENT']).then(() => {
+            throw new Phase2IntegrationError('INTAKE_IDEMPOTENCY_CONFLICT');
+          });
+        }
+        return existing.promise;
       }
 
-      const existing = inFlightIntake.get(`${input.orderId}:${input.idempotencyKey}`);
-      if (existing) return existing;
+      const validationErrors = validateCorporateIntake(input.draft);
+      if (validationErrors.length) {
+        return Promise.reject(new Phase2IntegrationError('INVALID_PAYLOAD'));
+      }
 
       const executeIntake = async (): Promise<SubmitCorporateIntakeResult> => {
-        const payload = toIntakePayload(input.draft, input.orderId, input.idempotencyKey);
+        await requireActor(gateway, ['CLIENT']);
         const { data, error } = await gateway.invokeCorporateIntake(payload);
         if (error) {
           const code = error.code ?? '';
@@ -254,12 +267,16 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
       };
 
       const promise = executeIntake().finally(() => {
-        if (inFlightIntake.get(`${input.orderId}:${input.idempotencyKey}`) === promise) {
-          inFlightIntake.delete(`${input.orderId}:${input.idempotencyKey}`);
+        if (inFlightIntake.get(input.idempotencyKey)?.promise === promise) {
+          inFlightIntake.delete(input.idempotencyKey);
         }
       });
 
-      inFlightIntake.set(`${input.orderId}:${input.idempotencyKey}`, promise);
+      inFlightIntake.set(input.idempotencyKey, {
+        orderId: input.orderId,
+        fingerprint,
+        promise,
+      });
       return promise;
     },
 
@@ -359,6 +376,23 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
       throw new Phase2IntegrationError('BROWSER_BOUNDARY_UNAVAILABLE');
     },
   };
+}
+
+function canonicalPayloadFingerprint(payload: IntakePayload): string {
+  const canonicalize = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(canonicalize);
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(
+        Object.entries(value)
+          .filter(([, child]) => child !== undefined)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, child]) => [key, canonicalize(child)]),
+      );
+    }
+    return value;
+  };
+
+  return JSON.stringify(canonicalize(payload));
 }
 
 function toIntakePayload(

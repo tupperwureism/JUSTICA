@@ -32,6 +32,7 @@ export type CorporatePartyDraft = {
 };
 
 export type BeneficialOwnerDraft = {
+  clientRowId: string;
   naturalPersonName: string;
   evidenceReference?: string;
   controlBasis: BeneficialOwnerControlBasis;
@@ -68,6 +69,7 @@ export const createEmptyCorporateParty = (): CorporatePartyDraft => ({
 });
 
 export const createEmptyBeneficialOwner = (): BeneficialOwnerDraft => ({
+  clientRowId: crypto.randomUUID(),
   naturalPersonName: '',
   controlBasis: 'OWNERSHIP',
   percentage: '',
@@ -122,11 +124,11 @@ export const addBeneficialOwner = (draft: CorporateIntakeDraft): CorporateIntake
   beneficialOwners: [...draft.beneficialOwners, createEmptyBeneficialOwner()],
 });
 
-export const removeBeneficialOwner = (draft: CorporateIntakeDraft, index: number): CorporateIntakeDraft => {
+export const removeBeneficialOwner = (draft: CorporateIntakeDraft, clientRowId: string): CorporateIntakeDraft => {
   if (draft.beneficialOwners.length <= 1) return draft;
   return {
     ...draft,
-    beneficialOwners: draft.beneficialOwners.filter((_, ownerIndex) => ownerIndex !== index),
+    beneficialOwners: draft.beneficialOwners.filter((owner) => owner.clientRowId !== clientRowId),
   };
 };
 

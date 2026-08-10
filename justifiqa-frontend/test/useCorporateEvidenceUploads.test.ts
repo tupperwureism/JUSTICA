@@ -1,0 +1,341 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { createElement, type ReactNode } from 'react';
+import TestRenderer, { act } from 'react-test-renderer';
+import {
+  useCorporateEvidenceUploads,
+  type CorporateEvidenceAdapter,
+} from '../src/hooks/useCorporateEvidenceUploads.ts';
+import { CorporateEvidenceError } from '../src/services/corporateEvidenceService.ts';
+
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+const ROW_A = 'row-aaaaaaaa';
+const ROW_B = 'row-bbbbbbbb';
+const EVIDENCE_ID_A = '11111111-1111-4111-8111-111111111111';
+const EVIDENCE_ID_B = '22222222-2222-4222-8222-222222222222';
+const IDEM_KEY_A = '33333333-3333-4333-8333-333333333333';
+const IDEM_KEY_B = '44444444-4444-4444-8444-444444444444';
+const REF_A = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const REF_B = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+
+function makeFile(name = 'ktp.pdf'): File {
+  return new File(['bytes'], name, { type: 'application/pdf' });
+}
+
+function idFactory(...ids: string[]): () => string {
+  let index = 0;
+  return () => {
+    const id = ids[index];
+    index += 1;
+    if (!id) throw new Error('Test ID factory exhausted.');
+    return id;
+  };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+class StubAdapter implements CorporateEvidenceAdapter {
+  prepareCalls = 0;
+  uploadCalls = 0;
+  finalizeCalls = 0;
+  prepareAttempts: Array<{ evidenceId: string; idempotencyKey: string }> = [];
+  finalizeAttempts: Array<{ evidenceId: string; idempotencyKey: string }> = [];
+  prepareError: string | null = null;
+  uploadError: string | null = null;
+  finalizeError: string | null = null;
+
+  async prepare(input: {
+    evidenceId: string;
+    idempotencyKey: string;
+    declaredMime: string;
+    declaredByteSize: number;
+  }) {
+    this.prepareCalls += 1;
+    this.prepareAttempts.push({ evidenceId: input.evidenceId, idempotencyKey: input.idempotencyKey });
+    assert.equal(input.declaredMime, 'application/pdf');
+    assert.ok(input.declaredByteSize > 0);
+    if (this.prepareError) {
+      throw new CorporateEvidenceError('prepare', this.prepareError, 'prepare fail');
+    }
+    return { objectPath: `evidence/${input.evidenceId}/ktp.pdf` };
+  }
+
+  async upload(input: { objectPath: string; file: File; contentType: string }) {
+    this.uploadCalls += 1;
+    assert.ok(input.objectPath);
+    assert.ok(input.file.size > 0);
+    assert.equal(input.contentType, 'application/pdf');
+    if (this.uploadError) {
+      throw new CorporateEvidenceError('upload', this.uploadError, 'upload fail');
+    }
+  }
+
+  async finalize(input: { evidenceId: string; idempotencyKey: string }) {
+    this.finalizeCalls += 1;
+    this.finalizeAttempts.push(input);
+    if (this.finalizeError) {
+      throw new CorporateEvidenceError('finalize', this.finalizeError, 'finalize fail');
+    }
+    return { evidenceReference: input.evidenceId === EVIDENCE_ID_A ? REF_A : REF_B };
+  }
+}
+
+function renderHook<T>(hook: () => T) {
+  const holder: { current: T | undefined } = { current: undefined };
+  const Harness = () => {
+    holder.current = hook();
+    return null as unknown as ReactNode;
+  };
+  let renderer!: TestRenderer.ReactTestRenderer;
+  act(() => { renderer = TestRenderer.create(createElement(Harness)); });
+  return {
+    view: holder as { current: T },
+    unmount: () => act(() => { renderer.unmount(); }),
+  };
+}
+
+test('hook exposes observable prepare progress and finalized success through React state', async () => {
+  const prepareGate = deferred<{ objectPath: string }>();
+  const adapter = new StubAdapter();
+  adapter.prepare = async (input) => {
+    adapter.prepareCalls += 1;
+    adapter.prepareAttempts.push({ evidenceId: input.evidenceId, idempotencyKey: input.idempotencyKey });
+    return prepareGate.promise;
+  };
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  let pending!: Promise<void>;
+  act(() => { pending = view.current.start(ROW_A, makeFile()); });
+  assert.equal(view.current.get(ROW_A)?.activeStep, 'prepare');
+  assert.equal(view.current.get(ROW_A)?.isRunning, true);
+
+  await act(async () => {
+    prepareGate.resolve({ objectPath: 'evidence/a/ktp.pdf' });
+    await pending;
+  });
+  assert.equal(view.current.get(ROW_A)?.checkpoint, 'FINALIZED');
+  assert.equal(view.current.get(ROW_A)?.evidenceReference, REF_A);
+  assert.equal(view.current.get(ROW_A)?.canRetry, false);
+  unmount();
+});
+
+test('NEW failure retries prepare with the same IDs', async () => {
+  const adapter = new StubAdapter();
+  adapter.prepareError = 'PREPARE_FAILED';
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, makeFile()).catch(() => undefined); });
+  assert.equal(view.current.get(ROW_A)?.checkpoint, 'NEW');
+  assert.equal(view.current.get(ROW_A)?.failedStep, 'prepare');
+
+  adapter.prepareError = null;
+  await act(async () => { await view.current.retry(ROW_A); });
+  assert.deepEqual(adapter.prepareAttempts, [
+    { evidenceId: EVIDENCE_ID_A, idempotencyKey: IDEM_KEY_A },
+    { evidenceId: EVIDENCE_ID_A, idempotencyKey: IDEM_KEY_A },
+  ]);
+  assert.equal(adapter.uploadCalls, 1);
+  assert.equal(adapter.finalizeCalls, 1);
+  unmount();
+});
+
+test('concurrent retry of the same attempt is single-flight', async () => {
+  const adapter = new StubAdapter();
+  adapter.prepareError = 'PREPARE_FAILED';
+  const createId = idFactory(EVIDENCE_ID_A, IDEM_KEY_A);
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, { createId }));
+  await act(async () => { await view.current.start(ROW_A, makeFile()).catch(() => undefined); });
+
+  const prepareGate = deferred<{ objectPath: string }>();
+  adapter.prepareError = null;
+  adapter.prepare = async (input) => {
+    adapter.prepareCalls += 1;
+    adapter.prepareAttempts.push({ evidenceId: input.evidenceId, idempotencyKey: input.idempotencyKey });
+    return prepareGate.promise;
+  };
+  let first!: Promise<void>;
+  let second!: Promise<void>;
+  act(() => {
+    first = view.current.retry(ROW_A);
+    second = view.current.retry(ROW_A);
+  });
+  assert.strictEqual(first, second);
+  assert.equal(adapter.prepareCalls, 2);
+
+  await act(async () => {
+    prepareGate.resolve({ objectPath: `evidence/${EVIDENCE_ID_A}/ktp.pdf` });
+    await Promise.all([first, second]);
+  });
+  assert.deepEqual([adapter.uploadCalls, adapter.finalizeCalls], [1, 1]);
+  unmount();
+});
+
+test('PREPARED failure retries upload only and retains objectPath', async () => {
+  const adapter = new StubAdapter();
+  adapter.uploadError = 'STORAGE_FAILED';
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, makeFile()).catch(() => undefined); });
+  assert.equal(view.current.get(ROW_A)?.checkpoint, 'PREPARED');
+  assert.equal(view.current.get(ROW_A)?.objectPath, `evidence/${EVIDENCE_ID_A}/ktp.pdf`);
+
+  adapter.uploadError = null;
+  await act(async () => { await view.current.retry(ROW_A); });
+  assert.equal(adapter.prepareCalls, 1);
+  assert.equal(adapter.uploadCalls, 2);
+  assert.equal(adapter.finalizeCalls, 1);
+  unmount();
+});
+
+test('UPLOADED failure retries finalize only and FINALIZED retry performs no network', async () => {
+  const adapter = new StubAdapter();
+  adapter.finalizeError = 'FINALIZE_FAILED';
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, makeFile()).catch(() => undefined); });
+  assert.equal(view.current.get(ROW_A)?.checkpoint, 'UPLOADED');
+
+  adapter.finalizeError = null;
+  await act(async () => { await view.current.retry(ROW_A); });
+  assert.deepEqual([adapter.prepareCalls, adapter.uploadCalls, adapter.finalizeCalls], [1, 1, 2]);
+  await act(async () => { await view.current.retry(ROW_A); });
+  assert.deepEqual([adapter.prepareCalls, adapter.uploadCalls, adapter.finalizeCalls], [1, 1, 2]);
+  unmount();
+});
+
+class ControlledFinalizeAdapter extends StubAdapter {
+  readonly started = new Map<string, ReturnType<typeof deferred<void>>>();
+  readonly completed = new Map<string, ReturnType<typeof deferred<string>>>();
+
+  override async finalize(input: { evidenceId: string; idempotencyKey: string }) {
+    this.finalizeCalls += 1;
+    this.finalizeAttempts.push(input);
+    const started = deferred<void>();
+    const completed = deferred<string>();
+    this.started.set(input.evidenceId, started);
+    this.completed.set(input.evidenceId, completed);
+    started.resolve();
+    return { evidenceReference: await completed.promise };
+  }
+}
+
+async function waitForFinalize(adapter: ControlledFinalizeAdapter, evidenceId: string): Promise<void> {
+  while (!adapter.started.has(evidenceId)) await Promise.resolve();
+  await adapter.started.get(evidenceId)?.promise;
+}
+
+test('reverse completion keeps each evidence reference on its stable row', async () => {
+  const adapter = new ControlledFinalizeAdapter();
+  const finalized: Array<[string, string]> = [];
+  const createId = idFactory(EVIDENCE_ID_A, IDEM_KEY_A, EVIDENCE_ID_B, IDEM_KEY_B);
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, {
+    createId,
+    onFinalized: (rowId, reference) => finalized.push([rowId, reference]),
+  }));
+
+  let first!: Promise<void>;
+  let second!: Promise<void>;
+  act(() => {
+    first = view.current.start(ROW_A, makeFile('a.pdf'));
+    second = view.current.start(ROW_B, makeFile('b.pdf'));
+  });
+  await act(async () => {
+    await Promise.all([
+      waitForFinalize(adapter, EVIDENCE_ID_A),
+      waitForFinalize(adapter, EVIDENCE_ID_B),
+    ]);
+  });
+  await act(async () => {
+    adapter.completed.get(EVIDENCE_ID_B)?.resolve(REF_B);
+    await second;
+    adapter.completed.get(EVIDENCE_ID_A)?.resolve(REF_A);
+    await first;
+  });
+
+  assert.equal(view.current.get(ROW_A)?.evidenceReference, REF_A);
+  assert.equal(view.current.get(ROW_B)?.evidenceReference, REF_B);
+  assert.deepEqual(finalized.sort(), [[ROW_A, REF_A], [ROW_B, REF_B]].sort());
+  unmount();
+});
+
+test('late completion from replaced File A cannot overwrite File B', async () => {
+  const adapter = new ControlledFinalizeAdapter();
+  const finalized: Array<[string, string]> = [];
+  const createId = idFactory(EVIDENCE_ID_A, IDEM_KEY_A, EVIDENCE_ID_B, IDEM_KEY_B);
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, {
+    createId,
+    onFinalized: (rowId, reference) => finalized.push([rowId, reference]),
+  }));
+
+  let first!: Promise<void>;
+  act(() => { first = view.current.start(ROW_A, makeFile('a.pdf')); });
+  await act(async () => { await waitForFinalize(adapter, EVIDENCE_ID_A); });
+  let second!: Promise<void>;
+  act(() => { second = view.current.start(ROW_A, makeFile('b.pdf')); });
+  await act(async () => { await waitForFinalize(adapter, EVIDENCE_ID_B); });
+
+  await act(async () => {
+    adapter.completed.get(EVIDENCE_ID_B)?.resolve(REF_B);
+    await second;
+    adapter.completed.get(EVIDENCE_ID_A)?.resolve(REF_A);
+    await first;
+  });
+  assert.equal(view.current.get(ROW_A)?.evidenceId, EVIDENCE_ID_B);
+  assert.equal(view.current.get(ROW_A)?.evidenceReference, REF_B);
+  assert.deepEqual(finalized, [[ROW_A, REF_B]]);
+  unmount();
+});
+
+test('late completion of a removed row is ignored', async () => {
+  const adapter = new ControlledFinalizeAdapter();
+  const finalized: Array<[string, string]> = [];
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+    onFinalized: (rowId, reference) => finalized.push([rowId, reference]),
+  }));
+
+  let pending!: Promise<void>;
+  act(() => { pending = view.current.start(ROW_A, makeFile()); });
+  await act(async () => { await waitForFinalize(adapter, EVIDENCE_ID_A); });
+  act(() => { view.current.remove(ROW_A); });
+  await act(async () => {
+    adapter.completed.get(EVIDENCE_ID_A)?.resolve(REF_A);
+    await pending;
+  });
+  assert.equal(view.current.tasks.has(ROW_A), false);
+  assert.deepEqual(finalized, []);
+  unmount();
+});
+
+test('new file creates new IDs and clears the previous evidence reference', async () => {
+  const adapter = new StubAdapter();
+  const createId = idFactory(EVIDENCE_ID_A, IDEM_KEY_A, EVIDENCE_ID_B, IDEM_KEY_B);
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, {
+    createId,
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, makeFile('a.pdf')); });
+  assert.equal(view.current.get(ROW_A)?.evidenceReference, REF_A);
+  await act(async () => { await view.current.start(ROW_A, makeFile('b.pdf')); });
+  assert.equal(view.current.get(ROW_A)?.evidenceId, EVIDENCE_ID_B);
+  assert.equal(view.current.get(ROW_A)?.idempotencyKey, IDEM_KEY_B);
+  assert.equal(view.current.get(ROW_A)?.evidenceReference, REF_B);
+  unmount();
+});

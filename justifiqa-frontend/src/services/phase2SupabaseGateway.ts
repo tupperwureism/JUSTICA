@@ -10,6 +10,9 @@ import {
   type Phase2IntegrationGateway,
   type SubmitCorporateIntakeResult,
 } from './phase2IntegrationService';
+import { parseIntakeErrorCode, INTAKE_UNKNOWN_FALLBACK } from './intakeError';
+
+export { parseIntakeErrorCode } from './intakeError';
 
 const CORPORATE_SERVICE_TYPES = ['PT_ORDINARY', 'PT_INDIVIDUAL_UMK', 'CV'];
 const CORPORATE_ESCROW_STATUSES: CorporateEscrowStatus[] = [
@@ -40,24 +43,6 @@ const kbliLabel = (snapshot: unknown) => {
   }
   return 'KBLI tersimpan';
 };
-
-function parseIntakeErrorCode(error: unknown): string | null {
-  // Handle FunctionsHttpError - error.context is Response
-  if (error && typeof error === 'object' && 'context' in error) {
-    const ctx = (error as { context?: Response }).context;
-    if (ctx instanceof Response) {
-      // Note: Cannot await here, rely on error.code property directly
-    }
-  }
-  // Handle FunctionsRelayError / FunctionsFetchError - may have code directly
-  if (error && typeof error === 'object' && 'code' in error) {
-    const code = (error as { code?: unknown }).code;
-    if (typeof code === 'string') {
-      return code;
-    }
-  }
-  return null;
-}
 
 export const phase2SupabaseGateway: Phase2IntegrationGateway = {
   async getActor() {
@@ -272,8 +257,8 @@ export const phase2SupabaseGateway: Phase2IntegrationGateway = {
       { body: payload },
     );
     if (error) {
-      const rawCode = parseIntakeErrorCode(error);
-      return { data: null, error: { code: rawCode ?? 'INTAKE_SERVER_UNAVAILABLE' } };
+      const rawCode = await parseIntakeErrorCode(error);
+      return { data: null, error: { code: rawCode ?? INTAKE_UNKNOWN_FALLBACK } };
     }
     return { data, error: null };
   },

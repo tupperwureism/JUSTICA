@@ -1,5 +1,9 @@
 # BATCH 3.A.1 DBS — Domain Brief Summary
 
+> **ERRATA / SUPERSEDED:** Penjelasan implementasi di dokumen ini menggambarkan
+> kandidat commit `490ca2691f7004cc941896ad5670a343aab3724c` yang gagal external audit.
+> Kontrak koreksi yang berlaku ada di `BATCH_3_A_1_2_DBS.md`.
+
 Materi pembelajaran dari Batch 3.A.1 Corporate Intake Correction. Bahasa Indonesia sederhana, contoh kecil, mini-checklist/quiz, sitasi file & symbol.
 
 ---

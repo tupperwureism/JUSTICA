@@ -28,6 +28,7 @@ const validDraft = (): CorporateIntakeDraft => ({
     effectiveDate: '2026-07-29',
   }],
   beneficialOwners: [{
+    clientRowId: 'row-budi-santoso',
     naturalPersonName: 'Budi Santoso',
     evidenceReference: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     controlBasis: 'OWNERSHIP',
@@ -71,8 +72,10 @@ test('beneficial owner rows can be added and cannot be removed below one', () =>
   const original = validDraft();
   const expanded = addBeneficialOwner(original);
   assert.equal(expanded.beneficialOwners.length, 2);
-  assert.equal(removeBeneficialOwner(expanded, 1).beneficialOwners.length, 1);
-  assert.strictEqual(removeBeneficialOwner(original, 0), original);
+  const addedRowId = expanded.beneficialOwners[1].clientRowId;
+  assert.notEqual(addedRowId, original.beneficialOwners[0].clientRowId);
+  assert.equal(removeBeneficialOwner(expanded, addedRowId).beneficialOwners.length, 1);
+  assert.strictEqual(removeBeneficialOwner(original, original.beneficialOwners[0].clientRowId), original);
 });
 
 test('the same natural person can be both a corporate party and a beneficial owner', () => {
@@ -85,6 +88,7 @@ test('beneficial-owner evidence references must be unique within the declaration
   const draft = validDraft();
   draft.beneficialOwners.push({
     ...draft.beneficialOwners[0],
+    clientRowId: 'row-budi-santoso-duplicate',
     naturalPersonName: 'Budi Santoso Duplikat',
     evidenceReference: draft.beneficialOwners[0].evidenceReference,
   });

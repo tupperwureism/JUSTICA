@@ -32,6 +32,7 @@ const validIntakeDraft: CorporateIntakeInput = {
     effectiveDate: '2026-08-01',
   }],
   beneficialOwners: [{
+    clientRowId: 'row-test-bo',
     naturalPersonName: 'Test BO',
     evidenceReference: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     controlBasis: 'OWNERSHIP',
@@ -52,11 +53,17 @@ const baseResult: SubmitCorporateIntakeResult = {
   replayed: false,
 };
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => { resolve = resolvePromise; });
+  return { promise, resolve };
+}
+
 class TrackingGateway implements Phase2IntegrationGateway {
   public actor: { userId: string; role: 'CLIENT' | 'ADVOCATE' | 'ADMIN' } | null = { userId: CLIENT_ID, role: 'CLIENT' };
   public invokeCalls: Array<{ payload: IntakePayload; timestamp: number }> = [];
   public invokeError: string | null = null;
-  public invokeDelay = 0;
+  public invokeGate: Promise<void> | null = null;
   public shouldReplay = false;
   private caseCounter = 0;
 
@@ -82,9 +89,7 @@ class TrackingGateway implements Phase2IntegrationGateway {
 
   async invokeCorporateIntake(payload: IntakePayload) {
     this.invokeCalls.push({ payload, timestamp: Date.now() });
-    if (this.invokeDelay > 0) {
-      await new Promise((r) => setTimeout(r, this.invokeDelay));
-    }
+    if (this.invokeGate) await this.invokeGate;
     if (this.invokeError) {
       return { data: null, error: { code: this.invokeError } };
     }
@@ -150,21 +155,25 @@ test('submitCorporateIntake exact retry uses same idempotencyKey and orderId', a
 
 test('submitCorporateIntake single-flight: concurrent calls return same promise', async () => {
   const gateway = new TrackingGateway();
-  gateway.invokeDelay = 50;
+  const gate = deferred<void>();
+  gateway.invokeGate = gate.promise;
   const service = makeService(gateway);
 
-  const [result1, result2] = await Promise.all([
-    service.submitCorporateIntake({
-      draft: validIntakeDraft,
-      orderId: 'single-flight-order',
-      idempotencyKey: 'single-flight-key',
-    }),
-    service.submitCorporateIntake({
-      draft: validIntakeDraft,
-      orderId: 'single-flight-order',
-      idempotencyKey: 'single-flight-key',
-    }),
-  ]);
+  const first = service.submitCorporateIntake({
+    draft: validIntakeDraft,
+    orderId: 'single-flight-order',
+    idempotencyKey: 'single-flight-key',
+  });
+  const second = service.submitCorporateIntake({
+    draft: validIntakeDraft,
+    orderId: 'single-flight-order',
+    idempotencyKey: 'single-flight-key',
+  });
+  assert.strictEqual(first, second);
+  while (gateway.invokeCalls.length === 0) await Promise.resolve();
+  assert.equal(gateway.invokeCalls.length, 1);
+  gate.resolve();
+  const [result1, result2] = await Promise.all([first, second]);
 
   assert.equal(result1.corporateCaseId, result2.corporateCaseId);
   assert.equal(gateway.invokeCalls.length, 1);
@@ -198,7 +207,7 @@ test('submitCorporateIntake reset clears retry context', async () => {
   assert.equal(gateway.invokeCalls[0].payload.orderId, 'reset-order-new');
 });
 
-test('toIntakePayload omits identityReference from beneficialOwners', async () => {
+test('toIntakePayload omits UI row identity and raw identityReference from beneficialOwners', async () => {
   const gateway = new TrackingGateway();
   const service = makeService(gateway);
 
@@ -210,6 +219,7 @@ test('toIntakePayload omits identityReference from beneficialOwners', async () =
 
   const boPayload = gateway.invokeCalls[0].payload.beneficialOwners[0];
   assert.equal('identityReference' in boPayload, false);
+  assert.equal('clientRowId' in boPayload, false);
   assert.equal(boPayload.evidenceReference, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
   assert.equal(boPayload.naturalPersonName, 'Test BO');
   assert.equal(boPayload.controlBasis, 'OWNERSHIP');
@@ -222,6 +232,7 @@ test('toIntakePayload rejects empty evidenceReference in beneficialOwners at val
   const draftWithEmptyEvidence: CorporateIntakeInput = {
     ...validIntakeDraft,
     beneficialOwners: [{
+      clientRowId: 'row-test-bo-invalid',
       naturalPersonName: 'Test BO',
       evidenceReference: '',
       controlBasis: 'OWNERSHIP',
@@ -343,6 +354,7 @@ test('evidence upload prevents race: concurrent uploads with different evidenceR
   const draft1: CorporateIntakeInput = {
     ...validIntakeDraft,
     beneficialOwners: [{
+      clientRowId: 'row-race-bo-1',
       naturalPersonName: 'BO 1',
       evidenceReference: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       controlBasis: 'OWNERSHIP',
@@ -353,6 +365,7 @@ test('evidence upload prevents race: concurrent uploads with different evidenceR
   const draft2: CorporateIntakeInput = {
     ...validIntakeDraft,
     beneficialOwners: [{
+      clientRowId: 'row-race-bo-2',
       naturalPersonName: 'BO 2',
       evidenceReference: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
       controlBasis: 'OWNERSHIP',
@@ -371,28 +384,30 @@ test('evidence upload prevents race: concurrent uploads with different evidenceR
   assert.equal(gateway.invokeCalls[1].payload.beneficialOwners[0].evidenceReference, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
 });
 
-test('submitCorporateIntake different orderId with same idempotencyKey are NOT treated as same attempt', async () => {
+test('submitCorporateIntake rejects a different orderId with the same in-flight idempotencyKey', async () => {
   const gateway = new TrackingGateway();
-  gateway.invokeDelay = 50;
+  const gate = deferred<void>();
+  gateway.invokeGate = gate.promise;
   const service = makeService(gateway);
 
-  const [result1, result2] = await Promise.all([
-    service.submitCorporateIntake({
-      draft: validIntakeDraft,
-      orderId: 'order-1',
-      idempotencyKey: 'same-key',
-    }),
+  const first = service.submitCorporateIntake({
+    draft: validIntakeDraft,
+    orderId: 'order-1',
+    idempotencyKey: 'same-key',
+  });
+  const conflict = assert.rejects(
     service.submitCorporateIntake({
       draft: validIntakeDraft,
       orderId: 'order-2',
       idempotencyKey: 'same-key',
     }),
-  ]);
+    (error) => error instanceof Phase2IntegrationError
+      && error.code === 'INTAKE_IDEMPOTENCY_CONFLICT',
+  );
 
-  // Both should succeed with different case IDs - they are different attempts
-  assert.notEqual(result1.corporateCaseId, result2.corporateCaseId);
-  // Two calls should be made because different orderId means different attempt
-  assert.equal(gateway.invokeCalls.length, 2);
+  gate.resolve();
+  await Promise.all([first, conflict]);
+  assert.equal(gateway.invokeCalls.length, 1);
 });
 
 test('submitCorporateIntake maps EVIDENCE_CONFLICT and EVIDENCE_INVALID from gateway', async () => {

@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test:phase2": "node --test --test-isolation=none test/corporateIntakeModel.test.ts test/phase2IntegrationService.test.ts test/phase2MutationState.test.ts test/usePhase2Hooks.test.ts test/corporateIntakeIntegration.test.ts",
+    "test:phase2": "node --test --test-isolation=none test/corporateIntakeModel.test.ts test/phase2IntegrationService.test.ts test/phase2MutationState.test.ts test/usePhase2Hooks.test.ts test/corporateIntakeIntegration.test.ts test/evidenceStateMachine.test.ts test/intakeErrorParsing.test.ts test/useCorporateEvidenceUploads.test.ts test/intakeIdempotencyConflict.test.ts test/evidenceUploadFeedback.test.ts test/beneficialOwnerEvidenceIntegration.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

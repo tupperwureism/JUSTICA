@@ -1,10 +1,38 @@
-import { supabase } from '@/lib/supabase';
+import { parseEvidenceErrorCode } from './intakeError.ts';
 
 export type EvidenceUploadStep = 'prepare' | 'upload' | 'finalize';
 
-export type EvidenceUploadOutcome = {
+export type PrepareInput = {
+  evidenceId: string;
+  idempotencyKey: string;
+  declaredMime: string;
+  declaredByteSize: number;
+};
+
+export type PrepareResult = {
+  objectPath: string;
+};
+
+export type UploadInput = {
+  objectPath: string;
+  file: File;
+  contentType: string;
+};
+
+export type FinalizeInput = {
+  evidenceId: string;
+  idempotencyKey: string;
+};
+
+export type FinalizeResult = {
   evidenceReference: string;
 };
+
+export interface EvidenceGateway {
+  prepare(input: PrepareInput): Promise<PrepareResult>;
+  upload(input: UploadInput): Promise<void>;
+  finalize(input: FinalizeInput): Promise<FinalizeResult>;
+}
 
 export class CorporateEvidenceError extends Error {
   readonly step: EvidenceUploadStep;
@@ -18,6 +46,22 @@ export class CorporateEvidenceError extends Error {
   }
 }
 
+const STORAGE_ERROR_ALLOWLIST = [
+  'EntityTooLarge',
+  'InvalidMimeType',
+  'InvalidRequest',
+  'ResourceAlreadyExists',
+] as const;
+
+function parseStorageErrorCode(error: unknown): string | null {
+  if (typeof error !== 'object' || error === null || !('code' in error)) return null;
+  const code = error.code;
+  return typeof code === 'string'
+    && STORAGE_ERROR_ALLOWLIST.includes(code as (typeof STORAGE_ERROR_ALLOWLIST)[number])
+    ? code
+    : null;
+}
+
 function friendlyError(step: EvidenceUploadStep, code: string, fallback: string): CorporateEvidenceError {
   if (step === 'finalize' && code === 'EVIDENCE_MAGIC_INVALID') {
     return new CorporateEvidenceError(step, code, 'Format file tidak didukung (PDF, JPG, PNG max 10MB).');
@@ -28,54 +72,121 @@ function friendlyError(step: EvidenceUploadStep, code: string, fallback: string)
   return new CorporateEvidenceError(step, code, fallback);
 }
 
-export async function uploadBeneficialOwnerEvidence(
-  file: File,
-  onProgress?: (step: EvidenceUploadStep) => void,
-): Promise<EvidenceUploadOutcome> {
-  // These IDs must be stable across retries - generated once per file selection
-  // The caller (BeneficialOwnerFields) manages the stable IDs via task state
-  // This function is called with pre-generated IDs from the task
-  const evidenceId = crypto.randomUUID();
-  const idempotencyKey = crypto.randomUUID();
+const PREPARE_FALLBACK = 'Persiapan unggah bukti gagal. Coba ulang.';
+const UPLOAD_FALLBACK = 'Unggah file bukti gagal. Coba ulang.';
+const FINALIZE_FALLBACK = 'Finalisasi bukti gagal. Coba ulang.';
+const EVIDENCE_REFERENCE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const UUID_FRAGMENT = '[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
+const EVIDENCE_OBJECT_PATH_PATTERN = new RegExp(`^${UUID_FRAGMENT}/(${UUID_FRAGMENT})/source\\.(?:pdf|jpg|png)$`);
 
-  return uploadBeneficialOwnerEvidenceWithIds(file, evidenceId, idempotencyKey, onProgress);
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
-export async function uploadBeneficialOwnerEvidenceWithIds(
-  file: File,
-  evidenceId: string,
-  idempotencyKey: string,
-  onProgress?: (step: EvidenceUploadStep) => void,
-): Promise<EvidenceUploadOutcome> {
-  onProgress?.('prepare');
-  const declaredMime = file.type;
-  const declaredByteSize = file.size;
-  const { data: prep, error: prepErr } = await supabase.functions.invoke(
-    'corporate-evidence/prepare',
-    { body: { evidenceId, declaredMime, declaredByteSize, idempotencyKey } },
-  );
-  if (prepErr || !prep?.objectPath) {
-    throw friendlyError('prepare', (prepErr as { code?: string } | null)?.code ?? 'PREPARE_FAILED', 'Persiapan unggah bukti gagal. Coba ulang.');
-  }
-  const objectPath: string = prep.objectPath;
-
-  onProgress?.('upload');
-  const { error: upErr } = await supabase.storage
-    .from('corporate-intake-evidence')
-    .upload(objectPath, file, { contentType: declaredMime, upsert: false });
-  if (upErr) {
-    const upCode = (upErr as unknown as { code?: string }).code ?? 'STORAGE_FAILED';
-    throw friendlyError('upload', upCode, 'Unggah file bukti gagal. Coba ulang.');
-  }
-
-  onProgress?.('finalize');
-  const { data: fin, error: finErr } = await supabase.functions.invoke(
-    'corporate-evidence/finalize',
-    { body: { evidenceId, idempotencyKey } },
-  );
-  if (finErr || !fin?.evidenceReference) {
-    throw friendlyError('finalize', (finErr as { code?: string } | null)?.code ?? 'FINALIZE_FAILED', 'Finalisasi bukti gagal. Coba ulang.');
-  }
-
-  return { evidenceReference: fin.evidenceReference as string };
+export function parseEvidencePrepareData(
+  data: unknown,
+  expectedEvidenceId: string,
+): PrepareResult | null {
+  if (!isRecord(data)
+    || typeof data.evidenceId !== 'string'
+    || typeof data.objectPath !== 'string') return null;
+  const normalizedEvidenceId = expectedEvidenceId.toLowerCase();
+  const objectPath = data.objectPath;
+  const pathMatch = EVIDENCE_OBJECT_PATH_PATTERN.exec(objectPath);
+  return data.evidenceId === normalizedEvidenceId && pathMatch?.[1] === normalizedEvidenceId
+    ? { objectPath }
+    : null;
 }
+
+export function parseEvidenceFinalizeData(
+  data: unknown,
+  expectedEvidenceId: string,
+): FinalizeResult | null {
+  if (!isRecord(data) || typeof data.evidenceReference !== 'string') return null;
+  const normalizedEvidenceId = expectedEvidenceId.toLowerCase();
+  return EVIDENCE_REFERENCE_PATTERN.test(data.evidenceReference)
+    && data.evidenceReference === normalizedEvidenceId
+    ? { evidenceReference: data.evidenceReference }
+    : null;
+}
+
+export async function prepareEvidence(
+  gateway: EvidenceGateway,
+  input: PrepareInput,
+): Promise<PrepareResult> {
+  try {
+    return await gateway.prepare(input);
+  } catch (error) {
+    if (error instanceof CorporateEvidenceError) throw error;
+    const code = await parseEvidenceErrorCode(error).catch(() => null);
+    throw friendlyError('prepare', code ?? 'PREPARE_FAILED', PREPARE_FALLBACK);
+  }
+}
+
+export async function uploadEvidence(
+  gateway: EvidenceGateway,
+  input: UploadInput,
+): Promise<void> {
+  try {
+    await gateway.upload(input);
+  } catch (error) {
+    if (error instanceof CorporateEvidenceError) throw error;
+    const code = parseStorageErrorCode(error);
+    throw friendlyError('upload', code ?? 'STORAGE_FAILED', UPLOAD_FALLBACK);
+  }
+}
+
+export async function finalizeEvidence(
+  gateway: EvidenceGateway,
+  input: FinalizeInput,
+): Promise<FinalizeResult> {
+  try {
+    return await gateway.finalize(input);
+  } catch (error) {
+    if (error instanceof CorporateEvidenceError) throw error;
+    const code = await parseEvidenceErrorCode(error).catch(() => null);
+    throw friendlyError('finalize', code ?? 'FINALIZE_FAILED', FINALIZE_FALLBACK);
+  }
+}
+
+export const corporateEvidenceGateway: EvidenceGateway = {
+  async prepare(input: PrepareInput): Promise<PrepareResult> {
+    const { supabase } = await import('@/lib/supabase');
+    const { data, error } = await supabase.functions.invoke('corporate-evidence/prepare', {
+      body: {
+        evidenceId: input.evidenceId,
+        declaredMime: input.declaredMime,
+        declaredByteSize: input.declaredByteSize,
+        idempotencyKey: input.idempotencyKey,
+      },
+    });
+    const parsed = parseEvidencePrepareData(data, input.evidenceId);
+    if (error || !parsed) {
+      const code = await parseEvidenceErrorCode(error).catch(() => null);
+      throw friendlyError('prepare', code ?? 'PREPARE_FAILED', PREPARE_FALLBACK);
+    }
+    return parsed;
+  },
+  async upload(input: UploadInput): Promise<void> {
+    const { supabase } = await import('@/lib/supabase');
+    const { error } = await supabase.storage
+      .from('corporate-intake-evidence')
+      .upload(input.objectPath, input.file, { contentType: input.contentType, upsert: false });
+    if (error) {
+      const upCode = parseStorageErrorCode(error) ?? 'STORAGE_FAILED';
+      throw friendlyError('upload', upCode, UPLOAD_FALLBACK);
+    }
+  },
+  async finalize(input: FinalizeInput): Promise<FinalizeResult> {
+    const { supabase } = await import('@/lib/supabase');
+    const { data, error } = await supabase.functions.invoke('corporate-evidence/finalize', {
+      body: { evidenceId: input.evidenceId, idempotencyKey: input.idempotencyKey },
+    });
+    const parsed = parseEvidenceFinalizeData(data, input.evidenceId);
+    if (error || !parsed) {
+      const code = await parseEvidenceErrorCode(error).catch(() => null);
+      throw friendlyError('finalize', code ?? 'FINALIZE_FAILED', FINALIZE_FALLBACK);
+    }
+    return parsed;
+  },
+};

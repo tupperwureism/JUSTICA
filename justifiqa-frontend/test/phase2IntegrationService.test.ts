@@ -152,6 +152,7 @@ const intakeDraft = {
     effectiveDate: '2026-07-29',
   }],
   beneficialOwners: [{
+    clientRowId: 'row-budi-santoso',
     naturalPersonName: 'Budi Santoso',
     identityReference: 'NIK-TEST-102',
     evidenceReference: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
