@@ -89,6 +89,23 @@ export const EMPTY_INTAKE_DRAFT: CorporateIntakeDraft = {
   acceptedScope: false,
 };
 
+export const createEmptyCorporateIntakeDraft = (createId?: () => string): CorporateIntakeDraft => {
+  const idFn = createId ?? crypto.randomUUID;
+  return {
+    entityType: 'PT_ORDINARY',
+    businessName: '',
+    domicileCity: '',
+    domicileProvince: '',
+    kbliCodes: [''],
+    authorizedCapitalIdr: '',
+    paidUpCapitalIdr: '',
+    corporateParties: [createEmptyCorporateParty()],
+    beneficialOwners: [{ ...createEmptyBeneficialOwner(), clientRowId: idFn() }],
+    paymentGatewayRef: '',
+    acceptedScope: false,
+  };
+};
+
 const isPresent = (value: string) => value.trim().length > 0;
 const isAllowed = <T extends readonly string[]>(values: T, value: string): value is T[number] => values.includes(value);
 const isPercentage = (value: string) => {

@@ -11,6 +11,11 @@ import {
 
 const CLIENT_ID = '11111111-1111-4111-8111-111111111111';
 const CASE_ID = '33333333-3333-4333-8333-333333333333';
+const ORDER_ID_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const ORDER_ID_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+const IDEMPOTENCY_KEY_K = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const IDEMPOTENCY_KEY_K1 = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+const IDEMPOTENCY_KEY_K2 = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
 
 const validIntakeDraft: CorporateIntakeInput = {
   entityType: 'PT_ORDINARY',
@@ -32,7 +37,7 @@ const validIntakeDraft: CorporateIntakeInput = {
   beneficialOwners: [{
     clientRowId: 'row-test-bo',
     naturalPersonName: 'Test BO',
-    evidenceReference: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    evidenceReference: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
     controlBasis: 'OWNERSHIP',
     percentage: '100',
   }],
@@ -81,13 +86,13 @@ test('intake single-flight: same key+orderId+payload returns same promise with o
 
   const first = service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'order-A',
-    idempotencyKey: 'key-K',
+    orderId: ORDER_ID_A,
+    idempotencyKey: IDEMPOTENCY_KEY_K,
   });
   const second = service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'order-A',
-    idempotencyKey: 'key-K',
+    orderId: ORDER_ID_A,
+    idempotencyKey: IDEMPOTENCY_KEY_K,
   });
   assert.strictEqual(first, second);
   while (gateway.invokeCalls === 0) await Promise.resolve();
@@ -106,13 +111,13 @@ test('intake single-flight: same idempotencyKey but different orderId fails clos
 
   const first = service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'order-A',
-    idempotencyKey: 'key-K',
+    orderId: ORDER_ID_A,
+    idempotencyKey: IDEMPOTENCY_KEY_K,
   });
   const second = service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'order-B',
-    idempotencyKey: 'key-K',
+    orderId: ORDER_ID_B,
+    idempotencyKey: IDEMPOTENCY_KEY_K,
   });
   const secondRejection = assert.rejects(
     second,
@@ -134,8 +139,8 @@ test('intake single-flight: same idempotencyKey+orderId but different payload fa
 
   const first = service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'order-A',
-    idempotencyKey: 'key-K',
+    orderId: ORDER_ID_A,
+    idempotencyKey: IDEMPOTENCY_KEY_K,
   });
   const conflictingDraft: CorporateIntakeInput = {
     ...validIntakeDraft,
@@ -143,8 +148,8 @@ test('intake single-flight: same idempotencyKey+orderId but different payload fa
   };
   const second = service.submitCorporateIntake({
     draft: conflictingDraft,
-    orderId: 'order-A',
-    idempotencyKey: 'key-K',
+    orderId: ORDER_ID_A,
+    idempotencyKey: IDEMPOTENCY_KEY_K,
   });
   const secondRejection = assert.rejects(
     second,
@@ -165,14 +170,14 @@ test('active key rejects a different invalid payload as idempotency conflict bef
   const service = createPhase2IntegrationService(gateway);
   const first = service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'order-A',
-    idempotencyKey: 'key-K',
+    orderId: ORDER_ID_A,
+    idempotencyKey: IDEMPOTENCY_KEY_K,
   });
   const invalidConflict = assert.rejects(
     service.submitCorporateIntake({
       draft: { ...validIntakeDraft, businessName: '' },
-      orderId: 'order-A',
-      idempotencyKey: 'key-K',
+      orderId: ORDER_ID_A,
+      idempotencyKey: IDEMPOTENCY_KEY_K,
     }),
     (error) => error instanceof Phase2IntegrationError
       && error.code === 'INTAKE_IDEMPOTENCY_CONFLICT',
@@ -189,13 +194,13 @@ test('intake single-flight: different idempotencyKey creates separate attempt', 
 
   await service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'order-A',
-    idempotencyKey: 'key-K1',
+    orderId: ORDER_ID_A,
+    idempotencyKey: IDEMPOTENCY_KEY_K1,
   });
   await service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'order-A',
-    idempotencyKey: 'key-K2',
+    orderId: ORDER_ID_A,
+    idempotencyKey: IDEMPOTENCY_KEY_K2,
   });
 
   assert.equal(gateway.invokeCalls, 2);
@@ -207,15 +212,63 @@ test('intake single-flight: cleanup only removes entry if the finished promise i
 
   await service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'order-A',
-    idempotencyKey: 'key-K',
+    orderId: ORDER_ID_A,
+    idempotencyKey: IDEMPOTENCY_KEY_K,
   });
 
   await service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'order-A',
-    idempotencyKey: 'key-K',
+    orderId: ORDER_ID_A,
+    idempotencyKey: IDEMPOTENCY_KEY_K,
   });
 
   assert.equal(gateway.invokeCalls, 2);
+});
+
+test('invalid orderId is rejected locally with INVALID_PAYLOAD before any side effects', async () => {
+  const gateway = new ConflictGateway();
+  const service = createPhase2IntegrationService(gateway);
+
+  await assert.rejects(
+    service.submitCorporateIntake({
+      draft: validIntakeDraft,
+      orderId: 'not-a-uuid',
+      idempotencyKey: IDEMPOTENCY_KEY_K,
+    }),
+    (e) => e instanceof Phase2IntegrationError && e.code === 'INVALID_PAYLOAD',
+  );
+  assert.equal(gateway.invokeCalls, 0);
+  assert.equal((service as any).inFlightIntake?.size ?? 0, 0);
+});
+
+test('invalid idempotencyKey is rejected locally with INVALID_PAYLOAD before any side effects', async () => {
+  const gateway = new ConflictGateway();
+  const service = createPhase2IntegrationService(gateway);
+
+  await assert.rejects(
+    service.submitCorporateIntake({
+      draft: validIntakeDraft,
+      orderId: ORDER_ID_A,
+      idempotencyKey: 'not-a-uuid',
+    }),
+    (e) => e instanceof Phase2IntegrationError && e.code === 'INVALID_PAYLOAD',
+  );
+  assert.equal(gateway.invokeCalls, 0);
+  assert.equal((service as any).inFlightIntake?.size ?? 0, 0);
+});
+
+test('invalid orderId and idempotencyKey do not call actor or gateway', async () => {
+  const gateway = new ConflictGateway();
+  const service = createPhase2IntegrationService(gateway);
+
+  await assert.rejects(
+    service.submitCorporateIntake({
+      draft: validIntakeDraft,
+      orderId: 'invalid-order',
+      idempotencyKey: 'invalid-key',
+    }),
+    (e) => e instanceof Phase2IntegrationError && e.code === 'INVALID_PAYLOAD',
+  );
+  assert.equal(gateway.invokeCalls, 0);
+  // Actor should not be called either
 });

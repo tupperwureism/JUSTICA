@@ -232,6 +232,10 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
       orderId: string;
       idempotencyKey: string;
     }): Promise<SubmitCorporateIntakeResult> {
+      if (!UUID_PATTERN.test(input.orderId) || !UUID_PATTERN.test(input.idempotencyKey)) {
+        return Promise.reject(new Phase2IntegrationError('INVALID_PAYLOAD'));
+      }
+
       const payload = toIntakePayload(input.draft, input.orderId, input.idempotencyKey);
       const fingerprint = canonicalPayloadFingerprint(payload);
       const existing = inFlightIntake.get(input.idempotencyKey);

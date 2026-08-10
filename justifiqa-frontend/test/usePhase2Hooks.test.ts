@@ -6,8 +6,6 @@ import { Phase2IntegrationError } from '../src/services/phase2IntegrationService
 import { usePhase2Mutation } from '../src/hooks/usePhase2Mutation.ts';
 import { usePhase2Query } from '../src/hooks/usePhase2Query.ts';
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 test('usePhase2Mutation exposes single-flight loading, success, and invalidation', async () => {
   let release: (() => void) | undefined;
   let calls = 0;

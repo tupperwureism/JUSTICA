@@ -173,7 +173,7 @@ test('corporate intake validates the client and refuses invalid gateway response
     service.submitCorporateIntake({
       draft: intakeDraft,
       orderId: '11111111-1111-4111-8111-111111111111',
-      idempotencyKey: 'k-1',
+      idempotencyKey: '22222222-2222-4222-8222-222222222222',
     }),
     (error) => error instanceof Phase2IntegrationError && error.code === 'ROLE_FORBIDDEN',
   );
@@ -183,7 +183,7 @@ test('corporate intake validates the client and refuses invalid gateway response
     service.submitCorporateIntake({
       draft: intakeDraft,
       orderId: '11111111-1111-4111-8111-111111111111',
-      idempotencyKey: 'k-1',
+      idempotencyKey: '22222222-2222-4222-8222-222222222222',
     }),
     (error) => error instanceof Phase2IntegrationError && error.code === 'INTAKE_SERVER_UNAVAILABLE',
   );
@@ -198,7 +198,7 @@ test('corporate intake surfaces idempotency conflict from gateway', async () => 
     service.submitCorporateIntake({
       draft: intakeDraft,
       orderId: '11111111-1111-4111-8111-111111111111',
-      idempotencyKey: 'k-1',
+      idempotencyKey: '22222222-2222-4222-8222-222222222222',
     }),
     (error) => error instanceof Phase2IntegrationError && error.code === 'INTAKE_IDEMPOTENCY_CONFLICT',
   );
@@ -214,7 +214,7 @@ test('corporate intake maps PRICING_CATALOG_UNAVAILABLE from gateway', async () 
     service.submitCorporateIntake({
       draft: intakeDraft,
       orderId: '11111111-1111-4111-8111-111111111111',
-      idempotencyKey: 'k-1',
+      idempotencyKey: '22222222-2222-4222-8222-222222222222',
     }),
     (error) => error instanceof Phase2IntegrationError && error.code === 'PRICING_CATALOG_UNAVAILABLE',
   );
@@ -230,7 +230,7 @@ test('corporate intake maps unknown gateway error to INTAKE_SERVER_UNAVAILABLE',
     service.submitCorporateIntake({
       draft: intakeDraft,
       orderId: '11111111-1111-4111-8111-111111111111',
-      idempotencyKey: 'k-1',
+      idempotencyKey: '22222222-2222-4222-8222-222222222222',
     }),
     (error) => error instanceof Phase2IntegrationError && error.code === 'INTAKE_SERVER_UNAVAILABLE',
   );

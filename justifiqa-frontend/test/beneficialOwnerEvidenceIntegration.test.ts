@@ -7,8 +7,6 @@ import type { CorporateEvidenceAdapter } from '../src/hooks/useCorporateEvidence
 import type { BeneficialOwnerDraft } from '../src/models/corporateIntake.ts';
 import { CorporateEvidenceError } from '../src/services/corporateEvidenceService.ts';
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 const ROW_ID = 'row-beneficial-owner';
 const EVIDENCE_ID = '11111111-1111-4111-8111-111111111111';
 const IDEMPOTENCY_KEY = '22222222-2222-4222-8222-222222222222';

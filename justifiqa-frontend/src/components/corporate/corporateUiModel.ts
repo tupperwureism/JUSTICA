@@ -1,5 +1,6 @@
 export {
   EMPTY_INTAKE_DRAFT,
+  createEmptyCorporateIntakeDraft,
   addBeneficialOwner,
   addCorporateParty,
   addKbliCode,

@@ -5,8 +5,6 @@ import TestRenderer, { act } from 'react-test-renderer';
 import { EvidenceUploadFeedback } from '../src/components/corporate/EvidenceUploadFeedback.ts';
 import type { CorporateEvidenceTaskView } from '../src/hooks/useCorporateEvidenceUploads.ts';
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 const baseTask: CorporateEvidenceTaskView = {
   clientRowId: 'row-a',
   evidenceId: '11111111-1111-4111-8111-111111111111',

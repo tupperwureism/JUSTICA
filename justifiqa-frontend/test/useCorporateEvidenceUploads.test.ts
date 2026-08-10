@@ -7,8 +7,7 @@ import {
   type CorporateEvidenceAdapter,
 } from '../src/hooks/useCorporateEvidenceUploads.ts';
 import { CorporateEvidenceError } from '../src/services/corporateEvidenceService.ts';
-
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+import { StorageApiError } from '@supabase/supabase-js';
 
 const ROW_A = 'row-aaaaaaaa';
 const ROW_B = 'row-bbbbbbbb';
@@ -337,5 +336,186 @@ test('new file creates new IDs and clears the previous evidence reference', asyn
   assert.equal(view.current.get(ROW_A)?.evidenceId, EVIDENCE_ID_B);
   assert.equal(view.current.get(ROW_A)?.idempotencyKey, IDEM_KEY_B);
   assert.equal(view.current.get(ROW_A)?.evidenceReference, REF_B);
+  unmount();
+});
+
+test('ambiguous Storage success: upload actually stored but response lost, retry receives StorageApiError 409 ResourceAlreadyExists', async () => {
+  const adapter = new StubAdapter();
+  let uploadAttempt = 0;
+  const objectPath = `evidence/${EVIDENCE_ID_A}/ktp.pdf`;
+  adapter.upload = async (input) => {
+    adapter.uploadCalls += 1;
+    uploadAttempt += 1;
+    assert.equal(input.objectPath, objectPath);
+    assert.equal(input.contentType, 'application/pdf');
+    if (uploadAttempt === 1) {
+      throw new Error('Network error: response lost');
+    }
+    if (uploadAttempt === 2) {
+      throw new StorageApiError('Duplicate', 409, 'ResourceAlreadyExists');
+    }
+  };
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, makeFile()).catch(() => undefined); });
+  assert.equal(view.current.get(ROW_A)?.checkpoint, 'PREPARED');
+  assert.equal(view.current.get(ROW_A)?.failedStep, 'upload');
+  assert.equal(adapter.uploadCalls, 1);
+
+  await act(async () => { await view.current.retry(ROW_A); });
+  assert.equal(view.current.get(ROW_A)?.checkpoint, 'FINALIZED');
+  assert.equal(view.current.get(ROW_A)?.evidenceReference, REF_A);
+  assert.equal(adapter.prepareCalls, 1);
+  assert.equal(adapter.uploadCalls, 2);
+  assert.equal(adapter.finalizeCalls, 1);
+  assert.deepEqual(adapter.prepareAttempts, [{ evidenceId: EVIDENCE_ID_A, idempotencyKey: IDEM_KEY_A }]);
+  assert.deepEqual(adapter.finalizeAttempts, [{ evidenceId: EVIDENCE_ID_A, idempotencyKey: IDEM_KEY_A }]);
+  unmount();
+});
+
+test('ambiguous Storage success: recognizes KeyAlreadyExists statusCode', async () => {
+  const adapter = new StubAdapter();
+  let uploadAttempt = 0;
+  adapter.upload = async (_input) => {
+    adapter.uploadCalls += 1;
+    uploadAttempt += 1;
+    if (uploadAttempt === 1) {
+      throw new Error('Network error: response lost');
+    }
+    if (uploadAttempt === 2) {
+      throw new StorageApiError('Duplicate', 409, 'KeyAlreadyExists');
+    }
+  };
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, makeFile()).catch(() => undefined); });
+  await act(async () => { await view.current.retry(ROW_A); });
+  assert.equal(view.current.get(ROW_A)?.checkpoint, 'FINALIZED');
+  assert.equal(adapter.uploadCalls, 2);
+  assert.equal(adapter.finalizeCalls, 1);
+  unmount();
+});
+
+test('ambiguous Storage success: recognizes legacy already_exists statusCode', async () => {
+  const adapter = new StubAdapter();
+  let uploadAttempt = 0;
+  adapter.upload = async (_input) => {
+    adapter.uploadCalls += 1;
+    uploadAttempt += 1;
+    if (uploadAttempt === 1) {
+      throw new Error('Network error: response lost');
+    }
+    if (uploadAttempt === 2) {
+      throw new StorageApiError('Duplicate', 409, 'already_exists');
+    }
+  };
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, makeFile()).catch(() => undefined); });
+  await act(async () => { await view.current.retry(ROW_A); });
+  assert.equal(view.current.get(ROW_A)?.checkpoint, 'FINALIZED');
+  assert.equal(adapter.uploadCalls, 2);
+  assert.equal(adapter.finalizeCalls, 1);
+  unmount();
+});
+
+test('ambiguous Storage success: arbitrary object with similar statusCode is rejected', async () => {
+  const adapter = new StubAdapter();
+  adapter.upload = async (_input) => {
+    adapter.uploadCalls += 1;
+    throw { status: 409, statusCode: 'ResourceAlreadyExists', code: 'ResourceAlreadyExists' };
+  };
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, makeFile()).catch(() => undefined); });
+  assert.equal(view.current.get(ROW_A)?.checkpoint, 'PREPARED');
+  assert.equal(view.current.get(ROW_A)?.failedStep, 'upload');
+  assert.equal(adapter.uploadCalls, 1);
+  assert.equal(adapter.finalizeCalls, 0);
+  unmount();
+});
+
+test('ambiguous Storage success: generic 409 without allowlisted statusCode is rejected', async () => {
+  const adapter = new StubAdapter();
+  adapter.upload = async (_input) => {
+    adapter.uploadCalls += 1;
+    throw new StorageApiError('Conflict', 409, 'SomeOtherConflictCode');
+  };
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, makeFile()).catch(() => undefined); });
+  assert.equal(view.current.get(ROW_A)?.checkpoint, 'PREPARED');
+  assert.equal(view.current.get(ROW_A)?.failedStep, 'upload');
+  assert.equal(adapter.uploadCalls, 1);
+  assert.equal(adapter.finalizeCalls, 0);
+  unmount();
+});
+
+test('ambiguous Storage success: upsert:false verified through gateway call arguments', async () => {
+  const adapter = new StubAdapter();
+  let uploadAttempt = 0;
+  const _uploadOptions: Array<{ objectPath: string; file: File; contentType: string }> = [];
+  adapter.upload = async (input) => {
+    adapter.uploadCalls += 1;
+    uploadAttempt += 1;
+    _uploadOptions.push(input);
+    if (uploadAttempt === 1) {
+      throw new Error('Network error: response lost');
+    }
+    if (uploadAttempt === 2) {
+      throw new StorageApiError('Duplicate', 409, 'ResourceAlreadyExists');
+    }
+  };
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, makeFile()).catch(() => undefined); });
+  await act(async () => { await view.current.retry(ROW_A); });
+  assert.equal(_uploadOptions.length, 2);
+  assert.equal(_uploadOptions[0].objectPath, _uploadOptions[1].objectPath);
+  assert.equal(_uploadOptions[0].file.size, _uploadOptions[1].file.size);
+  assert.equal(_uploadOptions[0].contentType, _uploadOptions[1].contentType);
+  unmount();
+});
+
+test('ambiguous Storage success: retry uses same evidenceId, idempotencyKey, File, and objectPath', async () => {
+  const adapter = new StubAdapter();
+  let uploadAttempt = 0;
+  const uploadInputs: Array<{ objectPath: string; file: File; contentType: string }> = [];
+  adapter.upload = async (input) => {
+    adapter.uploadCalls += 1;
+    uploadAttempt += 1;
+    uploadInputs.push(input);
+    if (uploadAttempt === 1) {
+      throw new Error('Network error: response lost');
+    }
+    if (uploadAttempt === 2) {
+      throw new StorageApiError('Duplicate', 409, 'ResourceAlreadyExists');
+    }
+  };
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(adapter, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  const testFile = makeFile('ktp.pdf');
+  await act(async () => { await view.current.start(ROW_A, testFile).catch(() => undefined); });
+  await act(async () => { await view.current.retry(ROW_A); });
+  assert.equal(uploadInputs.length, 2);
+  assert.equal(uploadInputs[0].objectPath, uploadInputs[1].objectPath);
+  assert.equal(uploadInputs[0].file, uploadInputs[1].file);
+  assert.equal(uploadInputs[0].contentType, uploadInputs[1].contentType);
+  assert.deepEqual(adapter.prepareAttempts, [{ evidenceId: EVIDENCE_ID_A, idempotencyKey: IDEM_KEY_A }]);
+  assert.deepEqual(adapter.finalizeAttempts, [{ evidenceId: EVIDENCE_ID_A, idempotencyKey: IDEM_KEY_A }]);
   unmount();
 });

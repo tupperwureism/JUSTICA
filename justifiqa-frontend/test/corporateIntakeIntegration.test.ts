@@ -14,6 +14,46 @@ const CASE_ID = '33333333-3333-4333-8333-333333333333';
 const ESCROW_ID = '44444444-4444-4444-8444-444444444444';
 const CATALOG_ID = '55555555-5555-4555-8555-555555555555';
 
+const ORDER_CALLER_1 = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const ORDER_CALLER_2 = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+const KEY_CALLER_1 = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const KEY_CALLER_2 = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+const ORDER_RETRY = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+const KEY_RETRY = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+const ORDER_SINGLE_FLIGHT = '11111111-1111-4111-8111-111111111111';
+const KEY_SINGLE_FLIGHT = '22222222-2222-4222-8222-222222222222';
+const ORDER_RESET = '33333333-3333-4333-8333-333333333333';
+const KEY_RESET = '44444444-4444-4444-8444-444444444444';
+const ORDER_RESET_NEW = '55555555-5555-4555-8555-555555555555';
+const KEY_RESET_NEW = '66666666-6666-4666-8666-666666666666';
+const ORDER_BO_TEST = '77777777-7777-4777-8777-777777777777';
+const KEY_BO_TEST = '88888888-8888-4888-8888-888888888888';
+const ORDER_BO_EMPTY = '99999999-9999-4999-8999-999999999999';
+const KEY_BO_EMPTY = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+const ORDER_PARTY_TEST = 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff';
+const KEY_PARTY_TEST = 'cccccccc-dddd-4eee-8fff-000000000000';
+const ORDER_SCOPE_TEST = 'dddddddd-eeee-4fff-8000-111111111111';
+const KEY_SCOPE_TEST = 'eeeeeeee-ffff-4000-8111-222222222222';
+const ORDER_PG_TEST = 'ffffffff-0000-4111-8222-333333333333';
+const KEY_PG_TEST = '00000000-1111-4222-8333-444444444444';
+const ORDER_EFF_TEST = '11111111-2222-4333-8444-555555555555';
+const KEY_EFF_TEST = '22222222-3333-4444-8555-666666666666';
+const ORDER_GATEWAY_TEST = '33333333-4444-4555-8666-777777777777';
+const KEY_GATEWAY_TEST = '44444444-5555-4666-8777-888888888888';
+const ORDER_EVIDENCE_RETRY = '55555555-6666-4777-8888-999999999999';
+const KEY_EVIDENCE_RETRY = '66666666-7777-4888-8999-aaaaaaaaaaaa';
+const ORDER_RACE_1 = '77777777-8888-4999-8aaa-bbbbbbbbbbbb';
+const KEY_RACE_1 = '88888888-9999-4aaa-8bbb-cccccccccccc';
+const ORDER_RACE_2 = '99999999-aaaa-4bbb-8ccc-dddddddddddd';
+const KEY_RACE_2 = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+const ORDER_ORDER_1 = 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff';
+const KEY_SAME_KEY = 'cccccccc-dddd-4eee-8fff-000000000000';
+const ORDER_ORDER_2 = 'dddddddd-eeee-4fff-8000-111111111111';
+const ORDER_EVIDENCE_CONFLICT = 'eeeeeeee-ffff-4000-8111-222222222222';
+const KEY_EVIDENCE_CONFLICT = 'ffffffff-0000-4111-8222-333333333333';
+const ORDER_ACTOR_MISMATCH = '00000000-1111-4222-8333-444444444444';
+const KEY_ACTOR_MISMATCH = '11111111-2222-4333-8444-555555555555';
+
 const validIntakeDraft: CorporateIntakeInput = {
   entityType: 'PT_ORDINARY',
   businessName: 'PT Test Company',
@@ -109,21 +149,21 @@ test('submitCorporateIntake uses caller-provided orderId and idempotencyKey', as
 
   await service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'caller-order-1',
-    idempotencyKey: 'caller-key-1',
+    orderId: ORDER_CALLER_1,
+    idempotencyKey: KEY_CALLER_1,
   });
 
   await service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'caller-order-2',
-    idempotencyKey: 'caller-key-2',
+    orderId: ORDER_CALLER_2,
+    idempotencyKey: KEY_CALLER_2,
   });
 
   assert.equal(gateway.invokeCalls.length, 2);
-  assert.equal(gateway.invokeCalls[0].payload.orderId, 'caller-order-1');
-  assert.equal(gateway.invokeCalls[0].payload.idempotencyKey, 'caller-key-1');
-  assert.equal(gateway.invokeCalls[1].payload.orderId, 'caller-order-2');
-  assert.equal(gateway.invokeCalls[1].payload.idempotencyKey, 'caller-key-2');
+  assert.equal(gateway.invokeCalls[0].payload.orderId, ORDER_CALLER_1);
+  assert.equal(gateway.invokeCalls[0].payload.idempotencyKey, KEY_CALLER_1);
+  assert.equal(gateway.invokeCalls[1].payload.orderId, ORDER_CALLER_2);
+  assert.equal(gateway.invokeCalls[1].payload.idempotencyKey, KEY_CALLER_2);
 });
 
 test('submitCorporateIntake exact retry uses same idempotencyKey and orderId', async () => {
@@ -134,22 +174,22 @@ test('submitCorporateIntake exact retry uses same idempotencyKey and orderId', a
   await assert.rejects(
     service.submitCorporateIntake({
       draft: validIntakeDraft,
-      orderId: 'retry-order',
-      idempotencyKey: 'retry-key',
+      orderId: ORDER_RETRY,
+      idempotencyKey: KEY_RETRY,
     }),
     (e) => e instanceof Phase2IntegrationError && e.code === 'INTAKE_SERVER_UNAVAILABLE',
   );
 
   gateway.invokeError = null;
-  const _result = await service.submitCorporateIntake({
+  await service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'retry-order',
-    idempotencyKey: 'retry-key',
+    orderId: ORDER_RETRY,
+    idempotencyKey: KEY_RETRY,
   });
 
   assert.equal(gateway.invokeCalls.length, 2);
-  assert.equal(gateway.invokeCalls[0].payload.idempotencyKey, 'retry-key');
-  assert.equal(gateway.invokeCalls[1].payload.idempotencyKey, 'retry-key');
+  assert.equal(gateway.invokeCalls[0].payload.idempotencyKey, KEY_RETRY);
+  assert.equal(gateway.invokeCalls[1].payload.idempotencyKey, KEY_RETRY);
   assert.equal(gateway.invokeCalls[0].payload.orderId, gateway.invokeCalls[1].payload.orderId);
 });
 
@@ -161,13 +201,13 @@ test('submitCorporateIntake single-flight: concurrent calls return same promise'
 
   const first = service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'single-flight-order',
-    idempotencyKey: 'single-flight-key',
+    orderId: ORDER_SINGLE_FLIGHT,
+    idempotencyKey: KEY_SINGLE_FLIGHT,
   });
   const second = service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'single-flight-order',
-    idempotencyKey: 'single-flight-key',
+    orderId: ORDER_SINGLE_FLIGHT,
+    idempotencyKey: KEY_SINGLE_FLIGHT,
   });
   assert.strictEqual(first, second);
   while (gateway.invokeCalls.length === 0) await Promise.resolve();
@@ -187,8 +227,8 @@ test('submitCorporateIntake reset clears retry context', async () => {
   await assert.rejects(
     service.submitCorporateIntake({
       draft: validIntakeDraft,
-      orderId: 'reset-order',
-      idempotencyKey: 'reset-key',
+      orderId: ORDER_RESET,
+      idempotencyKey: KEY_RESET,
     }),
     (e) => e instanceof Phase2IntegrationError && e.code === 'INTAKE_SERVER_UNAVAILABLE',
   );
@@ -196,15 +236,15 @@ test('submitCorporateIntake reset clears retry context', async () => {
   gateway.invokeError = null;
   gateway.invokeCalls.length = 0;
 
-  const _result = await service.submitCorporateIntake({
+  await service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'reset-order-new',
-    idempotencyKey: 'reset-key-new',
+    orderId: ORDER_RESET_NEW,
+    idempotencyKey: KEY_RESET_NEW,
   });
 
   assert.equal(gateway.invokeCalls.length, 1);
-  assert.equal(gateway.invokeCalls[0].payload.idempotencyKey, 'reset-key-new');
-  assert.equal(gateway.invokeCalls[0].payload.orderId, 'reset-order-new');
+  assert.equal(gateway.invokeCalls[0].payload.idempotencyKey, KEY_RESET_NEW);
+  assert.equal(gateway.invokeCalls[0].payload.orderId, ORDER_RESET_NEW);
 });
 
 test('toIntakePayload omits UI row identity and raw identityReference from beneficialOwners', async () => {
@@ -213,8 +253,8 @@ test('toIntakePayload omits UI row identity and raw identityReference from benef
 
   await service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'bo-test-order',
-    idempotencyKey: 'bo-test-key',
+    orderId: ORDER_BO_TEST,
+    idempotencyKey: KEY_BO_TEST,
   });
 
   const boPayload = gateway.invokeCalls[0].payload.beneficialOwners[0];
@@ -243,8 +283,8 @@ test('toIntakePayload rejects empty evidenceReference in beneficialOwners at val
   await assert.rejects(
     service.submitCorporateIntake({
       draft: draftWithEmptyEvidence,
-      orderId: 'bo-empty-evidence',
-      idempotencyKey: 'bo-empty-key',
+      orderId: ORDER_BO_EMPTY,
+      idempotencyKey: KEY_BO_EMPTY,
     }),
     (e) => e instanceof Phase2IntegrationError && e.code === 'INVALID_PAYLOAD',
   );
@@ -256,8 +296,8 @@ test('corporateParties identityReference is preserved in payload', async () => {
 
   await service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'party-test-order',
-    idempotencyKey: 'party-test-key',
+    orderId: ORDER_PARTY_TEST,
+    idempotencyKey: KEY_PARTY_TEST,
   });
 
   const partyPayload = gateway.invokeCalls[0].payload.corporateParties[0];
@@ -271,8 +311,8 @@ test('acceptedScope is not sent to Edge Function', async () => {
 
   await service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'scope-test-order',
-    idempotencyKey: 'scope-test-key',
+    orderId: ORDER_SCOPE_TEST,
+    idempotencyKey: KEY_SCOPE_TEST,
   });
 
   const payloadKeys = Object.keys(gateway.invokeCalls[0].payload);
@@ -285,8 +325,8 @@ test('paymentGatewayRef is included in payload', async () => {
 
   await service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'pg-test-order',
-    idempotencyKey: 'pg-test-key',
+    orderId: ORDER_PG_TEST,
+    idempotencyKey: KEY_PG_TEST,
   });
 
   assert.equal(gateway.invokeCalls[0].payload.paymentGatewayRef, 'PG-TEST-001');
@@ -298,8 +338,8 @@ test('effectiveDate maps to effectiveFrom', async () => {
 
   await service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'eff-test-order',
-    idempotencyKey: 'eff-test-key',
+    orderId: ORDER_EFF_TEST,
+    idempotencyKey: KEY_EFF_TEST,
   });
 
   const partyPayload = gateway.invokeCalls[0].payload.corporateParties[0];
@@ -312,8 +352,8 @@ test('gateway uses supabase.functions.invoke for corporate-intake', async () => 
 
   await service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'gateway-test-order',
-    idempotencyKey: 'gateway-test-key',
+    orderId: ORDER_GATEWAY_TEST,
+    idempotencyKey: KEY_GATEWAY_TEST,
   });
 
   // The gateway.invokeCorporateIntake was called
@@ -328,8 +368,8 @@ test('evidence upload resumable: retry per step preserves uploaded evidence', as
   await assert.rejects(
     service.submitCorporateIntake({
       draft: validIntakeDraft,
-      orderId: 'evidence-retry-order',
-      idempotencyKey: 'evidence-retry-key',
+      orderId: ORDER_EVIDENCE_RETRY,
+      idempotencyKey: KEY_EVIDENCE_RETRY,
     }),
     (e) => e instanceof Phase2IntegrationError && e.code === 'INTAKE_SERVER_UNAVAILABLE',
   );
@@ -337,8 +377,8 @@ test('evidence upload resumable: retry per step preserves uploaded evidence', as
   gateway.invokeError = null;
   await service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'evidence-retry-order',
-    idempotencyKey: 'evidence-retry-key',
+    orderId: ORDER_EVIDENCE_RETRY,
+    idempotencyKey: KEY_EVIDENCE_RETRY,
   });
 
   assert.equal(gateway.invokeCalls.length, 2);
@@ -374,8 +414,8 @@ test('evidence upload prevents race: concurrent uploads with different evidenceR
   };
 
   const [r1, r2] = await Promise.all([
-    service.submitCorporateIntake({ draft: draft1, orderId: 'race-1', idempotencyKey: 'race-key-1' }),
-    service.submitCorporateIntake({ draft: draft2, orderId: 'race-2', idempotencyKey: 'race-key-2' }),
+    service.submitCorporateIntake({ draft: draft1, orderId: ORDER_RACE_1, idempotencyKey: KEY_RACE_1 }),
+    service.submitCorporateIntake({ draft: draft2, orderId: ORDER_RACE_2, idempotencyKey: KEY_RACE_2 }),
   ]);
 
   assert.notEqual(r1.corporateCaseId, r2.corporateCaseId);
@@ -392,14 +432,14 @@ test('submitCorporateIntake rejects a different orderId with the same in-flight 
 
   const first = service.submitCorporateIntake({
     draft: validIntakeDraft,
-    orderId: 'order-1',
-    idempotencyKey: 'same-key',
+    orderId: ORDER_ORDER_1,
+    idempotencyKey: KEY_SAME_KEY,
   });
   const conflict = assert.rejects(
     service.submitCorporateIntake({
       draft: validIntakeDraft,
-      orderId: 'order-2',
-      idempotencyKey: 'same-key',
+      orderId: ORDER_ORDER_2,
+      idempotencyKey: KEY_SAME_KEY,
     }),
     (error) => error instanceof Phase2IntegrationError
       && error.code === 'INTAKE_IDEMPOTENCY_CONFLICT',
@@ -420,8 +460,8 @@ test('submitCorporateIntake maps EVIDENCE_CONFLICT and EVIDENCE_INVALID from gat
     await assert.rejects(
       service.submitCorporateIntake({
         draft: validIntakeDraft,
-        orderId: 'evidence-conflict-order',
-        idempotencyKey: 'evidence-conflict-key',
+        orderId: ORDER_EVIDENCE_CONFLICT,
+        idempotencyKey: KEY_EVIDENCE_CONFLICT,
       }),
       (e) => e instanceof Phase2IntegrationError && e.code === 'INTAKE_EVIDENCE_CONFLICT',
     );
@@ -438,8 +478,8 @@ test('submitCorporateIntake maps ACTOR_MISMATCH from gateway', async () => {
   await assert.rejects(
     service.submitCorporateIntake({
       draft: validIntakeDraft,
-      orderId: 'actor-mismatch-order',
-      idempotencyKey: 'actor-mismatch-key',
+      orderId: ORDER_ACTOR_MISMATCH,
+      idempotencyKey: KEY_ACTOR_MISMATCH,
     }),
     (e) => e instanceof Phase2IntegrationError && e.code === 'INTAKE_ACTOR_FORBIDDEN',
   );

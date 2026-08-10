@@ -66,7 +66,6 @@ export function BeneficialOwnerFields({
               <label className="space-y-2 text-sm font-semibold">Persentase (%)<Input required type="number" min="0" max="100" value={owner.percentage} onChange={(event) => evidence.updateOwner(owner.clientRowId, { percentage: event.target.value })} className="min-h-10 rounded-xl border-border bg-background" /></label>
             </div>
             <BeneficialOwnerEvidencePanel
-              clientRowId={owner.clientRowId}
               evidenceReference={owner.evidenceReference}
               task={task}
               onFile={(file) => {

@@ -1,10 +1,10 @@
 import { FileUp, Loader2, ShieldCheck, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useRef } from 'react';
 import type { CorporateEvidenceTaskView } from '@/hooks/useCorporateEvidenceUploads';
 import { EvidenceUploadFeedback } from './EvidenceUploadFeedback';
 
 type Props = {
-  clientRowId: string;
   evidenceReference?: string;
   task?: CorporateEvidenceTaskView;
   onFile: (file: File) => void;
@@ -12,13 +12,12 @@ type Props = {
 };
 
 export function BeneficialOwnerEvidencePanel({
-  clientRowId,
   evidenceReference,
   task,
   onFile,
   onRetry,
 }: Props) {
-  const inputId = `owner-evidence-${clientRowId}`;
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const hasEvidence = Boolean(evidenceReference);
   return (
     <div className="space-y-3 rounded-xl border border-border bg-background p-4">
@@ -28,8 +27,8 @@ export function BeneficialOwnerEvidencePanel({
           {hasEvidence ? 'Bukti identitas terunggah' : 'Unggah bukti identitas (PDF/JPG/PNG, max 10MB)'}
         </span>
         <span className="flex items-center gap-2">
-          <input id={inputId} type="file" accept="application/pdf,image/jpeg,image/png" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) onFile(file); }} />
-          <Button type="button" variant={hasEvidence ? 'outline' : 'default'} size="sm" onClick={() => document.getElementById(inputId)?.click()}>
+          <input ref={fileInputRef} type="file" accept="application/pdf,image/jpeg,image/png" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (event.target) event.target.value = ''; if (file) onFile(file); }} />
+          <Button type="button" variant={hasEvidence ? 'outline' : 'default'} size="sm" onClick={() => fileInputRef.current?.click()}>
             {task?.isRunning ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
             {hasEvidence ? 'Ganti file' : 'Pilih file'}
           </Button>

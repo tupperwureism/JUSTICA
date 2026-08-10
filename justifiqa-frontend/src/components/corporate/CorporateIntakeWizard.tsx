@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { CorporateIntakeStepFields } from './CorporateIntakeStepFields';
 import {
-  EMPTY_INTAKE_DRAFT,
+  createEmptyCorporateIntakeDraft,
   INTAKE_STEPS,
   validateCorporateIntakeStep,
   type CorporateIntakeDraft,
@@ -22,7 +22,7 @@ export function CorporateIntakeWizard({
   onComplete, submitting = false, error, onRetry,
 }: Props) {
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState(EMPTY_INTAKE_DRAFT);
+  const [draft, setDraft] = useState(() => createEmptyCorporateIntakeDraft());
   const [validationError, setValidationError] = useState<string | null>(null);
   const isLast = step === INTAKE_STEPS.length - 1;
 

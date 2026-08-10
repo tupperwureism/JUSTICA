@@ -1,4 +1,5 @@
 import { parseEvidenceErrorCode } from './intakeError.ts';
+import { StorageApiError } from '@supabase/supabase-js';
 
 export type EvidenceUploadStep = 'prepare' | 'upload' | 'finalize';
 
@@ -46,19 +47,31 @@ export class CorporateEvidenceError extends Error {
   }
 }
 
-const STORAGE_ERROR_ALLOWLIST = [
-  'EntityTooLarge',
-  'InvalidMimeType',
-  'InvalidRequest',
+const STORAGE_DUPLICATE_CODES = [
   'ResourceAlreadyExists',
+  'KeyAlreadyExists',
+  'already_exists',
 ] as const;
 
+function isStorageApiError(error: unknown): error is StorageApiError {
+  return error instanceof StorageApiError;
+}
+
+function parseStorageDuplicateCode(error: unknown): (typeof STORAGE_DUPLICATE_CODES)[number] | null {
+  if (!isStorageApiError(error)) return null;
+  if (error.status !== 409) return null;
+  const statusCode = error.statusCode;
+  return typeof statusCode === 'string' && STORAGE_DUPLICATE_CODES.includes(statusCode as (typeof STORAGE_DUPLICATE_CODES)[number])
+    ? statusCode as (typeof STORAGE_DUPLICATE_CODES)[number]
+    : null;
+}
+
 function parseStorageErrorCode(error: unknown): string | null {
-  if (typeof error !== 'object' || error === null || !('code' in error)) return null;
-  const code = error.code;
-  return typeof code === 'string'
-    && STORAGE_ERROR_ALLOWLIST.includes(code as (typeof STORAGE_ERROR_ALLOWLIST)[number])
-    ? code
+  if (!isStorageApiError(error)) return null;
+  const statusCode = error.statusCode;
+  return typeof statusCode === 'string'
+    && ['EntityTooLarge', 'InvalidMimeType', 'InvalidRequest', 'ResourceAlreadyExists', 'KeyAlreadyExists', 'already_exists'].includes(statusCode)
+    ? statusCode
     : null;
 }
 
@@ -131,6 +144,10 @@ export async function uploadEvidence(
     await gateway.upload(input);
   } catch (error) {
     if (error instanceof CorporateEvidenceError) throw error;
+    const duplicateCode = parseStorageDuplicateCode(error);
+    if (duplicateCode) {
+      return;
+    }
     const code = parseStorageErrorCode(error);
     throw friendlyError('upload', code ?? 'STORAGE_FAILED', UPLOAD_FALLBACK);
   }
