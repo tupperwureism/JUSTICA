@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createElement, useCallback, useState, useRef, type ReactNode } from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { useBeneficialOwnerEvidence } from '../src/hooks/useBeneficialOwnerEvidence.ts';
 import type { CorporateEvidenceAdapter } from '../src/hooks/useCorporateEvidenceUploads.ts';
 import type { BeneficialOwnerDraft } from '../src/models/corporateIntake.ts';
 import { CorporateEvidenceError } from '../src/services/corporateEvidenceService.ts';
+
+const __dirname = join(fileURLToPath(import.meta.url), '..');
 
 const ROW_ID = 'row-beneficial-owner';
 const EVIDENCE_ID = '11111111-1111-4111-8111-111111111111';
@@ -88,8 +93,12 @@ test('BeneficialOwnerEvidencePanel ref isolation: each panel button triggers onl
 
   let fileInputAClicked = false;
   let fileInputBClicked = false;
+  let fileA: File | null = null;
+  let fileB: File | null = null;
 
-  const TestPanelA = ({ onFile }: { onFile: (file: File) => void }) => {
+  const createFile = (name: string) => new File(['content'], name, { type: 'application/pdf' });
+
+  const TestPanelA = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     return createElement('div', {},
       createElement('input', {
@@ -98,7 +107,7 @@ test('BeneficialOwnerEvidencePanel ref isolation: each panel button triggers onl
         className: 'sr-only',
         onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
           const file = e.target.files?.[0];
-          if (file) onFile(file);
+          if (file) fileA = file;
         }
       }),
       createElement('button', {
@@ -108,7 +117,7 @@ test('BeneficialOwnerEvidencePanel ref isolation: each panel button triggers onl
     );
   };
 
-  const TestPanelB = ({ onFile }: { onFile: (file: File) => void }) => {
+  const TestPanelB = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     return createElement('div', {},
       createElement('input', {
@@ -117,7 +126,7 @@ test('BeneficialOwnerEvidencePanel ref isolation: each panel button triggers onl
         className: 'sr-only',
         onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
           const file = e.target.files?.[0];
-          if (file) onFile(file);
+          if (file) fileB = file;
         }
       }),
       createElement('button', {
@@ -128,11 +137,9 @@ test('BeneficialOwnerEvidencePanel ref isolation: each panel button triggers onl
   };
 
   const Harness = () => {
-    const onFileA = useCallback((file: File) => { /* handle file A */ }, []);
-    const onFileB = useCallback((file: File) => { /* handle file B */ }, []);
     return createElement('div', {},
-      createElement(TestPanelA, { onFile: onFileA }),
-      createElement(TestPanelB, { onFile: onFileB })
+      createElement(TestPanelA),
+      createElement(TestPanelB)
     );
   };
 
@@ -154,8 +161,20 @@ test('BeneficialOwnerEvidencePanel ref isolation: each panel button triggers onl
   assert.equal(fileInputAClicked, true);
   assert.equal(fileInputBClicked, true);
 
-  // Verify no document.getElementById was used (test would fail if it was)
-  // This test passes because we use useRef, not document.getElementById
-
   act(() => { renderer.unmount(); });
+});
+
+test('BeneficialOwnerEvidencePanel source code uses useRef not document.getElementById', () => {
+  const componentPath = join(__dirname, '../src/components/corporate/BeneficialOwnerEvidencePanel.tsx');
+  const source = readFileSync(componentPath, 'utf8');
+  
+  // Verify useRef is used for file input
+  assert.ok(source.includes('useRef<HTMLInputElement>'), 'Component should use useRef for file input');
+  assert.ok(source.includes('fileInputRef.current?.click()'), 'Component should use ref.current?.click()');
+  
+  // Verify document.getElementById is NOT used
+  assert.ok(!source.includes('document.getElementById'), 'Component should not use document.getElementById');
+  
+  // Verify the pattern: ref is attached to input element
+  assert.ok(source.includes('ref={fileInputRef}'), 'Component should attach ref to input element');
 });

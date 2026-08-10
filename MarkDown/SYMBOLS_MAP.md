@@ -125,7 +125,7 @@
 | components/corporate/CorporateKbliCodeFields.tsx | 12f CorporateKbliCodeFields |
 | components/corporate/CorporatePartyFields.tsx | 27f CorporatePartyFields |
 | components/corporate/EvidenceUploadFeedback.ts | 11f EvidenceUploadFeedback |
-| components/corporate/corporateUiModel.ts | 1x EMPTY_INTAKE_DRAFT, 1x createEmptyCorporateIntakeDraft, 1x addBeneficialOwner, 1x addCorporateParty, 1x addKbliCode, 1x removeBeneficialOwner, 1x removeCorporateParty, 1x removeKbliCode, 1x validateCorporateIntake, 1x validateCorporateIntakeStep, 13x BeneficialOwnerControlBasis, 13x BeneficialOwnerDraft, 13x CorporateEntityType, 13x CorporateIntakeDraft, 13x CorporateIntakeValidationIssue, 13x CorporatePartyDraft, 13x CorporatePartyRole, 13x CorporatePartyType, 24t CorporateCaseStage, 32v INTAKE_STEPS, 40v CORPORATE_STAGES, 49v CLIENT_STAGE_COPY |
+| components/corporate/corporateUiModel.ts | 1x createEmptyCorporateIntakeDraft, 1x addBeneficialOwner, 1x addCorporateParty, 1x addKbliCode, 1x removeBeneficialOwner, 1x removeCorporateParty, 1x removeKbliCode, 1x validateCorporateIntake, 1x validateCorporateIntakeStep, 12x BeneficialOwnerControlBasis, 12x BeneficialOwnerDraft, 12x CorporateEntityType, 12x CorporateIntakeDraft, 12x CorporateIntakeValidationIssue, 12x CorporatePartyDraft, 12x CorporatePartyRole, 12x CorporatePartyType, 23t CorporateCaseStage, 31v INTAKE_STEPS, 39v CORPORATE_STAGES, 48v CLIENT_STAGE_COPY |
 | components/corporate/notary/KemenkumhamStampingModal.tsx | 8t NotaryStampingRequest, 23f KemenkumhamStampingModal |
 | components/corporate/notary/NotaryCaseWorkspacePanel.tsx | 23f NotaryCaseWorkspacePanel |
 | components/document/DocumentDraftActions.tsx | 6f DocumentDraftActions |
@@ -176,7 +176,7 @@
 | hooks/useVaultDelivery.ts | 4f useVaultDelivery |
 | lib/supabase.ts | 20v supabase |
 | lib/utils.ts | 4f cn |
-| models/corporateIntake.ts | 1v CORPORATE_ENTITY_TYPES, 2v CORPORATE_PARTY_TYPES, 3v CORPORATE_PARTY_ROLES, 11v BENEFICIAL_OWNER_CONTROL_BASES, 19t CorporateEntityType, 20t CorporatePartyType, 21t CorporatePartyRole, 22t BeneficialOwnerControlBasis, 24t CorporatePartyDraft, 34t BeneficialOwnerDraft, 42t CorporateIntakeDraft, 56t CorporateIntakeValidationIssue, 61v createEmptyCorporateParty, 71v createEmptyBeneficialOwner, 78v EMPTY_INTAKE_DRAFT, 92v createEmptyCorporateIntakeDraft, 126v addCorporateParty, 131v removeCorporateParty, 139v addBeneficialOwner, 144v removeBeneficialOwner, 152v addKbliCode, 157v removeKbliCode, 250f validateCorporateIntake, 261f validateCorporateIntakeStep |
+| models/corporateIntake.ts | 1v CORPORATE_ENTITY_TYPES, 2v CORPORATE_PARTY_TYPES, 3v CORPORATE_PARTY_ROLES, 11v BENEFICIAL_OWNER_CONTROL_BASES, 19t CorporateEntityType, 20t CorporatePartyType, 21t CorporatePartyRole, 22t BeneficialOwnerControlBasis, 24t CorporatePartyDraft, 34t BeneficialOwnerDraft, 42t CorporateIntakeDraft, 56t CorporateIntakeValidationIssue, 61v createEmptyCorporateParty, 71v createEmptyBeneficialOwner, 81v createEmptyCorporateIntakeDraft, 115v addCorporateParty, 120v removeCorporateParty, 128v addBeneficialOwner, 133v removeBeneficialOwner, 141v addKbliCode, 146v removeKbliCode, 239f validateCorporateIntake, 250f validateCorporateIntakeStep |
 | pages/AdminDashboardPage.tsx | 10f AdminDashboardPage |
 | pages/AdvocateAuthPage.tsx | 15v AdvocateAuthPage |
 | pages/AdvocateDashboardPage.tsx | 4f AdvocateDashboardPage |
@@ -195,7 +195,7 @@
 | router/AppRouter.tsx | 63v AppRouter |
 | router/PortalProtectedRoute.tsx | 11f PortalProtectedRoute |
 | services/consultationService.ts | 15f getAvailableConsultationSlots, 52f checkoutConsultation |
-| services/corporateEvidenceService.ts | 4t EvidenceUploadStep, 6t PrepareInput, 13t PrepareResult, 17t UploadInput, 23t FinalizeInput, 28t FinalizeResult, 32i EvidenceGateway, 38c CorporateEvidenceError, 99f parseEvidencePrepareData, 114f parseEvidenceFinalizeData, 126f prepareEvidence, 139f uploadEvidence, 156f finalizeEvidence, 169v corporateEvidenceGateway |
+| services/corporateEvidenceService.ts | 4t EvidenceUploadStep, 6t PrepareInput, 13t PrepareResult, 17t UploadInput, 23t FinalizeInput, 28t FinalizeResult, 32i EvidenceGateway, 38i GatewayDependencies, 43c CorporateEvidenceError, 106f parseEvidencePrepareData, 121f parseEvidenceFinalizeData, 133f prepareEvidence, 146f uploadEvidence, 163f finalizeEvidence, 190f createCorporateEvidenceGateway, 230v corporateEvidenceGateway |
 | services/intakeError.ts | 3v INTAKE_ERROR_ALLOWLIST, 11t IntakeErrorCode, 13v INTAKE_UNKNOWN_FALLBACK, 36f parseIntakeErrorCode, 52f parseEvidenceErrorCode |
 | services/mockConsultationService.ts | 8v TIER_CATALOG, 65v MOCK_ADVOCATE_SLOTS, 98c MockConsultationService |
 | services/mockIracService.ts | 8c MockIracService |

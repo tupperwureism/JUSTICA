@@ -214,7 +214,8 @@ export function createCorporateEvidenceGateway(deps: GatewayDependencies): Evide
     },
     async finalize(input: FinalizeInput): Promise<FinalizeResult> {
       const { data, error } = await deps.invokeFunction('corporate-evidence/finalize', {
-        body: { evidenceId: input.evidenceId, idempotencyKey: input.idempotencyKey },
+        evidenceId: input.evidenceId,
+        idempotencyKey: input.idempotencyKey,
       });
       const parsed = parseEvidenceFinalizeData(data, input.evidenceId);
       if (error || !parsed) {
