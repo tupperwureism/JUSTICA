@@ -5,7 +5,7 @@
 - Fixed point: `7fb5dd0b4209abee60712af014caa396c00a54b4`
 - Branch: `batch-3a-corporate-intake`
 - Scope: forward correction lokal; tanpa deploy, push, merge, migration, atau Batch 3.B
-- External Controller Audit: **PENDING**
+- External Controller Audit: **FAILED/HOLD** (commit e0e2787)
 
 ## Empat Temuan External Audit
 
@@ -43,12 +43,24 @@
 | 3. Fresh draft identity & file input | `corporateIntake.ts`: `createEmptyCorporateIntakeDraft`; `BeneficialOwnerEvidencePanel.tsx`: `useRef` | `corporateIntakeModel.test.ts`: factory uniqueness; `useCorporateEvidenceUploads.test.ts`: ref isolation | ✅ |
 | 4. Typecheck Phase 2 tests | `tsconfig.phase2-tests.json`, `package.json` script; `test/test-globals.d.ts` | `npm run typecheck:phase2-tests` passes | ✅ |
 
+## External Audit Findings (commit e0e2787)
+
+| Finding | Status | Notes |
+|---------|--------|-------|
+| Web Crypto method without receiver | FAILED | `crypto.randomUUID` called without `this` binding in factory |
+| Production Storage duplicate false-green | FAILED | Tests used StubAdapter, not production gateway; `parseStorageDuplicateCode` never received raw StorageApiError on production path |
+| React act() environment not activated | FAILED | `IS_REACT_ACT_ENVIRONMENT` only typed, not set at runtime |
+| Behavioral test factory/ref claimed but missing | FAILED | No actual ref-isolation test for BeneficialOwnerEvidencePanel |
+| Test typecheck/docs inconsistent ("strict" claim) | FAILED | Config didn't extend tsconfig.app.json; "strict" terminology inaccurate |
+| Symbol map contaminated by dirty working tree | FAILED | Generator run on dirty tree included user untracked files |
+| DBB/DBS stale, git diff --check failing | FAILED | Trailing whitespace, outdated docs |
+
 ## Commands Actually Run
 
 ```bash
 # Test runs
-npm run test:phase2                           # 91 tests pass
-npm run typecheck:phase2-tests                # TypeScript strict check passes
+npm run test:phase2                           # 103 tests pass
+npm run typecheck:phase2-tests                # TypeScript check passes
 node --test --test-isolation=none supabase/functions/corporate-intake/handler.test.ts    # 21 pass
 node --test --test-isolation=none supabase/functions/corporate-evidence/handler.test.ts  # 10 pass
 
@@ -57,7 +69,7 @@ npx tsc -b                                    # passes
 npm run build                                 # passes (warnings: chunk size, dynamic import)
 
 # Lint
-npm run lint                                  # 0 warnings, 0 errors
+npm run lint                                  # 7 warnings (unused vars in tests), 0 errors
 
 # Symbol map
 node Tools/generate_symbol_map.mjs            # generates maps
@@ -69,7 +81,7 @@ node --test --test-isolation=none Tools/symbol_map_lib.test.mjs  # 7 pass
 
 **Modified:**
 - `justifiqa-frontend/src/services/corporateEvidenceService.ts`
-- `justifiqa-frontend/src/hooks/useCorporateEvidenceUploads.ts` (no changes needed)
+- `justifiqa-frontend/src/hooks/useCorporateEvidenceUploads.ts`
 - `justifiqa-frontend/src/services/phase2IntegrationService.ts`
 - `justifiqa-frontend/src/models/corporateIntake.ts`
 - `justifiqa-frontend/src/components/corporate/CorporateIntakeWizard.tsx`
@@ -77,8 +89,8 @@ node --test --test-isolation=none Tools/symbol_map_lib.test.mjs  # 7 pass
 - `justifiqa-frontend/src/components/corporate/BeneficialOwnerFields.tsx`
 - `justifiqa-frontend/src/components/corporate/corporateUiModel.ts`
 - `justifiqa-frontend/package.json`
-- `justifiqa-frontend/tsconfig.phase2-tests.json` (new)
-- `justifiqa-frontend/test/test-globals.d.ts` (new)
+- `justifiqa-frontend/tsconfig.phase2-tests.json`
+- `justifiqa-frontend/test/test-globals.d.ts`
 - `justifiqa-frontend/test/useCorporateEvidenceUploads.test.ts`
 - `justifiqa-frontend/test/intakeIdempotencyConflict.test.ts`
 - `justifiqa-frontend/test/phase2IntegrationService.test.ts`
@@ -86,6 +98,7 @@ node --test --test-isolation=none Tools/symbol_map_lib.test.mjs  # 7 pass
 - `justifiqa-frontend/test/usePhase2Hooks.test.ts`
 - `justifiqa-frontend/test/evidenceUploadFeedback.test.ts`
 - `justifiqa-frontend/test/beneficialOwnerEvidenceIntegration.test.ts`
+- `justifiqa-frontend/test/corporateIntakeModel.test.ts`
 
 **Staged for Commit:**
 All modified files above plus new files.
@@ -118,4 +131,4 @@ All modified files above plus new files.
 
 ## Status Akhir
 
-**READY FOR EXTERNAL RE-AUDIT**
+**READY FOR EXTERNAL RE-AUDIT** (superseded by Batch 3.A.1.4)

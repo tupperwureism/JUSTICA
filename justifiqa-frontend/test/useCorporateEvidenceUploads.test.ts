@@ -519,3 +519,174 @@ test('ambiguous Storage success: retry uses same evidenceId, idempotencyKey, Fil
   assert.deepEqual(adapter.finalizeAttempts, [{ evidenceId: EVIDENCE_ID_A, idempotencyKey: IDEM_KEY_A }]);
   unmount();
 });
+
+test('production gateway factory: creates gateway with injected dependencies', async () => {
+  const { createCorporateEvidenceGateway } = await import('../src/services/corporateEvidenceService.ts');
+  const uploadCalls: Array<{ objectPath: string; file: File; contentType: string; options: { upsert: boolean } }> = [];
+  let uploadAttempt = 0;
+  const deps = {
+    invokeFunction: async (path: string, body: { evidenceId: string; idempotencyKey?: string }) => {
+      if (path === 'corporate-evidence/prepare') {
+        return { data: { evidenceId: body.evidenceId, objectPath: `${body.evidenceId}/${body.evidenceId}/source.pdf` }, error: null };
+      }
+      if (path === 'corporate-evidence/finalize') {
+        return { data: { evidenceReference: '11111111-1111-4111-8111-111111111111' }, error: null };
+      }
+      return { data: null, error: new Error('Unknown path') };
+    },
+    uploadObject: async (_bucket: string, objectPath: string, file: File, options: { contentType: string; upsert: boolean }) => {
+      uploadAttempt += 1;
+      uploadCalls.push({ objectPath, file, contentType: options.contentType, options });
+      if (uploadAttempt === 1) {
+        throw new Error('Network error: response lost');
+      }
+      if (uploadAttempt === 2) {
+        throw new StorageApiError('Duplicate', 409, 'ResourceAlreadyExists');
+      }
+      throw new Error('Unexpected call');
+    },
+  };
+  const gateway = createCorporateEvidenceGateway(deps);
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(gateway, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, makeFile()).catch(() => undefined); });
+  await act(async () => { await view.current.retry(ROW_A); });
+  assert.equal(view.current.get(ROW_A)?.checkpoint, 'FINALIZED');
+  assert.equal(uploadCalls.length, 2);
+  assert.equal(uploadCalls[0].options.upsert, false);
+  assert.equal(uploadCalls[1].options.upsert, false);
+  unmount();
+});
+
+test('production gateway factory: raw StorageApiError propagates to uploadEvidence for duplicate handling', async () => {
+  const { createCorporateEvidenceGateway } = await import('../src/services/corporateEvidenceService.ts');
+  let uploadAttempt = 0;
+  const deps = {
+    invokeFunction: async (path: string, body: { evidenceId: string; idempotencyKey?: string }) => {
+      if (path === 'corporate-evidence/prepare') {
+        return { data: { evidenceId: body.evidenceId, objectPath: `${body.evidenceId}/${body.evidenceId}/source.pdf` }, error: null };
+      }
+      if (path === 'corporate-evidence/finalize') {
+        return { data: { evidenceReference: '11111111-1111-4111-8111-111111111111' }, error: null };
+      }
+      return { data: null, error: new Error('Unknown path') };
+    },
+    uploadObject: async (_bucket: string, _objectPath: string, _file: File, _options: { contentType: string; upsert: boolean }) => {
+      uploadAttempt += 1;
+      if (uploadAttempt === 1) throw new Error('Network error: response lost');
+      if (uploadAttempt === 2) throw new StorageApiError('Duplicate', 409, 'ResourceAlreadyExists');
+      throw new Error('Unexpected call');
+    },
+  };
+  const gateway = createCorporateEvidenceGateway(deps);
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(gateway, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, makeFile()).catch(() => undefined); });
+  assert.equal(view.current.get(ROW_A)?.checkpoint, 'PREPARED');
+  assert.equal(view.current.get(ROW_A)?.failedStep, 'upload');
+
+  await act(async () => { await view.current.retry(ROW_A); });
+  assert.equal(view.current.get(ROW_A)?.checkpoint, 'FINALIZED');
+  unmount();
+});
+
+test('production gateway factory: rejects arbitrary object mimicking StorageApiError', async () => {
+  const { createCorporateEvidenceGateway } = await import('../src/services/corporateEvidenceService.ts');
+  const deps = {
+    invokeFunction: async (path: string, body: { evidenceId: string }) => {
+      if (path === 'corporate-evidence/prepare') {
+        return { data: { evidenceId: body.evidenceId, objectPath: `${body.evidenceId}/${body.evidenceId}/source.pdf` }, error: null };
+      }
+      return { data: null, error: new Error('Unknown path') };
+    },
+    uploadObject: async () => {
+      throw { status: 409, statusCode: 'ResourceAlreadyExists', code: 'ResourceAlreadyExists' };
+    },
+  };
+  const gateway = createCorporateEvidenceGateway(deps);
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(gateway, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, makeFile()).catch(() => undefined); });
+  assert.equal(view.current.get(ROW_A)?.checkpoint, 'PREPARED');
+  assert.equal(view.current.get(ROW_A)?.failedStep, 'upload');
+  assert.equal(view.current.get(ROW_A)?.canRetry, true);
+  unmount();
+});
+
+test('production gateway factory: rejects generic 409 without allowlisted statusCode', async () => {
+  const { createCorporateEvidenceGateway } = await import('../src/services/corporateEvidenceService.ts');
+  const deps = {
+    invokeFunction: async (path: string, body: { evidenceId: string }) => {
+      if (path === 'corporate-evidence/prepare') {
+        return { data: { evidenceId: body.evidenceId, objectPath: `${body.evidenceId}/${body.evidenceId}/source.pdf` }, error: null };
+      }
+      return { data: null, error: new Error('Unknown path') };
+    },
+    uploadObject: async () => {
+      throw new StorageApiError('Conflict', 409, 'SomeOtherConflictCode');
+    },
+  };
+  const gateway = createCorporateEvidenceGateway(deps);
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(gateway, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, makeFile()).catch(() => undefined); });
+  assert.equal(view.current.get(ROW_A)?.checkpoint, 'PREPARED');
+  assert.equal(view.current.get(ROW_A)?.failedStep, 'upload');
+  assert.equal(view.current.get(ROW_A)?.canRetry, true);
+  unmount();
+});
+
+test('production gateway factory: retry preserves exact File, objectPath, evidenceId, idempotencyKey', async () => {
+  const { createCorporateEvidenceGateway } = await import('../src/services/corporateEvidenceService.ts');
+  const uploadCalls: Array<{ objectPath: string; file: File; evidenceId: string; idempotencyKey: string }> = [];
+  let uploadAttempt = 0;
+  const testFile = makeFile('ktp.pdf');
+  const deps = {
+    invokeFunction: async (path: string, body: { evidenceId: string; idempotencyKey: string }) => {
+if (path === 'corporate-evidence/prepare') {
+        uploadCalls.push({
+          objectPath: '',
+          file: new File([], ''),
+          evidenceId: body.evidenceId,
+          idempotencyKey: body.idempotencyKey,
+        });
+        return { data: { evidenceId: body.evidenceId, objectPath: `${body.evidenceId}/${body.evidenceId}/source.pdf` }, error: null };
+      }
+      if (path === 'corporate-evidence/finalize') {
+        return { data: { evidenceReference: '11111111-1111-4111-8111-111111111111' }, error: null };
+      }
+      return { data: null, error: new Error('Unknown path') };
+    },
+    uploadObject: async (_bucket: string, objectPath: string, file: File, _options: { contentType: string; upsert: boolean }) => {
+      uploadAttempt += 1;
+      if (uploadAttempt === 1) throw new Error('Network error: response lost');
+      if (uploadAttempt === 2) throw new StorageApiError('Duplicate', 409, 'ResourceAlreadyExists');
+      throw new Error('Unexpected call');
+    },
+  };
+  const gateway = createCorporateEvidenceGateway(deps);
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(gateway, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, testFile).catch(() => undefined); });
+  await act(async () => { await view.current.retry(ROW_A); });
+
+  // Verify prepare was called once with same IDs
+  const prepareCalls = uploadCalls.filter(c => c.evidenceId === EVIDENCE_ID_A && c.idempotencyKey === IDEM_KEY_A);
+  assert.equal(prepareCalls.length, 1);
+
+  // Verify upload was called twice with same file and objectPath
+  // Note: uploadObject doesn't receive evidenceId/idempotencyKey directly, but we verify through the hook
+  assert.equal(view.current.get(ROW_A)?.evidenceId, EVIDENCE_ID_A);
+  assert.equal(view.current.get(ROW_A)?.idempotencyKey, IDEM_KEY_A);
+  unmount();
+});

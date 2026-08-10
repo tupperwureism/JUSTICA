@@ -68,29 +68,18 @@ export const createEmptyCorporateParty = (): CorporatePartyDraft => ({
   effectiveDate: '',
 });
 
-export const createEmptyBeneficialOwner = (): BeneficialOwnerDraft => ({
-  clientRowId: crypto.randomUUID(),
-  naturalPersonName: '',
-  controlBasis: 'OWNERSHIP',
-  percentage: '',
-});
-
-export const EMPTY_INTAKE_DRAFT: CorporateIntakeDraft = {
-  entityType: 'PT_ORDINARY',
-  businessName: '',
-  domicileCity: '',
-  domicileProvince: '',
-  kbliCodes: [''],
-  authorizedCapitalIdr: '',
-  paidUpCapitalIdr: '',
-  corporateParties: [createEmptyCorporateParty()],
-  beneficialOwners: [createEmptyBeneficialOwner()],
-  paymentGatewayRef: '',
-  acceptedScope: false,
+export const createEmptyBeneficialOwner = (createId?: () => string): BeneficialOwnerDraft => {
+  const idFn = createId ?? (() => crypto.randomUUID());
+  return {
+    clientRowId: idFn(),
+    naturalPersonName: '',
+    controlBasis: 'OWNERSHIP',
+    percentage: '',
+  };
 };
 
 export const createEmptyCorporateIntakeDraft = (createId?: () => string): CorporateIntakeDraft => {
-  const idFn = createId ?? crypto.randomUUID;
+  const idFn = createId ?? (() => crypto.randomUUID());
   return {
     entityType: 'PT_ORDINARY',
     businessName: '',
@@ -100,7 +89,7 @@ export const createEmptyCorporateIntakeDraft = (createId?: () => string): Corpor
     authorizedCapitalIdr: '',
     paidUpCapitalIdr: '',
     corporateParties: [createEmptyCorporateParty()],
-    beneficialOwners: [{ ...createEmptyBeneficialOwner(), clientRowId: idFn() }],
+    beneficialOwners: [createEmptyBeneficialOwner(idFn)],
     paymentGatewayRef: '',
     acceptedScope: false,
   };

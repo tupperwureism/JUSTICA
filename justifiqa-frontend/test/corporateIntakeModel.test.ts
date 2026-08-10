@@ -3,11 +3,14 @@ import test from 'node:test';
 import {
   addBeneficialOwner,
   addCorporateParty,
+  createEmptyBeneficialOwner,
+  createEmptyCorporateIntakeDraft,
   removeBeneficialOwner,
   removeCorporateParty,
   validateCorporateIntake,
   validateCorporateIntakeStep,
   type CorporateIntakeDraft,
+  type BeneficialOwnerDraft,
 } from '../src/models/corporateIntake.ts';
 
 const validDraft = (): CorporateIntakeDraft => ({
@@ -130,4 +133,65 @@ test('final confirmation is required before the intake can be submitted', () => 
   const draft = validDraft();
   draft.acceptedScope = false;
   assert.equal(validateCorporateIntakeStep(draft, 4)?.code, 'SCOPE_ACCEPTANCE_REQUIRED');
+});
+
+test('createEmptyCorporateIntakeDraft default factory works without receiver error', () => {
+  const draft = createEmptyCorporateIntakeDraft();
+  assert.ok(draft);
+  assert.equal(draft.beneficialOwners.length, 1);
+  assert.ok(draft.beneficialOwners[0].clientRowId);
+  assert.match(draft.beneficialOwners[0].clientRowId, /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+});
+
+test('two factory calls produce distinct objects, arrays, BO, and clientRowId', () => {
+  const draft1 = createEmptyCorporateIntakeDraft();
+  const draft2 = createEmptyCorporateIntakeDraft();
+  assert.notStrictEqual(draft1, draft2);
+  assert.notStrictEqual(draft1.corporateParties, draft2.corporateParties);
+  assert.notStrictEqual(draft1.beneficialOwners, draft2.beneficialOwners);
+  assert.notStrictEqual(draft1.kbliCodes, draft2.kbliCodes);
+  assert.notEqual(draft1.beneficialOwners[0].clientRowId, draft2.beneficialOwners[0].clientRowId);
+  assert.notEqual(draft1.corporateParties[0], draft2.corporateParties[0]);
+});
+
+test('injected createId is called exactly once for initial BO and produces deterministic ID', () => {
+  let callCount = 0;
+  const deterministicId = '11111111-1111-4111-8111-111111111111';
+  const createId = () => {
+    callCount += 1;
+    return deterministicId;
+  };
+  const draft = createEmptyCorporateIntakeDraft(createId);
+  assert.equal(callCount, 1);
+  assert.equal(draft.beneficialOwners[0].clientRowId, deterministicId);
+});
+
+test('createEmptyBeneficialOwner accepts optional createId and generates exactly one clientRowId', () => {
+  let callCount = 0;
+  const deterministicId = '22222222-2222-4222-8222-222222222222';
+  const createId = () => {
+    callCount += 1;
+    return deterministicId;
+  };
+  const bo = createEmptyBeneficialOwner(createId);
+  assert.equal(callCount, 1);
+  assert.equal(bo.clientRowId, deterministicId);
+  assert.equal(bo.naturalPersonName, '');
+  assert.equal(bo.controlBasis, 'OWNERSHIP');
+  assert.equal(bo.percentage, '');
+});
+
+test('createEmptyBeneficialOwner without createId uses crypto.randomUUID and generates valid UUID', () => {
+  const bo = createEmptyBeneficialOwner();
+  assert.ok(bo.clientRowId);
+  assert.match(bo.clientRowId, /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+});
+
+test('no shared mutable state between factory calls', () => {
+  const draft1 = createEmptyCorporateIntakeDraft();
+  const draft2 = createEmptyCorporateIntakeDraft();
+  draft1.businessName = 'Modified';
+  draft1.beneficialOwners[0].naturalPersonName = 'Modified';
+  assert.equal(draft2.businessName, '');
+  assert.equal(draft2.beneficialOwners[0].naturalPersonName, '');
 });

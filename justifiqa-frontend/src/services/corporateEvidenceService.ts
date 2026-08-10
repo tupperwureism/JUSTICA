@@ -35,6 +35,11 @@ export interface EvidenceGateway {
   finalize(input: FinalizeInput): Promise<FinalizeResult>;
 }
 
+export interface GatewayDependencies {
+  invokeFunction(path: string, body: Record<string, unknown>): Promise<{ data: unknown; error: unknown }>;
+  uploadObject(bucket: string, objectPath: string, file: File, options: { contentType: string; upsert: boolean }): Promise<{ error: StorageApiError | null }>;
+}
+
 export class CorporateEvidenceError extends Error {
   readonly step: EvidenceUploadStep;
   readonly code: string;
@@ -52,6 +57,8 @@ const STORAGE_DUPLICATE_CODES = [
   'KeyAlreadyExists',
   'already_exists',
 ] as const;
+
+const EVIDENCE_BUCKET = 'corporate-intake-evidence';
 
 function isStorageApiError(error: unknown): error is StorageApiError {
   return error instanceof StorageApiError;
@@ -166,44 +173,57 @@ export async function finalizeEvidence(
   }
 }
 
-export const corporateEvidenceGateway: EvidenceGateway = {
-  async prepare(input: PrepareInput): Promise<PrepareResult> {
-    const { supabase } = await import('@/lib/supabase');
-    const { data, error } = await supabase.functions.invoke('corporate-evidence/prepare', {
-      body: {
+function createDefaultDependencies(): GatewayDependencies {
+  return {
+    async invokeFunction(path, body) {
+      const { supabase } = await import('@/lib/supabase');
+      return supabase.functions.invoke(path, { body: body as Record<string, unknown> });
+    },
+    async uploadObject(bucket, objectPath, file, options) {
+      const { supabase } = await import('@/lib/supabase');
+      const result = await supabase.storage.from(bucket).upload(objectPath, file, options);
+      return { error: result.error as StorageApiError | null };
+    },
+  };
+}
+
+export function createCorporateEvidenceGateway(deps: GatewayDependencies): EvidenceGateway {
+  return {
+    async prepare(input: PrepareInput): Promise<PrepareResult> {
+      const { data, error } = await deps.invokeFunction('corporate-evidence/prepare', {
         evidenceId: input.evidenceId,
         declaredMime: input.declaredMime,
         declaredByteSize: input.declaredByteSize,
         idempotencyKey: input.idempotencyKey,
-      },
-    });
-    const parsed = parseEvidencePrepareData(data, input.evidenceId);
-    if (error || !parsed) {
-      const code = await parseEvidenceErrorCode(error).catch(() => null);
-      throw friendlyError('prepare', code ?? 'PREPARE_FAILED', PREPARE_FALLBACK);
-    }
-    return parsed;
-  },
-  async upload(input: UploadInput): Promise<void> {
-    const { supabase } = await import('@/lib/supabase');
-    const { error } = await supabase.storage
-      .from('corporate-intake-evidence')
-      .upload(input.objectPath, input.file, { contentType: input.contentType, upsert: false });
-    if (error) {
-      const upCode = parseStorageErrorCode(error) ?? 'STORAGE_FAILED';
-      throw friendlyError('upload', upCode, UPLOAD_FALLBACK);
-    }
-  },
-  async finalize(input: FinalizeInput): Promise<FinalizeResult> {
-    const { supabase } = await import('@/lib/supabase');
-    const { data, error } = await supabase.functions.invoke('corporate-evidence/finalize', {
-      body: { evidenceId: input.evidenceId, idempotencyKey: input.idempotencyKey },
-    });
-    const parsed = parseEvidenceFinalizeData(data, input.evidenceId);
-    if (error || !parsed) {
-      const code = await parseEvidenceErrorCode(error).catch(() => null);
-      throw friendlyError('finalize', code ?? 'FINALIZE_FAILED', FINALIZE_FALLBACK);
-    }
-    return parsed;
-  },
-};
+      });
+      const parsed = parseEvidencePrepareData(data, input.evidenceId);
+      if (error || !parsed) {
+        const code = await parseEvidenceErrorCode(error).catch(() => null);
+        throw friendlyError('prepare', code ?? 'PREPARE_FAILED', PREPARE_FALLBACK);
+      }
+      return parsed;
+    },
+    async upload(input: UploadInput): Promise<void> {
+      const { error } = await deps.uploadObject(EVIDENCE_BUCKET, input.objectPath, input.file, {
+        contentType: input.contentType,
+        upsert: false,
+      });
+      if (error) {
+        throw error;
+      }
+    },
+    async finalize(input: FinalizeInput): Promise<FinalizeResult> {
+      const { data, error } = await deps.invokeFunction('corporate-evidence/finalize', {
+        body: { evidenceId: input.evidenceId, idempotencyKey: input.idempotencyKey },
+      });
+      const parsed = parseEvidenceFinalizeData(data, input.evidenceId);
+      if (error || !parsed) {
+        const code = await parseEvidenceErrorCode(error).catch(() => null);
+        throw friendlyError('finalize', code ?? 'FINALIZE_FAILED', FINALIZE_FALLBACK);
+      }
+      return parsed;
+    },
+  };
+}
+
+export const corporateEvidenceGateway: EvidenceGateway = createCorporateEvidenceGateway(createDefaultDependencies());

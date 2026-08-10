@@ -110,8 +110,10 @@ Keduanya wajib lulus. Runtime test hijau tapi typecheck merah = ada bug tipe yan
 - [ ] `tsconfig.phase2-tests.json` extend `tsconfig.app.json`, include `src` dan `test`?
 - [ ] `test/test-globals.d.ts` deklarasi `globalThis.IS_REACT_ACT_ENVIRONMENT`?
 - [ ] `npm run typecheck:phase2-tests` lulus tanpa error?
-- [ ] `npm run test:phase2` 91 test lulus?
+- [ ] `npm run test:phase2` 103 test lulus?
 - [ ] Handler tests (intake 21, evidence 10) lulus?
 - [ ] Symbol map generate/check/test lulus?
 - [ ] `npx tsc -b`, `npm run lint`, `npm run build` lulus?
 - [ ] Tidak ada file unrelated di-staged?
+
+**Catatan:** Dokumentasi ini digantikan oleh BATCH_3_A_1_4_DBS.md.
