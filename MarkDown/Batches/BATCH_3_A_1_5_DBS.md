@@ -2,7 +2,7 @@
 
 ## Latar Belakang
 
-External audit commit `cc05bcf` menemukan **empat kegagalan nyata** yang harus diperbaiki sebelum lanjut ke Batch 3.B. Batch 3.A.1.5 memperbaiki semuanya.
+External audit commit `cc05bcf` menemukan **empat kegagalan nyata** yang harus diperbaiki sebelum lanjut ke Batch 3.B. Batch 3.A.1.5 memperbaiki semuanya, **NAMUN external audit menemukan bahwa perbaikan tidak lengkap**.
 
 ---
 
@@ -50,7 +50,7 @@ invokeFunction('path', { a: 1 })
 
 **Masalah:** Test `BeneficialOwnerEvidencePanel ref isolation` menggunakan komponen test double (`TestPanelA`, `TestPanelB`), bukan komponen produksi `BeneficialOwnerEvidencePanel`. External audit menilai ini bukan behavioral test yang valid.
 
-**Solusi:** Karena Node.js test runner tidak bisa import `.tsx` langsung, tambah test verifikasi source code yang:
+**Solusi yang Diterapkan di Batch 3.A.1.5 (TIDAK CUKUP):** Karena Node.js test runner tidak bisa import `.tsx` langsung, ditambah test verifikasi source code yang:
 1. Membaca file `BeneficialOwnerEvidencePanel.tsx`
 2. Memverifikasi `useRef<HTMLInputElement>` digunakan
 3. Memverifikasi `fileInputRef.current?.click()` digunakan
@@ -68,6 +68,8 @@ assert.ok(source.includes('ref={fileInputRef}'));
 ```
 
 **Mini-kuis:** Kenapa tidak bisa import `.tsx` di Node.js test? Karena Node.js native ESM tidak support TypeScript/JSX tanpa transpiler. Test runner pakai `node --test` tanpa Vite/bundler.
+
+**Catatan Audit:** Verifikasi source code **bukan** behavioral test. External audit meminta test yang benar-benar me-render komponen produksi dan memverifikasi perilaku ref isolation secara aktual.
 
 ---
 
@@ -127,12 +129,25 @@ node --test --test-isolation=none Tools/symbol_map_lib.test.mjs
 ## 5. Mini-Kuis Ringkas
 
 1. **Finalize payload:** `invokeFunction('finalize', { body: { ... } })` vs `invokeFunction('finalize', { ... })` — mana yang benar? **Tanpa `body` wrapper**
-2. **Ref verification:** Test apa yang verifikasi komponen produksi pakai `useRef`? **Source code verification test**
+2. **Ref verification:** Test apa yang verifikasi komponen produksi pakai `useRef`? **Source code verification test** (di batch ini), **Behavioral render test** (di Batch 3.A.1.6)
 3. **Clean candidate:** Generator dijalankan di snapshot dari `git archive <TREE_ID>`, bukan working tree langsung.
 4. **Export singleton:** `EMPTY_INTAKE_DRAFT` masih diekspor? **Tidak, sudah dihapus di batch sebelumnya, diganti factory.**
 
 ---
 
+## External Audit Findings (Batch 3.A.1.5 GAGAL)
+
+| # | Temuan | Mengapa Gagal |
+|---|--------|---------------|
+| 1 | Fake/source-text tests | Test ref-isolation pakai `TestPanelA`/`TestPanelB` fake, bukan komponen produksi |
+| 2 | No exact finalize payload regression | Tidak ada test yang capture payload prepare/finalize aktual |
+| 3 | Lint 8 warnings | Unused vars/params di test files |
+| 4 | git diff --check fail | Whitespace issues di working tree |
+| 5 | Symbol map contaminated | Generator jalan di dirty tree, include unrelated files |
+| 6 | DBB stale after commit | Docs tidak match committed state |
+
+---
+
 ## Status
 
-**READY FOR EXTERNAL RE-AUDIT** (bukan PASS)
+**SUPERSEDED BY BATCH 3.A.1.6** — Batch ini GAGAL external audit. Lihat `BATCH_3_A_1_6_DBS.md` untuk versi terbenar.

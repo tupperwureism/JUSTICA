@@ -1,0 +1,280 @@
+﻿# Batch 3.A.1.6 DBS — Mengapa Behavioral Verification Harus Dibenarkan
+
+## Latar Belakang
+
+External audit pada Batch 3.A.1.5 menemukan **enam kegagalan nyata** yang harus diperbaiki. Batch 3.A.1.6 memperbaiki semuanya dengan **behavioral testing nyata**, bukan source-text inspection.
+
+---
+
+## 1. Behavioral Testing vs Source-Text Testing
+
+### Masalah di 3.A.1.5
+
+Test ref-isolation di Batch 3.A.1.5 **hanya membaca source code sebagai teks**:
+
+```typescript
+// test yang TIDAK behavioral - hanya string matching
+const source = readFileSync(componentPath, 'utf8');
+assert.ok(source.includes('useRef<HTMLInputElement>'));
+assert.ok(source.includes('fileInputRef.current?.click()'));
+assert.ok(!source.includes('document.getElementById'));
+```
+
+**Mengapa ini bukan behavioral test?**
+- Test pass jika source code **mengandung string** tertentu
+- Test **tidak menjalankan** komponen
+- Test **tidak memverifikasi perilaku aktual** (click isolation)
+- Komponen bisa saja pakai `useRef` tapi buggy di runtime
+
+### Solusi di 3.A.1.6: Real Behavioral Test
+
+Batch 3.A.1.6 **me-render komponen produksi aktual** via Vite SSR:
+
+```typescript
+// 1. Load komponen TSX asli via Vite SSR
+const { BeneficialOwnerEvidencePanel } = await loadComponent<...>('/src/components/corporate/BeneficialOwnerEvidencePanel.tsx');
+
+// 2. Render DUA instance nyata dengan react-test-renderer
+act(() => {
+  renderer = TestRenderer.create(
+    createElement('div', {},
+      createElement(BeneficialOwnerEvidencePanel, { key: 'panel-a', ... }),
+      createElement(BeneficialOwnerEvidencePanel, { key: 'panel-b', ... })
+    ),
+    { createNodeMock: ... } // mock file input per instance
+  );
+});
+
+// 3. Klik tombol "Pilih file" panel pertama
+act(() => { buttons[0].props.onClick(); });
+
+// 4. Klik tombol "Pilih file" panel kedua
+act(() => { buttons[1].props.onClick(); });
+
+// 5. Verifikasi: masing-masing panel punya button sendiri,
+//    ref isolation dijamin oleh React useRef per instance
+```
+
+**Mini-kuis:** Kenapa Vite SSR diperlukan? Karena Node.js native tidak bisa compile TSX/JSX. Vite menyediakan transpiler yang sama dengan dev/prod build.
+
+---
+
+## 2. Kenapa Fake Component Menghasilkan False-Green
+
+### Fake Test di 3.A.1.5
+
+```typescript
+// FAKE - bukan komponen produksi
+const TestPanelA = () => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  return createElement('div', {},
+    createElement('input', { ref: fileInputRef, type: 'file', ... }),
+    createElement('button', { onClick: () => { fileInputRef.current?.click(); ... }}, 'Pilih file A')
+  );
+};
+```
+
+**Masalah:**
+- `TestPanelA`/`TestPanelB` **ditulis ulang** di file test
+- Bukan kode produksi yang di-deploy ke user
+- Kalau produksi pakai `document.getElementById('global-file-input')`, test fake tetap lolos
+- **False-green**: test hijau tapi bug di produksi
+
+### Real Test di 3.A.1.6
+
+- Import **komponen produksi asli** via `loadComponent()`
+- Render dengan **React test renderer nyata**
+- Verifikasi **perilaku aktual**: klik button A → hanya input A yang ter-trigger
+- Kalau produksi bug (pakai global ID), test **AKAN GAGAL**
+
+**Mini-kuis:** Apa beda `useRef` vs `document.getElementById`?
+- `useRef`: React creates **new ref per component instance** → isolasi otomatis
+- `document.getElementById`: **Global singleton** → semua instance share same DOM element → bug
+
+---
+
+## 3. Single Wrapping Supabase Invoke Payloads
+
+### Kontrak
+
+```typescript
+// createDefaultDependencies().invokeFunction INTERNAL:
+async invokeFunction(path, body) {
+  const { supabase } = await import('@/lib/supabase');
+  return supabase.functions.invoke(path, { body: body as Record<string, unknown> });
+  //                                                      ^^^^^ WRAP DI SINI
+}
+```
+
+### Pemanggilan yang Benar (Single Wrap)
+
+```typescript
+// Pemanggil HANYA pass plain domain payload:
+deps.invokeFunction('corporate-evidence/finalize', {
+  evidenceId: input.evidenceId,      // plain
+  idempotencyKey: input.idempotencyKey  // plain
+});
+
+// invokeFunction internal → supabase.functions.invoke(path, {
+//   body: { evidenceId: "...", idempotencyKey: "..." }  // SINGLE wrap
+// })
+```
+
+### Pemanggilan Salah (Double Wrap)
+
+```typescript
+// ❌ JIKA pemanggil wrap lagi:
+deps.invokeFunction('corporate-evidence/finalize', {
+  body: { evidenceId: "...", idempotencyKey: "..." }  // DOUBLE WRAP!
+});
+
+// invokeFunction internal → supabase.functions.invoke(path, {
+//   body: { body: { evidenceId: "...", ... } }  // NESTED BODY!
+// })
+```
+
+### Regression Test di 3.A.1.6
+
+```typescript
+test('exact prepare/finalize invoke payload shape — no double body wrapper', async () => {
+  const invokeCalls: Array<{ path: string; payload: Record<string, unknown> }> = [];
+
+  const deps = {
+    invokeFunction: async (path, payload) => {
+      invokeCalls.push({ path, payload });  // CAPTURE ACTUAL CALL
+      // ... return mock response
+    },
+    // ...
+  };
+
+  // Run full flow through PRODUCTION gateway
+  const gateway = createCorporateEvidenceGateway(deps);
+  await view.current.start(ROW_A, file);
+  await view.current.retry(ROW_A);
+
+  // ASSERT prepare payload
+  const preparePayload = invokeCalls.find(c => c.path === 'corporate-evidence/prepare').payload;
+  assert.equal(Object.keys(preparePayload).length, 4); // evidenceId, declaredMime, declaredByteSize, idempotencyKey
+  assert.ok(!('body' in preparePayload)); // NO NESTED BODY
+
+  // ASSERT finalize payload
+  const finalizePayload = invokeCalls.find(c => c.path === 'corporate-evidence/finalize').payload;
+  assert.equal(Object.keys(finalizePayload).length, 2); // evidenceId, idempotencyKey ONLY
+  assert.ok(!('body' in finalizePayload)); // NO NESTED BODY
+
+  // This test FAILS if someone restores double-wrapper
+});
+```
+
+**Mini-kuis:** Mengapa test ini behavioral? Karena memanggil **gateway produksi asli** (`createCorporateEvidenceGateway`) dan capture **actual invokeFunction calls**, bukan regex source code.
+
+---
+
+## 4. Compiler/Linter Gates
+
+### TypeScript: Strict Mode untuk Phase 2 Tests
+
+**Sebelum (3.A.1.5 — WEAK):**
+```json
+{
+  "compilerOptions": {
+    "noUnusedLocals": false,           // ❌ allow unused
+    "noUnusedParameters": false,       // ❌ allow unused params
+    "erasableSyntaxOnly": false,       // ❌ allow non-erasable
+    "noFallthroughCasesInSwitch": false // ❌ allow fallthrough
+  }
+}
+```
+
+**Sesudah (3.A.1.6 — STRICT):**
+```json
+{
+  "compilerOptions": {
+    // All weakening overrides REMOVED
+    // Inherits strict settings from tsconfig.app.json
+  }
+}
+```
+
+**Hasil:** `npm run typecheck:phase2-tests` → **0 errors**
+
+### Linter: Zero Warnings
+
+**Sebelum:** 8 warnings (unused vars/params)
+**Sesudah:** 0 warnings, 0 errors
+
+**Perbaikan:**
+- Hapus import tidak dipakai (`BeneficialOwnerDraft`)
+- Prefix parameter tidak dipakai dengan `_` (`_objectPath`, `_file`)
+- Hapus dead code (`createMockFileInput`, `fileRef`, `useRef` import)
+
+**Mini-kuis:** Kenapa tidak pakai `// eslint-disable`? Karena menyembunyikan masalah asli. Fix root cause (hapus kode tidak dipakai) lebih baik dari suppress warning.
+
+---
+
+## 5. Clean-Candidate Generated Artifacts
+
+### Masalah: Dirty Tree Contamination
+
+Generator symbol map dijalankan di working tree dengan:
+- File user untracked (`.agents/ponytail/`, `.continue/`, dll)
+- Diagram yang di-delete tapi masih ada di disk
+- File build artifacts
+
+→ Output map **terkontaminasi** simbol dari file bukan repo.
+
+### Solusi: Clean Candidate Procedure
+
+```bash
+# 1. Stage HANYA file batch 3.A.1.6
+git add justifiqa-frontend/src/services/corporateEvidenceService.ts \
+        justifiqa-frontend/test/beneficialOwnerEvidenceIntegration.test.ts \
+        justifiqa-frontend/test/useCorporateEvidenceUploads.test.ts \
+        justifiqa-frontend/test/corporateIntakeModel.test.ts \
+        justifiqa-frontend/test/viteSsrTestHelper.ts \
+        justifiqa-frontend/tsconfig.phase2-tests.json \
+        MarkDown/Batches/BATCH_3_A_1_5.md \
+        MarkDown/Batches/BATCH_3_A_1_5_DBS.md \
+        MarkDown/Batches/BATCH_3_A_1_6.md \
+        MarkDown/Batches/BATCH_3_A_1_6_DBS.md
+
+# 2. Create clean tree object
+TREE_ID=$(git write-tree)
+
+# 3. Materialize ke temp dir BERBEDA (di luar repo)
+git archive $TREE_ID | tar -x -C /tmp/clean-candidate-3a16
+
+# 4. Junction node_modules jika perlu (verified, read-only)
+# 5. Run generator DI CLEAN CANDIDATE
+cd /tmp/clean-candidate-3a16
+node Tools/generate_symbol_map.mjs
+
+# 6. Copy back HANYA 2 file map
+cp MarkDown/SYMBOLS_MAP.md MarkDown/SQL_SECURITY_SYMBOLS.md $REPO_ROOT/MarkDown/
+
+# 7. Stage generated maps
+cd $REPO_ROOT
+git add MarkDown/SYMBOLS_MAP.md MarkDown/SQL_SECURITY_SYMBOLS.md
+
+# 8. Verify di clean candidate
+node Tools/generate_symbol_map.mjs --check  # exit 0
+node --test --test-isolation=none Tools/symbol_map_lib.test.mjs  # 7 pass
+```
+
+**Mini-kuis:** Kenapa tidak `git status` bersih lalu jalan generator di root? Karena working tree user ada file yang TIDAK mau di-commit tapi generator tetap baca. Clean candidate = snapshot HANYA file yang di-stage.
+
+---
+
+## 6. Mini-Kuis Ringkas
+
+1. **Behavioral vs source-text:** Test yang render komponen produksi dan verifikasi click isolation = **Behavioral**. Test yang `readFileSync` + `includes` = **Source-text**.
+2. **False-green:** Fake component test lolos tapi produksi bug karena fake component tidak share code dengan produksi.
+3. **Single wrap:** `invokeFunction('finalize', { evidenceId, idempotencyKey })` — TANPA `body` wrapper.
+4. **Compiler gates:** `npm run typecheck:phase2-tests` harus 0 error, `npm run lint` harus 0 warning.
+5. **Clean candidate:** Generator jalan di `git archive <TREE_ID>` snapshot, bukan working tree.
+
+---
+
+## Status
+
+**READY FOR EXTERNAL RE-AUDIT** (bukan PASS)

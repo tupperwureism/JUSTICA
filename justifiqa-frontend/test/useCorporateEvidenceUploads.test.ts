@@ -568,8 +568,8 @@ test('production gateway factory: raw StorageApiError propagates to uploadEviden
       if (path === 'corporate-evidence/prepare') {
         return { data: { evidenceId: body.evidenceId, objectPath: `${body.evidenceId}/${body.evidenceId}/source.pdf` }, error: null };
       }
-      if (path === 'corporate-evidence/finalize') {
-        return { data: { evidenceReference: '11111111-1111-4111-8111-111111111111' }, error: null };
+if (path === 'corporate-evidence/finalize') {
+return { data: { evidenceReference: '11111111-1111-4111-8111-111111111111' }, error: null };
       }
       return { data: null, error: new Error('Unknown path') };
     },
@@ -665,7 +665,7 @@ if (path === 'corporate-evidence/prepare') {
       }
       return { data: null, error: new Error('Unknown path') };
     },
-    uploadObject: async (_bucket: string, objectPath: string, file: File, _options: { contentType: string; upsert: boolean }) => {
+    uploadObject: async (_bucket: string, _objectPath: string, _file: File, _options: { contentType: string; upsert: boolean }) => {
       uploadAttempt += 1;
       if (uploadAttempt === 1) throw new Error('Network error: response lost');
       if (uploadAttempt === 2) throw new StorageApiError('Duplicate', 409, 'ResourceAlreadyExists');
@@ -688,5 +688,67 @@ if (path === 'corporate-evidence/prepare') {
   // Note: uploadObject doesn't receive evidenceId/idempotencyKey directly, but we verify through the hook
   assert.equal(view.current.get(ROW_A)?.evidenceId, EVIDENCE_ID_A);
   assert.equal(view.current.get(ROW_A)?.idempotencyKey, IDEM_KEY_A);
+  unmount();
+});
+
+test('production gateway factory: exact prepare/finalize invoke payload shape — no double body wrapper', async () => {
+  const { createCorporateEvidenceGateway } = await import('../src/services/corporateEvidenceService.ts');
+  const invokeCalls: Array<{ path: string; payload: Record<string, unknown> }> = [];
+  let uploadAttempt = 0;
+  const testFile = makeFile('ktp.pdf');
+  const deps = {
+    invokeFunction: async (path: string, payload: Record<string, unknown>) => {
+      invokeCalls.push({ path, payload });
+      if (path === 'corporate-evidence/prepare') {
+        return { data: { evidenceId: payload.evidenceId, objectPath: `${payload.evidenceId}/${payload.evidenceId}/source.pdf` }, error: null };
+      }
+      if (path === 'corporate-evidence/finalize') {
+        return { data: { evidenceReference: '11111111-1111-4111-8111-111111111111' }, error: null };
+      }
+      return { data: null, error: new Error('Unknown path') };
+    },
+    uploadObject: async (_bucket: string, _objectPath: string, _file: File, _options: { contentType: string; upsert: boolean }) => {
+      uploadAttempt += 1;
+      if (uploadAttempt === 1) throw new Error('Network error: response lost');
+      if (uploadAttempt === 2) throw new StorageApiError('Duplicate', 409, 'ResourceAlreadyExists');
+      throw new Error('Unexpected call');
+    },
+  };
+  const gateway = createCorporateEvidenceGateway(deps);
+  const { view, unmount } = renderHook(() => useCorporateEvidenceUploads(gateway, {
+    createId: idFactory(EVIDENCE_ID_A, IDEM_KEY_A),
+  }));
+
+  await act(async () => { await view.current.start(ROW_A, testFile).catch(() => undefined); });
+  await act(async () => { await view.current.retry(ROW_A); });
+
+  // Capture prepare call
+  const prepareCall = invokeCalls.find(c => c.path === 'corporate-evidence/prepare');
+  assert.ok(prepareCall, 'prepare must be called');
+  const preparePayload = prepareCall.payload;
+  // Prepare payload: evidenceId, declaredMime, declaredByteSize, idempotencyKey
+  assert.equal(typeof preparePayload.evidenceId, 'string');
+  assert.equal(preparePayload.evidenceId, EVIDENCE_ID_A);
+  assert.equal(preparePayload.declaredMime, 'application/pdf');
+  assert.ok(typeof preparePayload.declaredByteSize === 'number' && preparePayload.declaredByteSize > 0);
+  assert.equal(preparePayload.idempotencyKey, IDEM_KEY_A);
+  // Must NOT have nested body
+  assert.ok(!('body' in preparePayload), 'prepare payload must not have nested body property');
+
+  // Capture finalize call
+  const finalizeCall = invokeCalls.find(c => c.path === 'corporate-evidence/finalize');
+  assert.ok(finalizeCall, 'finalize must be called');
+  const finalizePayload = finalizeCall.payload;
+  // Finalize payload: exactly evidenceId and idempotencyKey
+  assert.equal(Object.keys(finalizePayload).length, 2, 'finalize payload must have exactly 2 keys');
+  assert.equal(finalizePayload.evidenceId, EVIDENCE_ID_A);
+  assert.equal(finalizePayload.idempotencyKey, IDEM_KEY_A);
+  // Must NOT have nested body
+  assert.ok(!('body' in finalizePayload), 'finalize payload must not have nested body property');
+
+  // Verify the test would fail if double-wrapper is restored
+  // This assertion would fail if someone wraps payload as { body: { evidenceId, idempotencyKey } }
+  assert.ok(!('body' in finalizePayload && typeof finalizePayload.body === 'object' && finalizePayload.body !== null));
+
   unmount();
 });

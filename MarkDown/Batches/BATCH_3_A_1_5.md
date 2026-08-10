@@ -5,7 +5,7 @@
 - Fixed point (parent): `cc05bcf37912a035a3418c40d7ab232adba488a0`
 - Branch: `batch-3a-corporate-intake`
 - Scope: forward correction lokal; tanpa deploy, push, merge, migration, atau Batch 3.B
-- External Controller Audit: **PENDING** (re-audit required)
+- External Controller Audit: **SUPERSEDED BY BATCH 3.A.1.6** (this batch failed external audit)
 
 ## Empat Kegagalan External Audit (commit cc05bcf) yang Ditutup
 
@@ -64,7 +64,7 @@ Alasan: `createDefaultDependencies().invokeFunction` sudah memanggil `supabase.f
 | C3 | Fix ref-isolation test production component | ✅ Source code verification test added | `beneficialOwnerEvidenceIntegration.test.ts` | — | C4 |
 | C4 | Clean candidate, symbol maps, full gates | ✅ All gates pass | `SYMBOLS_MAP.md`, `SQL_SECURITY_SYMBOLS.md` (regenerated) | — | C5 |
 | C5 | DBB/DBS update, git diff --check | ✅ Docs updated, no whitespace issues | `BATCH_3_A_1_5.md`, `BATCH_3_A_1_5_DBS.md` | — | C6 |
-| C6 | Two-axis review, staging, commit | 🔄 In progress | — | — | Commit |
+| C6 | Two-axis review, staging, commit | ⚠️ **FAILED EXTERNAL AUDIT** | — | Remaining findings: fake tests, lint warnings, no exact payload test | — |
 
 ## Finding → Fix → Behavioral Test Matrix
 
@@ -115,10 +115,17 @@ git diff --check                              # passes (no trailing whitespace i
 3. Tidak ada perubahan migration/RPC/RLS/ACL, payment webhook, Notary, e-KYC, Qualifa, atau Edge Function Batch 3.B.
 4. Clean snapshot verification di Windows sandbox mungkin gagal spawn EPERM; perlu dijalankan di luar sandbox jika gagal.
 
-## Next Exact Action
+## External Audit Findings (BLOCKING)
 
-Commit dengan message: `fix(intake): finalize contract and verification artifact correction`
+**This batch FAILED external audit because:**
+
+1. **Fake/source-text tests remained**: The ref-isolation test used `TestPanelA`/`TestPanelB` fake components instead of rendering the real `BeneficialOwnerEvidencePanel`.
+2. **No exact finalize-payload regression test**: No test captured the actual prepare/finalize invoke payload shape to prevent double-wrapper regression.
+3. **Lint had 8 warnings**: Unused variables/parameters in test files.
+4. **git diff --check failed**: Whitespace issues in working tree.
+5. **Clean-candidate symbol-map verification failed**: Maps contained symbols from unrelated dirty-tree files.
+6. **DBB was stale after commit**: Documentation didn't match actual committed state.
 
 ## Status
 
-**READY FOR EXTERNAL RE-AUDIT** (bukan PASS)
+**SUPERSEDED BY BATCH 3.A.1.6** — This batch is not ready for external re-audit. See `BATCH_3_A_1_6.md` for the corrected version.

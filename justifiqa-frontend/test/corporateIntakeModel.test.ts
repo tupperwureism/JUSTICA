@@ -10,7 +10,6 @@ import {
   validateCorporateIntake,
   validateCorporateIntakeStep,
   type CorporateIntakeDraft,
-  type BeneficialOwnerDraft,
 } from '../src/models/corporateIntake.ts';
 
 const validDraft = (): CorporateIntakeDraft => ({
