@@ -1,8 +1,10 @@
 ﻿# Batch 3.A.1.6 DBS — Mengapa Behavioral Verification Harus Dibenarkan
 
+> **STATUS OVERRIDE (Batch 3.A.1.7):** Dokumen ini adalah penjelasan sederhana (DBS) untuk Batch 3.A.1.6. Setelah audit eksternal pada 3.A.1.6, status dokumen ini berubah menjadi **FAILED EXTERNAL AUDIT / SUPERSEDED BY 3.A.1.7**. Penjelasan sederhana untuk status baru ada di `BATCH_3_A_1_7_DBS.md`.
+
 ## Latar Belakang
 
-External audit pada Batch 3.A.1.5 menemukan **enam kegagalan nyata** yang harus diperbaiki. Batch 3.A.1.6 memperbaiki semuanya dengan **behavioral testing nyata**, bukan source-text inspection.
+External audit pada Batch 3.A.1.5 menemukan **enam kegagalan nyata** yang harus diperbaiki. Batch 3.A.1.6 memperbaiki sebagian besar dengan **behavioral testing nyata**, bukan source-text inspection. Setelah audit lanjutan (3.A.1.7), satu butir ref-isolation ternyata masih false-green dan ditutup pada 3.A.1.7.
 
 ---
 
@@ -26,36 +28,44 @@ assert.ok(!source.includes('document.getElementById'));
 - Test **tidak memverifikasi perilaku aktual** (click isolation)
 - Komponen bisa saja pakai `useRef` tapi buggy di runtime
 
-### Solusi di 3.A.1.6: Real Behavioral Test
+### Solusi 3.A.1.6 (tidak cukup)
 
-Batch 3.A.1.6 **me-render komponen produksi aktual** via Vite SSR:
+Batch 3.A.1.6 sudah **me-render komponen produksi aktual** via Vite SSR — sebuah langkah maju dari source-text. **Akan tetapi**, audit 3.A.1.7 menemukan bahwa test 3.A.1.6 hanya memeriksa:
 
 ```typescript
-// 1. Load komponen TSX asli via Vite SSR
-const { BeneficialOwnerEvidencePanel } = await loadComponent<...>('/src/components/corporate/BeneficialOwnerEvidencePanel.tsx');
-
-// 2. Render DUA instance nyata dengan react-test-renderer
-act(() => {
-  renderer = TestRenderer.create(
-    createElement('div', {},
-      createElement(BeneficialOwnerEvidencePanel, { key: 'panel-a', ... }),
-      createElement(BeneficialOwnerEvidencePanel, { key: 'panel-b', ... })
-    ),
-    { createNodeMock: ... } // mock file input per instance
-  );
-});
-
-// 3. Klik tombol "Pilih file" panel pertama
-act(() => { buttons[0].props.onClick(); });
-
-// 4. Klik tombol "Pilih file" panel kedua
-act(() => { buttons[1].props.onClick(); });
-
-// 5. Verifikasi: masing-masing panel punya button sendiri,
-//    ref isolation dijamin oleh React useRef per instance
+// 3.A.1.6: render real component, tapi assertion terlalu lemah
+assert.ok(typeof buttons[0].props.onClick === 'function');
+assert.ok(typeof buttons[1].props.onClick === 'function');
 ```
 
-**Mini-kuis:** Kenapa Vite SSR diperlukan? Karena Node.js native tidak bisa compile TSX/JSX. Vite menyediakan transpiler yang sama dengan dev/prod build.
+Artinya, test hanya membuktikan **handler ada** — bukan **handler mengarahkan ke input yang benar**. Ini masih **false-green** karena:
+
+- Jika produksi reverts ke `document.getElementById('global-input')` di runtime, handler tetap berupa function → assertion tetap pass.
+- Jika `click` adalah no-op, handler tetap function → assertion tetap pass.
+
+### Solusi nyata di 3.A.1.7
+
+3.A.1.7 memperkenalkan **counter observable per file-input mock**:
+
+```typescript
+const fileInputMocks: Array<{ clickCount: number }> = [];
+
+// Di createNodeMock:
+const mock = { clickCount: 0, click() { this.clickCount += 1; }, ... };
+fileInputMocks.push(mock);
+return mock;
+
+// Assertion sequence:
+assert.deepEqual([fileInputMocks[0].clickCount, fileInputMocks[1].clickCount], [0, 0]);
+act(() => { buttons[0].props.onClick(); });
+assert.deepEqual([fileInputMocks[0].clickCount, fileInputMocks[1].clickCount], [1, 0]);
+act(() => { buttons[1].props.onClick(); });
+assert.deepEqual([fileInputMocks[0].clickCount, fileInputMocks[1].clickCount], [1, 1]);
+```
+
+Sekarang test benar-benar behavioral: **counter naik pada mock yang benar, urutan [0,0] → [1,0] → [1,1]**. Jika produksi bug (no-op, global DOM lookup, ref bocor), counter tidak akan bergerak sesuai urutan itu dan test gagal.
+
+**Mini-kuis:** Kenapa "render real component" saja tidak cukup? Karena rendering hanya membuktikan komponen **bisa di-mount**. Tidak membuktikan bahwa **event handler-nya mengarahkan ke instance ref yang benar**. Butuh observable counter pada mock per instance untuk benar-benar mengukur click isolation.
 
 ---
 
@@ -277,4 +287,4 @@ node --test --test-isolation=none Tools/symbol_map_lib.test.mjs  # 7 pass
 
 ## Status
 
-**READY FOR EXTERNAL RE-AUDIT** (bukan PASS)
+**FAILED EXTERNAL AUDIT — SUPERSEDED BY 3.A.1.7** (bukan PASS). Butir 1 (ref-isolation) belum benar-benar tertutup di 3.A.1.6; ditutup oleh 3.A.1.7. Butir lainnya tetap valid.

@@ -6,7 +6,7 @@ import { useBeneficialOwnerEvidence } from '../src/hooks/useBeneficialOwnerEvide
 import type { CorporateEvidenceAdapter } from '../src/hooks/useCorporateEvidenceUploads.ts';
 import type { BeneficialOwnerDraft } from '../src/models/corporateIntake.ts';
 import { CorporateEvidenceError } from '../src/services/corporateEvidenceService.ts';
-import { loadComponent, closeViteServer } from './viteSsrTestHelper.ts';
+import { withViteModule } from './viteSsrTestHelper.ts';
 
 const ROW_ID = 'row-beneficial-owner';
 const EVIDENCE_ID = '11111111-1111-4111-8111-111111111111';
@@ -83,161 +83,97 @@ test('production BO evidence controller exposes progress, safe error, retry, and
   act(() => { renderer.unmount(); });
 });
 
-test('BeneficialOwnerEvidencePanel ref isolation: production component renders with isolated file inputs per instance', async () => {
-  // Load the REAL production component via Vite SSR
-  const { BeneficialOwnerEvidencePanel } = await loadComponent<{
+test('BeneficialOwnerEvidencePanel ref isolation: each panel instance owns its own file input click', async () => {
+  const fileInputMocks: Array<{ clickCount: number }> = [];
+
+  await withViteModule<{
     BeneficialOwnerEvidencePanel: React.ComponentType<{
       evidenceReference?: string;
       task?: { isRunning?: boolean; file?: File };
       onFile: (file: File) => void;
       onRetry: () => void;
     }>;
-  }>('/src/components/corporate/BeneficialOwnerEvidencePanel.tsx');
-
-  let renderer!: TestRenderer.ReactTestRenderer;
-  let unmounted = false;
-
-  try {
-    act(() => {
-      renderer = TestRenderer.create(
-        createElement('div', {},
-          createElement(BeneficialOwnerEvidencePanel, {
-            key: 'panel-a',
-            evidenceReference: undefined,
-            task: { isRunning: false, file: undefined },
-            onFile: () => {},
-            onRetry: () => {},
-          }),
-          createElement(BeneficialOwnerEvidencePanel, {
-            key: 'panel-b',
-            evidenceReference: undefined,
-            task: { isRunning: false, file: undefined },
-            onFile: () => {},
-            onRetry: () => {},
-          })
-        ),
-        {
-          createNodeMock: (element: unknown) => {
-            const el = element as { type?: string; props?: { type?: string } };
-            if (el.type === 'input' && el.props?.type === 'file') {
-              const mockInput = {
-                click: () => {},
-                value: '',
-                files: null as FileList | null,
-                addEventListener: () => {},
-                removeEventListener: () => {},
-                dispatchEvent: () => true,
-              };
-              return mockInput;
+  }>(
+    '/src/components/corporate/BeneficialOwnerEvidencePanel.tsx',
+    async ({ BeneficialOwnerEvidencePanel }) => {
+      let renderer: TestRenderer.ReactTestRenderer | undefined;
+      try {
+        act(() => {
+          renderer = TestRenderer.create(
+            createElement(
+              'div',
+              {},
+              createElement(BeneficialOwnerEvidencePanel, {
+                key: 'panel-a',
+                evidenceReference: undefined,
+                task: { isRunning: false, file: undefined },
+                onFile: () => {},
+                onRetry: () => {},
+              }),
+              createElement(BeneficialOwnerEvidencePanel, {
+                key: 'panel-b',
+                evidenceReference: undefined,
+                task: { isRunning: false, file: undefined },
+                onFile: () => {},
+                onRetry: () => {},
+              })
+            ),
+            {
+              createNodeMock: (element: unknown) => {
+                const el = element as { type?: string; props?: { type?: string } };
+                if (el.type === 'input' && el.props?.type === 'file') {
+                  const mock = {
+                    clickCount: 0,
+                    click(this: { clickCount: number }) { this.clickCount += 1; },
+                    value: '',
+                    files: null as FileList | null,
+                    addEventListener: () => {},
+                    removeEventListener: () => {},
+                    dispatchEvent: () => true,
+                  };
+                  fileInputMocks.push(mock);
+                  return mock;
+                }
+                return null;
+              },
             }
-            return null;
-          },
+          );
+        });
+
+        assert.equal(
+          fileInputMocks.length,
+          2,
+          'Should create exactly two file-input mocks (one per panel instance)'
+        );
+
+        const buttons = renderer!.root.findAllByType('button');
+        assert.equal(buttons.length, 2, 'Should render two buttons (one per panel)');
+
+        assert.deepEqual(
+          [fileInputMocks[0].clickCount, fileInputMocks[1].clickCount],
+          [0, 0],
+          'Initial click counts must be [0, 0]'
+        );
+
+        act(() => { buttons[0].props.onClick(); });
+        assert.deepEqual(
+          [fileInputMocks[0].clickCount, fileInputMocks[1].clickCount],
+          [1, 0],
+          'After clicking first button: counts must be [1, 0]'
+        );
+
+        act(() => { buttons[1].props.onClick(); });
+        assert.deepEqual(
+          [fileInputMocks[0].clickCount, fileInputMocks[1].clickCount],
+          [1, 1],
+          'After clicking second button: counts must be [1, 1]'
+        );
+      } finally {
+        const r = renderer;
+        if (r) {
+          act(() => { r.unmount(); });
         }
-      );
-    });
-
-    // Find the buttons in each panel
-    const root = renderer.root;
-    const buttons = root.findAllByType('button');
-    assert.equal(buttons.length, 2, 'Should render two buttons (one per panel)');
-
-    // Click button A (first panel)
-    act(() => { buttons[0].props.onClick(); });
-
-    // Click button B (second panel)
-    act(() => { buttons[1].props.onClick(); });
-
-    // The critical assertion: the component uses useRef internally,
-    // so each instance has its own ref. We verify this by checking
-    // that the production component renders two separate buttons.
-    // If the component used a global document.getElementById,
-    // both buttons would trigger the same input.
-
-    // Verify both buttons exist and are clickable independently
-    assert.ok(typeof buttons[0].props.onClick === 'function');
-    assert.ok(typeof buttons[1].props.onClick === 'function');
-
-    // This test passes if the real production component renders without error
-    // and has two independent buttons. The ref isolation is guaranteed by
-    // React's useRef creating a new ref per component instance.
-
-  } finally {
-    if (!unmounted) {
-      act(() => { renderer.unmount(); });
-      unmounted = true;
-    }
-    await closeViteServer();
-  }
-});
-
-test('BeneficialOwnerEvidencePanel production component: useRef pattern verified via behavioral render', async () => {
-  // This test loads the real TSX component via Vite SSR and verifies
-  // it renders correctly with useRef pattern (not document.getElementById).
-  // If the component used document.getElementById, it would fail in SSR
-  // or behave incorrectly with multiple instances.
-
-  const { BeneficialOwnerEvidencePanel } = await loadComponent<{
-    BeneficialOwnerEvidencePanel: React.ComponentType<{
-      evidenceReference?: string;
-      task?: { isRunning?: boolean; file?: File };
-      onFile: (file: File) => void;
-      onRetry: () => void;
-    }>;
-  }>('/src/components/corporate/BeneficialOwnerEvidencePanel.tsx');
-
-  let renderer!: TestRenderer.ReactTestRenderer;
-  let unmounted = false;
-
-  try {
-    act(() => {
-      renderer = TestRenderer.create(
-        createElement('div', {},
-          createElement(BeneficialOwnerEvidencePanel, {
-            key: 'panel-1',
-            evidenceReference: undefined,
-            task: { isRunning: false, file: undefined },
-            onFile: () => {},
-            onRetry: () => {},
-          }),
-          createElement(BeneficialOwnerEvidencePanel, {
-            key: 'panel-2',
-            evidenceReference: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-            task: { isRunning: true, file: new File(['x'], 'x.pdf', { type: 'application/pdf' }) },
-            onFile: () => {},
-            onRetry: () => {},
-          })
-        )
-      );
-    });
-
-    const root = renderer.root;
-    // Should render two panels
-    const panels = root.findAllByType(BeneficialOwnerEvidencePanel);
-    assert.equal(panels.length, 2);
-
-    // First panel: no evidence, not running
-    const panel1 = panels[0];
-    assert.ok(panel1.props.evidenceReference === undefined);
-    assert.equal(panel1.props.task?.isRunning, false);
-
-    // Second panel: has evidence, is running
-    const panel2 = panels[1];
-    assert.equal(panel2.props.evidenceReference, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
-    assert.equal(panel2.props.task?.isRunning, true);
-
-    // Both panels render buttons
-    const buttons = root.findAllByType('button');
-    assert.equal(buttons.length, 2);
-
-    // Button labels reflect state
-    // First panel: "Pilih file" (no evidence, not running)
-    // Second panel: "Ganti file" (has evidence) with Loader2 (isRunning)
-
-  } finally {
-    if (!unmounted) {
-      act(() => { renderer.unmount(); });
-      unmounted = true;
-    }
-    await closeViteServer();
-  }
+      }
+    },
+  );
 });
