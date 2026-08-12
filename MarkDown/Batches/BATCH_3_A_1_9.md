@@ -2,14 +2,15 @@
 
 ## Status
 
-- Fixed point: `979c7932d99d80819c2307042637a1d777ac10aa`
-- Parent of fixed point: `979c7932d99d80819c2307042637a1d777ac10aa` (self-reference not embedded; batch is documentation-only reconciliation of audit findings against that fixed point)
-- Actual parent verified before edit: `979c7932d99d80819c2307042637a1d777ac10aa`
+- Input fixed point before Batch 3.A.1.9: `979c7932d99d80819c2307042637a1d777ac10aa`
+- Parent of that input fixed point: `67439533e079cceded8bbddba1f56a4db6388767`
+- Resulting Batch 3.A.1.9 commit: `6c3f38c340b05a9b6ae404e925b4a8d5192c1f6b`
+- Parent of the resulting Batch 3.A.1.9 commit: `979c7932d99d80819c2307042637a1d777ac10aa`
 - Branch: `batch-3a-corporate-intake`
 - Scope: **Markdown only.** No TypeScript, TSX, test, package, lockfile, configuration, generated map, Supabase object, migration, RPC, RLS, ACL, Edge Function, webhook, Notary, e-KYC, or Qualifa file changed. Corporate Intake implementation commit `67439533e079cceded8bbddba1f56a4db6388767` remains accepted; no production code or test is reopened.
 - Commit-message contract: `fix(docs): close corporate intake reconciliation audit`
 - Resulting commit hash: **TIDAK disertakan dalam dokumen ini.** A commit cannot truthfully contain its own final hash; the executor will report it externally after commit.
-- Final status: **READY FOR EXTERNAL RE-AUDIT**, never self-certified PASS.
+- Final historical status of Batch 3.A.1.9: **DOCUMENTATION METADATA AUDIT FAILED; SUPERSEDED BY 3.A.1.10** — only the ancestry metadata (incorrect parent hash and ambiguous relationship labels) in the 3.A.1.9 DBB failed audit; the three substantive documentation corrections (removal of executable staging recipe, correction of self-contradictory final-hash claims, removal of stale directional wording) made by 3.A.1.9 remain accepted. Corporate Intake implementation commit `67439533e079cceded8bbddba1f56a4db6388767` remains accepted; no production code or test is reopened.
 
 ## Inherited Dirty-Tree Warning
 
@@ -77,8 +78,8 @@ Batch 3.A.1.9 is **Markdown-only documentation reconciliation**. Corporate Intak
 
 ## Next Exact Action
 
-External controller audit of the commit produced by this batch. Until the audit returns, status remains **READY FOR EXTERNAL RE-AUDIT**, never PASS. If the audit finds new documentation defects, open Batch 3.A.1.10; if it passes, transition Batch 3.A to closed and proceed to Batch 3.B per the phase plan.
+Batch 3.A.1.9 is superseded by 3.A.1.10 for ancestry correction only. The three substantive documentation corrections remain valid. External controller audit of the 3.A.1.10 commit is the next exact action.
 
 ## Status
 
-**READY FOR EXTERNAL RE-AUDIT** (never PASS).
+Batch 3.A.1.9 historical status: **DOCUMENTATION METADATA AUDIT FAILED; SUPERSEDED BY 3.A.1.10** — only the ancestry metadata (incorrect parent hash assignment and ambiguous relationship labels) failed; the three substantive documentation corrections remain accepted; Corporate Intake implementation `67439533` remains accepted; no production code/test reopened. Batch 3.A.1.10 carries the corrected ancestry.

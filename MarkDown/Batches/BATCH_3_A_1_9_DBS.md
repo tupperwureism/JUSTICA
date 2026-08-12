@@ -105,5 +105,5 @@ Sebelum menyatakan sebuah batch dokumentasi "siap untuk audit eksternal", tanyak
 
 ## 7. Status
 
-Batch 3.A.1.9: **READY FOR EXTERNAL RE-AUDIT** (never PASS).
+Batch 3.A.1.9: **DOCUMENTATION METADATA AUDIT FAILED; SUPERSEDED BY 3.A.1.10** — hanya metadata keturunan (hubungan hash) dalam DBB 3.A.1.9 yang gagal audit; tiga koreksi dokumentasi substantif tetap diterima; implementasi Corporate Intake (`67439533`) tetap diterima; tidak ada kode produksi atau tes yang dibuka kembali.
 Batch 3.A.1.8 (historis): **DOCUMENTATION RECONCILIATION FAILED EXTERNAL AUDIT; SUPERSEDED BY 3.A.1.9** — implementasi Corporate Intake (`67439533`) tetap diterima.
