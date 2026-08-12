@@ -9,7 +9,7 @@
 - Branch: `batch-3a-corporate-intake`
 - Scope: **Markdown only.** No TypeScript, TSX, test, package, lockfile, configuration, generated map, Supabase object, migration, RPC, RLS, ACL, Edge Function, webhook, Notary, e-KYC, or Qualifa file changed. Corporate Intake implementation commit `67439533e079cceded8bbddba1f56a4db6388767` remains accepted; no production code or test is reopened.
 - Commit-message contract: `fix(docs): close corporate intake reconciliation audit`
-- Resulting commit hash: **TIDAK disertakan dalam dokumen ini.** A commit cannot truthfully contain its own final hash; the executor will report it externally after commit.
+- Resulting commit hash (fakta saat pembuatan commit 3.A.1.9: belum dapat disertakan karena commit belum tercipta; fakta repository sekarang: hash `6c3f38c340b05a9b6ae404e925b4a8d5192c1f6b` telah diverifikasi dan dimasukkan secara retrospektif oleh Batch 3.A.1.10 sebagai descendant): pada original creation time, hash ini belum diketahui; dokumen saat ini memuatnya sebagai catatan historis setelah commit `6c3f38c` terbentuk.
 - Final historical status of Batch 3.A.1.9: **DOCUMENTATION METADATA AUDIT FAILED; SUPERSEDED BY 3.A.1.10** — only the ancestry metadata (incorrect parent hash and ambiguous relationship labels) in the 3.A.1.9 DBB failed audit; the three substantive documentation corrections (removal of executable staging recipe, correction of self-contradictory final-hash claims, removal of stale directional wording) made by 3.A.1.9 remain accepted. Corporate Intake implementation commit `67439533e079cceded8bbddba1f56a4db6388767` remains accepted; no production code or test is reopened.
 
 ## Inherited Dirty-Tree Warning
@@ -74,7 +74,7 @@ Batch 3.A.1.9 is **Markdown-only documentation reconciliation**. Corporate Intak
 1. This batch does not add new behavioral failure-path tests; it only reconciles documentation claims with existing evidence.
 2. The repository's inherited dirty-tree (many unrelated tracked/untracked changes) remains untouched; future batches that modify the generator or build artifacts must re-verify clean-candidate procedures independently.
 3. Verification of removed executable recipes relies on literal string absence checks; if a future batch introduces similar text, a new audit must re-verify.
-4. The final commit hash of 3.A.1.9 is intentionally not embedded in any committed file; it will be reported by the executor externally after commit, consistent with the principle established in 3.A.1.8.
+4. At original creation time (before commit 3.A.1.9 existed), its final hash could not be embedded inside itself; the present-state document now includes `6c3f38c...` retrospectively via Batch 3.A.1.10 (descendant audit). This does not mean the hash was available at the time of creation; it was only verified and recorded after the commit formed.
 
 ## Next Exact Action
 

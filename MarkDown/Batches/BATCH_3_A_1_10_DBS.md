@@ -96,8 +96,20 @@ Sebelum menyatakan batch "siap untuk audit eksternal", tanyakan:
 
 ---
 
+## 9. Kontradiksi Temporal yang Diperbaiki oleh Batch 3.A.1.11
+
+Setelah 3.A.1.10 memperbaiki keturunan, masih tersisa satu masalah bahasa dalam `BATCH_3_A_1_9.md`: dokumen memuat hash `6c3f38c` (fakta sekarang), tetapi menyatakan bahwa hash "tidak disertakan" (klaim saat ini). Ini kontradiksi temporal — pernyataan yang benar pada saat pembuatan commit menjadi salah ketika dibaca sebagai fakta saat ini.
+
+Batch 3.A.1.11 menyelesaikannya dengan menambahkan kualifikasi waktu:
+- **Pada saat pembuatan commit 3.A.1.9** (`original creation time`): hash belum dapat disertakan, karena commit belum tercipta.
+- **Pada fakta repository sekarang** (`present-state`): hash `6c3f38c` sudah diverifikasi oleh `git rev-parse` dan dimasukkan secara retrospektif oleh Batch 3.A.1.10 sebagai descendant.
+
+Ini berarti kalimat lama "intentionally not embedded" tidak dihapus, tetapi diberi konteks waktu: ia berlaku pada `creation time`, bukan pada `present-state`.
+
+---
+
 ## 8. Status
 
 Batch 3.A.1.9 (historis): **DOCUMENTATION METADATA AUDIT FAILED; SUPERSEDED BY 3.A.1.10** — hanya metadata keturunan dalam DBB 3.A.1.9 yang gagal audit; tiga koreksi dokumentasi substantif tetap diterima; implementasi Corporate Intake (`67439533`) tetap diterima; tidak ada kode produksi atau tes yang dibuka kembali.
 
-Batch 3.A.1.10: **READY FOR EXTERNAL RE-AUDIT** (tidak pernah dinyatakan PASS oleh dokumen ini sendiri).
+Batch 3.A.1.10: **DOCUMENTATION RETROSPECTIVE HASH AUDIT FAILED; SUPERSEDED BY 3.A.1.11** (tidak pernah dinyatakan PASS oleh dokumen ini sendiri) — koreksi keturunan 3.A.1.10 tetap diterima, tetapi dokumen `BATCH_3_A_1_9.md` masih menyisakan kontradiksi temporal: hash hasil (`6c3f38c`) sudah tercatat secara retrospektif, namun dokumen menyatakan hash tersebut "tidak disertakan" tanpa kualifikasi waktu. Batch 3.A.1.11 merekonsiliasi ini dengan menambahkan kualifikasi temporal (`pada saat pembuatan commit` vs `fakta repository sekarang`) tanpa menghapus hash yang sudah diverifikasi.

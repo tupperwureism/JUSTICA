@@ -7,11 +7,14 @@
 - Branch: `batch-3a-corporate-intake`
 - Scope: **Markdown only.** No TypeScript, TSX, test, package, lockfile, configuration, generated map, Supabase object, migration, RPC, RLS, ACL, Edge Function, webhook, Notary, e-KYC, Qualifa file changed. Corporate Intake implementation commit `67439533e079cceded8bbddba1f56a4db6388767` remains accepted; no production code or test is reopened.
 - Commit-message contract: `fix(docs): correct corporate intake batch ancestry`
-- Final status: **READY FOR EXTERNAL RE-AUDIT** (never PASS; no self-certified PASS claim).
+- Final status (before 3.A.1.11 supersession): **READY FOR EXTERNAL RE-AUDIT** (never PASS; no self-certified PASS claim). After Batch 3.A.1.11: superseded by temporal-wording reconciliation.
+- Historical status after 3.A.1.11: **DOCUMENTATION RETROSPECTIVE HASH AUDIT FAILED; SUPERSEDED BY 3.A.1.11** — the ancestry correction made by 3.A.1.10 remains accepted; the failure is limited to residual temporal wording in `BATCH_3_A_1_9.md` (self-contradictory current-state claims that the resulting hash was not embedded, despite its retrospective presence); substantive corrections from 3.A.1.9 are not revoked; Corporate Intake implementation `67439533` remains accepted; no production code or test is reopened.
 
-## External Finding (Locked)
+## External Finding (Locked) — Plus Residual Temporal Wording Fixed by 3.A.1.11
 
-In `MarkDown/Batches/BATCH_3_A_1_9.md`, the ancestry metadata incorrectly assigned the same hash (`979c7932d99d80819c2307042637a1d777ac10aa`) to both the input fixed point and its parent, and included an ambiguous line (`Actual parent verified before edit: ...`) that did not distinguish the parent of the input fixed point from the parent of the resulting commit. Git proves the correct chain is:
+In `MarkDown/Batches/BATCH_3_A_1_9.md`, the ancestry metadata incorrectly assigned the same hash (`979c7932d99d80819c2307042637a1d777ac10aa`) to both the input fixed point and its parent, and included an ambiguous line (`Actual parent verified before edit: ...`) that did not distinguish the parent of the input fixed point from the parent of the resulting commit. Batch 3.A.1.10 corrected that.
+
+Additionally, `BATCH_3_A_1_9.md` retained residual temporal-wording contradictions after the 3.A.1.10 ancestry fix: the document embedded the resulting hash `6c3f38c...` (line 7, added retrospectively) but simultaneously claimed in current-state language that the hash was "TIDAK disertakan" and "intentionally not embedded" (limitations section). This is a temporal contradiction: at original creation time the hash could not be known; at present-state (after 3.A.1.10) it is correctly recorded. Batch 3.A.1.11 reconciles those statements by applying temporal qualifiers (`pada saat pembuatan commit` vs `fakta repository sekarang`) without removing the verified hash.
 
 - Input fixed point before Batch 3.A.1.9: `979c7932d99d80819c2307042637a1d777ac10aa`
 - Parent of that input fixed point: `67439533e079cceded8bbddba1f56a4db6388767`
