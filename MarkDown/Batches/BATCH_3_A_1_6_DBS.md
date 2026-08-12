@@ -226,7 +226,7 @@ test('exact prepare/finalize invoke payload shape — no double body wrapper', a
 
 ### Catatan penting
 
-Versi sebelumnya dari bagian ini memuat **resep staging yang tidak aman** untuk sebuah batch historis. Perintah `git add ... corporateEvidenceService.ts ...` di bawah adalah **contoh usang** yang salah: file tersebut sebenarnya tidak pernah masuk commit `12c0b4e657aed485e87801e0ac541f08a6a76c90` (commit 3.A.1.6). Bagian ini diperbaiki oleh Batch 3.A.1.8 agar mencerminkan kenyataan dan tidak menyarankan perintah yang bisa mengotori commit lain.
+Versi sebelumnya dari bagian ini memuat **resep penambahan berkas (`staging`) historis yang tidak aman**. Perintah tersebut (yang menyarankan penambahan berkas seperti `corporateEvidenceService.ts`) adalah **contoh usang yang salah**: file tersebut sebenarnya tidak pernah masuk commit `12c0b4e657aed485e87801e0ac541f08a6a76c90` (commit 3.A.1.6). Bagian ini sudah direkonsiliasi oleh Batch 3.A.1.8 dan kemudian diperjelas lagi oleh Batch 3.A.1.9, agar mencerminkan kenyataan dan tidak menyarankan perintah yang bisa mengotori commit lain. Dokumen ini tidak lagi memuat instruksi yang dapat dieksekusi.
 
 ### Apa yang sebenarnya dikomit oleh 3.A.1.6
 
@@ -248,7 +248,7 @@ justifiqa-frontend/tsconfig.phase2-tests.json
 
 Catatan faktual:
 
-- `justifiqa-frontend/src/services/corporateEvidenceService.ts` **tidak masuk commit `12c0b4e`**. Versi DBS sebelumnya yang mencantumkannya dalam `git add` adalah keliru.
+- `justifiqa-frontend/src/services/corporateEvidenceService.ts` **tidak masuk commit `12c0b4e`**. Versi DBS sebelumnya yang mencantumkannya dalam resep penambahan berkas historis adalah keliru.
 - `justifiqa-frontend/test/viteSsrTestHelper.ts` **dipositif secara fisik** dalam `12c0b4e`, namun berada di luar *allowlist* dokumentasi 3.A.1.6 saat itu. Otorisasi eksplisit untuk helper ini diberikan kemudian oleh Batch 3.A.1.7 untuk tujuan tunggal: memuat komponen produksi nyata dan memastikan cleanup yang tahan pengecualian.
 
 ### Akar masalah: dirty-tree contamination pada generator

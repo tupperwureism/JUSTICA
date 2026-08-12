@@ -27,7 +27,7 @@ Checkpoint matrix adalah laporan status saat itu. Kalau checkpoint masih tertuli
 - Tidak tahu hasil verifikasi aktual, padahal verifikasi sudah dijalankan.
 - Bisa salah memutuskan langkah berikutnya berdasarkan informasi yang kadaluarsa.
 
-Di sinilah audit eksternal menemukan masalah: checkpoint matrix di 3.A.1.7 tidak mencerminkan kenyataan. 3.A.1.8 memperbaikinya dengan menulis ulang entri CP-05/06/07/08 dengan hasil aktual (test pass, typecheck pass, lint pass, commit hash final dicatat oleh 3.A.1.8, dst.).
+Di sinilah audit eksternal menemukan masalah: checkpoint matrix di 3.A.1.7 tidak mencerminkan kenyataan. Batch 3.A.1.8 mencatat hasil aktual (test pass, typecheck pass, lint pass, dst.) dalam dokumen terkomit; hash final 3.A.1.8 sengaja **tidak disertakan** dalam dokumen yang dikomit, dan dilaporkan oleh eksekutor secara eksternal setelah commit.
 
 Pelajarannya: **status placeholder harus selalu diganti dengan hasil aktual sebelum commit**, atau ditandai secara eksplisit sebagai "akan diisi setelahnya oleh batch berikutnya". Tidak boleh ada placeholder menggantung di dokumen final.
 
@@ -35,20 +35,7 @@ Pelajarannya: **status placeholder harus selalu diganti dengan hasil aktual sebe
 
 ## 3. Mengapa Perintah Staging Historis Tidak Aman di Worktree Kotor
 
-Dokumen 3.A.1.6 DBS sebelumnya memuat resep bash seperti:
-
-```
-git add justifiqa-frontend/src/services/corporateEvidenceService.ts \
-        ... (lima file lain)
-```
-
-Resep ini terlihat seperti instruksi yang bisa dijalankan. Tapi:
-
-- Itu adalah **perintah untuk batch historis** yang sudah selesai; bukan untuk worktree sekarang.
-- `corporateEvidenceService.ts` sebenarnya tidak masuk commit `12c0b4e` (diverifikasi lewat `git show`).
-- Kalau resep itu dijalankan di worktree kotor saat ini, bisa **meng-stage file yang salah** atau bahkan **file user yang tidak terkait**.
-
-Prinsip aman: dokumen **tidak boleh** memuat perintah yang bisa disalin-ditempel untuk aksi destruktif. Dokumentasi cukup **menjelaskan** apa yang terjadi; tidak perlu **menyarankan** perintah untuk mengulangi proses historis. 3.A.1.8 menghapus resep itu dan menggantinya dengan kutipan fakta dari Git (`git show --name-only --format= 12c0b4e…`).
+Dokumen 3.A.1.6 DBS sebelumnya mencantumkan sebuah resep bash yang menyarankan penambahan berkas (`staging`) historis — termasuk menyebut `corporateEvidenceService.ts` — yang jika disalin dan dijalankan bisa mengotori commit lain. Resep tersebut sudah dihapus; sebagai gantinya, dokumen ini hanya menyajikan daftar keanggotaan berkas yang sebenarnya dikomit (`12c0b4e`) secara faktual, tanpa instruksi yang bisa dieksekusi.
 
 ---
 
@@ -117,7 +104,7 @@ Sebelum menganggap dokumentasi "selesai", tanyakan hal-hal berikut:
 
 ## 8. Rujukan
 
-- `MarkDown/Batches/BATCH_3_A_1_8.md` — DBB utama untuk batch ini, memuat matriks finding → correction → verification.
+- `MarkDown/Batches/BATCH_3_A_1_8.md` — DBB utama untuk batch ini (status rekonsiliasi: DOCUMENTATION RECONCILIATION FAILED EXTERNAL AUDIT; SUPERSEDED BY 3.A.1.9). Implementasi Corporate Intake commit `67439533` tetap diterima; tidak ada kode produksi atau test yang dibuka kembali.
 - `MarkDown/Batches/BATCH_3_A_1_7.md` — DBB 3.A.1.7 yang direkonsiliasi (status sekarang: IMPLEMENTATION ACCEPTED; DOCUMENTATION AUDIT FAILED; SUPERSEDED BY 3.A.1.8).
 - `MarkDown/Batches/BATCH_3_A_1_7_DBS.md` — DBS 3.A.1.7 yang direkonsiliasi (karakter aksidental dihapus, klaim middleware-mode dikoreksi, pembedaan behavioral/struktural ditambahkan).
 - `MarkDown/Batches/BATCH_3_A_1_6_DBS.md` — DBS 3.A.1.6 yang direkonsiliasi (resep staging historis dihapus, klaim akar generator dikoreksi).
@@ -129,4 +116,6 @@ Sebelum menganggap dokumentasi "selesai", tanyakan hal-hal berikut:
 
 ## Status
 
-**READY FOR EXTERNAL RE-AUDIT** (never PASS).
+Batch 3.A.1.8: **DOCUMENTATION RECONCILIATION FAILED EXTERNAL AUDIT; SUPERSEDED BY 3.A.1.9.** Corporate Intake implementasi commit `67439533` tetap diterima; tidak ada kode produksi atau test yang dibuka kembali. Batch ini (3.A.1.9) adalah koreksi dokumentasi lanjutan.
+
+Batch 3.A.1.9: **READY FOR EXTERNAL RE-AUDIT** (never PASS).

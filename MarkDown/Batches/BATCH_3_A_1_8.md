@@ -8,7 +8,7 @@
 - Scope: **Markdown only.** Production code, tests, generated maps, configuration, dan database objects **tidak disentuh**.
 - Commit-message contract: `fix(docs): reconcile corporate intake batch records`
 - Resulting commit hash: **TIDAK disertakan dalam dokumen ini.** Git tidak mengizinkan sebuah commit berisi hash miliknya sendiri yang final, karena perubahan dokumen akan mengubah hash.
-- Status: **READY FOR EXTERNAL RE-AUDIT**, never self-certified PASS.
+- Status: **DOCUMENTATION RECONCILIATION FAILED EXTERNAL AUDIT; SUPERSEDED BY 3.A.1.9.** Corporate Intake implementasi commit `67439533e079cceded8bbddba1f56a4db6388767` tetap diterima; tidak ada kode produksi atau test yang dibuka kembali. Status final 3.A.1.9 akan dicatat oleh batch 3.A.1.9 (bukan oleh dokumen ini).
 
 ## Inherited Dirty-Tree Warning
 
@@ -29,9 +29,9 @@ Repositori mewarisi kondisi dirty tree dari pekerjaan pengguna yang tidak terkai
 
 | # | Finding | Documentation Correction | Verification |
 |---|---------|--------------------------|--------------|
-| 1 | Unsafe historical `git add` recipe (incl. `corporateEvidenceService.ts`) in 3.A.1.6 DBS | Removed the executable `git add` recipe. Replaced with a factual historical explanation derived from `git show --name-only --format= 12c0b4e657aed485e87801e0ac541f08a6a76c90`, plus a note that `corporateEvidenceService.ts` was never in `12c0b4e` and that `viteSsrTestHelper.ts` was physically committed there but outside the original 3.A.1.6 allowlist (later re-authorized by 3.A.1.7). | `git show --name-only --format= 12c0b4e657aed485e87801e0ac541f08a6a76c90` no longer matches the staging list; DBS now references the actual commit file membership. |
+| 1 | Unsafe historical staging recipe (incl. `corporateEvidenceService.ts`) in 3.A.1.6 DBS | Removed the executable staging recipe. Replaced with a factual historical explanation derived from `git show --name-only --format= 12c0b4e657aed485e87801e0ac541f08a6a76c90`, plus a note that `corporateEvidenceService.ts` was never in `12c0b4e` and that `viteSsrTestHelper.ts` was physically committed there but outside the original 3.A.1.6 allowlist (later re-authorized by 3.A.1.7). | `git show --name-only --format= 12c0b4e657aed485e87801e0ac541f08a6a76c90` no longer matches the staging list; DBS now references the actual commit file membership. |
 | 2 | False generator scan-root claims | Stated the actual three fixed roots from `Tools/symbol_map_lib.mjs`: `justifiqa-frontend/src` (TS/TSX), `database/migrations` (SQL when present), `supabase/migrations` (SQL). Explicitly stated that `.agents/`, `.continue/`, mockups, diagrams, and build artifacts are not scanned. | `Tools/symbol_map_lib.mjs:331–346` confirms the three roots only. |
-| 3 | Stale CP entries in 3.A.1.7 DBB | Replaced "Pending", "Required gates recorded below", and the predicted commit hash with actual outcomes: external physical verification 104/104 tests, typecheck pass, lint pass, commit range `git diff --check` pass, plus the actual resulting commit hash recorded by 3.A.1.8 (not embedded in the document itself). | External verification commands re-confirmed; resulting commit hash not present inside the staged text. |
+| 3 | Stale CP entries in 3.A.1.7 DBB | Replaced "Pending", "Required gates recorded below", and the predicted commit hash with actual outcomes: external physical verification 104/104 tests, typecheck pass, lint pass, commit range `git diff --check` pass, plus acknowledgment that 3.A.1.8's final hash was intentionally omitted from committed documents and reported externally by the executor after commit. | External verification commands re-confirmed; no final commit hash embedded inside staged text. |
 | 4 | Status line of 3.A.1.7 mis-stated as PASS-equivalent | Replaced with `IMPLEMENTATION ACCEPTED; DOCUMENTATION AUDIT FAILED; SUPERSEDED BY 3.A.1.8.` | Status line contains the literal phrase. |
 | 5 | Stray `监管` characters in 3.A.1.7 DBS | Removed. | File search for `监管` returns 0 matches. |
 | 6 | Incorrect `git status` explanation in 3.A.1.7 DBS | Reworded: ordinary untracked files are reported by `git status` unless ignored or explicitly hidden. The generator reads the filesystem, not the status display. | DBS now states the correct behaviour. |
@@ -79,8 +79,8 @@ sed -n '329,346p' Tools/symbol_map_lib.mjs
 
 # Stale-content removal search
 grep -c '监管' MarkDown/Batches/BATCH_3_A_1_7_DBS.md            # 0
-grep -c 'git add justifiqa-frontend/src/services/corporateEvidenceService.ts' \
-     MarkDown/Batches/BATCH_3_A_1_6_DBS.md                       # 0
+# (staging recipe removed; no executable instruction remains in allowed documents)
+# `corporateEvidenceService.ts` is not in `12c0b4e` file membership
 grep -c 'port conflict' MarkDown/Batches/BATCH_3_A_1_7_DBS.md    # 0
 grep -c 'enforced by a test' MarkDown/Batches/BATCH_3_A_1_7_DBS.md # 0
 grep -c 'behaviorally tested' MarkDown/Batches/BATCH_3_A_1_7_DBS.md # 0 (cleanup path)
