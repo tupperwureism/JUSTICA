@@ -1,6 +1,6 @@
 # Batch 3.A.1.11 DBS — Perbedaan "Fakta Saat Kejadian" dan "Fakta Repository Sekarang"
 
-Dokumen ini menjelaskan secara sederhana (DBS) mengapa Batch 3.A.1.11 diperlukan, apa yang diperbaiki, dan bagaimana pembaca dapat memahaminya — tanpa memerlukan pengetahuan teknis mendalam.
+Dokumen ini menjelaskan secara sederhana (DBS) mengapa Batch 3.A.1.11 diperlukan, apa yang diperbaiki, dan bagaimana pembaca dapat memahaminya — tanpa memerlukan pengetahuan teknis mendalam. **Dokumen ini adalah `BATCH_3_A_1_11_DBS.md` (dokumen DBB pendamping `BATCH_3_A_1_11.md`), bukan `BATCH_3_A_1_11.md` itu sendiri.**
 
 ---
 
@@ -82,7 +82,7 @@ Sebelum menyatakan batch "siap untuk audit eksternal", tanyakan:
 - Descendant boleh memperbarui dokumen historis (`ancestor`) untuk mencatat fakta baru yang belum tersedia saat ancestor dibuat. Ini adalah audit retrospektif yang sah.
 
 **4. Mengapa Batch 3.A.1.11 diperlukan jika 3.A.1.10 sudah memperbaiki keturunan?**
-- Karena 3.A.1.9 masih menyisakan kontradiksi temporal: dokumen memuat `6c3f38c` (fakta sekarang) tetapi menyatakan hash "tidak disertakan" (klaim saat ini tanpa kualifikasi). 3.A.1.11 merekonsiliasi ini dengan menambahkan kualifikasi waktu.
+- Karena **sebelum koreksi 3.A.1.11** (`before the 3.A.1.11 correction`), `BATCH_3_A_1_9.md` masih menyisakan kontradiksi temporal: dokumen memuat `6c3f38c` (fakta sekarang) tetapi menyatakan hash "tidak disertakan" (klaim saat ini tanpa kualifikasi). 3.A.1.11 merekonsiliasi ini dengan menambahkan kualifikasi waktu.
 
 ---
 
@@ -90,10 +90,10 @@ Sebelum menyatakan batch "siap untuk audit eksternal", tanyakan:
 
 - `MarkDown/Batches/BATCH_3_A_1_9.md` — baris hash (line 7) tetap memuat `6c3f38c...`; baris 12 dan bagian keterbatasan (limitations) sekarang memakai kualifikasi temporal (`pada saat pembuatan commit` vs `fakta repository sekarang`).
 - `MarkDown/Batches/BATCH_3_A_1_10.md` — status historis diperbarui menjadi `DOCUMENTATION RETROSPECTIVE HASH AUDIT FAILED; SUPERSEDED BY 3.A.1.11`; penjelasan tentang kontradiksi temporal ditambahkan.
-- `MarkDown/Batches/BATCH_3_A_1_11.md` (dokumen ini) — mencatat fixed point `e347594...`, parent `6c3f38c...`, serta penjelasan lengkap tentang temporal qualifier dan dua-fakta (`creation-time` vs `present-state`).
+- `MarkDown/Batches/BATCH_3_A_1_11.md` — **dokumen DBB (bukan dokumen ini)** mencatat fixed point `e347594...`, parent `6c3f38c...`, serta penjelasan lengkap tentang temporal qualifier dan dua-fakta (`creation-time` vs `present-state`).
 
 ---
 
 ## 8. Status
 
-Batch 3.A.1.11: **READY FOR EXTERNAL RE-AUDIT** (tidak pernah dinyatakan PASS oleh dokumen ini sendiri). Kontradiksi temporal dalam `BATCH_3_A_1_9.md` telah direkonsiliasi; hash `6c3f38c` dipertahankan dengan kualifikasi waktu yang tepat; koreksi keturunan 3.A.1.10 tetap diterima; implementasi Corporate Intake (`67439533`) tetap diterima; tidak ada kode produksi atau tes yang dibuka kembali.
+Batch 3.A.1.11: **DOCUMENTATION COMPLETENESS AUDIT FAILED; SUPERSEDED BY 3.A.1.12** (tidak pernah dinyatakan PASS oleh dokumen `BATCH_3_A_1_11.md` sendiri). Kontradiksi temporal dalam `BATCH_3_A_1_9.md` telah direkonsiliasi; hash `6c3f38c` dipertahankan dengan kualifikasi waktu yang tepat; koreksi keturunan 3.A.1.10 tetap diterima; implementasi Corporate Intake (`67439533`) tetap diterima; tidak ada kode produksi atau tes yang dibuka kembali. **Konsep temporal yang diajarkan DBS ini tetap valid; kegagalan adalah aplikasi tidak lengkap dan self-audit tidak akurat, bukan konsep itu sendiri.**

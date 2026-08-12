@@ -57,7 +57,7 @@ Rantai yang sudah diverifikasi:
 1. `67439533e079cceded8bbddba1f56a4db6388767` — komit implementasi Corporate Intake (`67439533`).
 2. `979c7932d99d80819c2307042637a1d777ac10aa` — komit sebelum 3.A.1.9 (titik awal 3.A.1.9).
 3. `6c3f38c340b05a9b6ae404e925b4a8d5192c1f6b` — komit hasil 3.A.1.9.
-4. Komit hasil 3.A.1.10 — **tidak diprediksi atau disertakan** dalam dokumen ini, karena dokumen yang dikomit tidak bisa memuat hash komitnya sendiri.
+4. Komit hasil 3.A.1.10 — **pada saat dokumen ini dibuat (creation time), hash komit hasil 3.A.1.10 belum diketahui dan tidak disertakan; fakta repository sekarang (present-state): komit hasil 3.A.1.10 diverifikasi sebagai `e347594988af77692364d1cb3d9cbe7583337e23` (parent: `6c3f38c340b05a9b6ae404e925b4a8d5192c1f6b`)**.
 
 ---
 
@@ -83,8 +83,8 @@ Sebelum menyatakan batch "siap untuk audit eksternal", tanyakan:
 3. **Apakah Batch 3.A.1.10 membuka kembali kode produksi atau tes?**
    Tidak. Ini hanya koreksi dokumentasi metadata; implementasi `67439533` dan tiga koreksi substantif 3.A.1.9 tetap diterima.
 
-4. **Mengapa angka komit hasil 3.A.1.10 tidak disertakan dalam dokumen ini?**
-   Karena isi dokumen akan berubah ketika angka disertakan, sehingga angka itu akan selalu salah. Angka hasil akan dilaporkan oleh eksekutor setelah komit, di luar dokumen.
+4. **Mengapa angka komit hasil 3.A.1.10 tidak disertakan dalam dokumen ini pada saat pembuatan (creation time)?**
+    Karena isi dokumen akan berubah ketika angka disertakan, sehingga angka itu akan selalu salah. Angka hasil akan dilaporkan oleh eksekutor setelah komit, di luar dokumen. **Fakta repository sekarang (present-state): komit hasil 3.A.1.10 diverifikasi sebagai `e347594988af77692364d1cb3d9cbe7583337e23`.**
 
 ---
 
@@ -92,11 +92,11 @@ Sebelum menyatakan batch "siap untuk audit eksternal", tanyakan:
 
 - `MarkDown/Batches/BATCH_3_A_1_9.md` — koreksi keturunan diterapkan; empat hubungan diberi label eksplisit (`Input fixed point`, `Parent of input fixed point`, `Resulting Batch 3.A.1.9 commit`, `Parent of resulting commit`); status historis diperbarui menjadi `DOCUMENTATION METADATA AUDIT FAILED; SUPERSEDED BY 3.A.1.10` dengan penegasan bahwa hanya metadata yang gagal.
 - `MarkDown/Batches/BATCH_3_A_1_9_DBS.md` — status historis diperbarui dengan penjelasan bahwa hanya metadata keturunan yang gagal; tiga koreksi substantif dan implementasi `67439533` tetap diterima.
-- `MarkDown/Batches/BATCH_3_A_1_10.md` — dokumen audit baru (DBB) dengan rantai verifikasi, matriks koreksi, dan pernyataan bahwa status tetap `READY FOR EXTERNAL RE-AUDIT`.
+- `MarkDown/Batches/BATCH_3_A_1_10.md` — dokumen audit baru (DBB) dengan rantai verifikasi, matriks koreksi, dan status historis `DOCUMENTATION RETROSPECTIVE HASH AUDIT FAILED; SUPERSEDED BY 3.A.1.11`; pada saat pembuatan status asli `READY FOR EXTERNAL RE-AUDIT`, audit eksternal kemudian gagal.
 
 ---
 
-## 9. Kontradiksi Temporal yang Diperbaiki oleh Batch 3.A.1.11
+## 8. Kontradiksi Temporal yang Diperbaiki oleh Batch 3.A.1.11
 
 Setelah 3.A.1.10 memperbaiki keturunan, masih tersisa satu masalah bahasa dalam `BATCH_3_A_1_9.md`: dokumen memuat hash `6c3f38c` (fakta sekarang), tetapi menyatakan bahwa hash "tidak disertakan" (klaim saat ini). Ini kontradiksi temporal — pernyataan yang benar pada saat pembuatan commit menjadi salah ketika dibaca sebagai fakta saat ini.
 
@@ -108,8 +108,13 @@ Ini berarti kalimat lama "intentionally not embedded" tidak dihapus, tetapi dibe
 
 ---
 
-## 8. Status
+## 9. Status
 
 Batch 3.A.1.9 (historis): **DOCUMENTATION METADATA AUDIT FAILED; SUPERSEDED BY 3.A.1.10** — hanya metadata keturunan dalam DBB 3.A.1.9 yang gagal audit; tiga koreksi dokumentasi substantif tetap diterima; implementasi Corporate Intake (`67439533`) tetap diterima; tidak ada kode produksi atau tes yang dibuka kembali.
 
-Batch 3.A.1.10: **DOCUMENTATION RETROSPECTIVE HASH AUDIT FAILED; SUPERSEDED BY 3.A.1.11** (tidak pernah dinyatakan PASS oleh dokumen ini sendiri) — koreksi keturunan 3.A.1.10 tetap diterima, tetapi dokumen `BATCH_3_A_1_9.md` masih menyisakan kontradiksi temporal: hash hasil (`6c3f38c`) sudah tercatat secara retrospektif, namun dokumen menyatakan hash tersebut "tidak disertakan" tanpa kualifikasi waktu. Batch 3.A.1.11 merekonsiliasi ini dengan menambahkan kualifikasi temporal (`pada saat pembuatan commit` vs `fakta repository sekarang`) tanpa menghapus hash yang sudah diverifikasi.
+Batch 3.A.1.10: **DOCUMENTATION RETROSPECTIVE HASH AUDIT FAILED; SUPERSEDED BY 3.A.1.11** (tidak pernah dinyatakan PASS oleh dokumen ini sendiri) — koreksi keturunan 3.A.1.10 tetap diterima.
+- **Status asal eksekutor pada saat pembuatan (original executor status at creation time):** `READY FOR EXTERNAL RE-AUDIT`.
+- **Audit eksternal kemudian gagal** karena kontradiksi temporal tetap tersisa di `BATCH_3_A_1_9.md`.
+- **Status historis akhir (final historical status):** `DOCUMENTATION RETROSPECTIVE HASH AUDIT FAILED; SUPERSEDED BY 3.A.1.11`.
+- Batch 3.A.1.11 merekonsiliasi kontradiksi temporal dengan menambahkan kualifikasi temporal (`pada saat pembuatan commit` vs `fakta repository sekarang`) tanpa menghapus hash `6c3f38c` yang sudah diverifikasi.
+- Batch 3.A.1.12 menyelesaikan rekonsiliasi dokumentasi residual setelah 3.A.1.11 juga gagal audit kelengkapan.

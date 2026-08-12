@@ -7,8 +7,10 @@
 - Branch: `batch-3a-corporate-intake`
 - Scope: **Markdown only.** No TypeScript, TSX, test, package, lockfile, configuration, generated map, Supabase object, migration, RPC, RLS, ACL, Edge Function, webhook, Notary, e-KYC, Qualifa file changed. Corporate Intake implementation commit `67439533e079cceded8bbddba1f56a4db6388767` remains accepted; no production code or test is reopened.
 - Commit-message contract: `fix(docs): correct corporate intake batch ancestry`
-- Final status (before 3.A.1.11 supersession): **READY FOR EXTERNAL RE-AUDIT** (never PASS; no self-certified PASS claim). After Batch 3.A.1.11: superseded by temporal-wording reconciliation.
-- Historical status after 3.A.1.11: **DOCUMENTATION RETROSPECTIVE HASH AUDIT FAILED; SUPERSEDED BY 3.A.1.11** — the ancestry correction made by 3.A.1.10 remains accepted; the failure is limited to residual temporal wording in `BATCH_3_A_1_9.md` (self-contradictory current-state claims that the resulting hash was not embedded, despite its retrospective presence); substantive corrections from 3.A.1.9 are not revoked; Corporate Intake implementation `67439533` remains accepted; no production code or test is reopened.
+- Resulting Batch 3.A.1.10 commit: `e347594988af77692364d1cb3d9cbe7583337e23`
+- Parent of the resulting Batch 3.A.1.10 commit: `6c3f38c340b05a9b6ae404e925b4a8d5192c1f6b`
+- Final status at original creation time (before 3.A.1.11): **READY FOR EXTERNAL RE-AUDIT** (never PASS; no self-certified PASS claim).
+- Historical status after 3.A.1.11 and external audit: **DOCUMENTATION RETROSPECTIVE HASH AUDIT FAILED; SUPERSEDED BY 3.A.1.11** — the ancestry correction made by 3.A.1.10 remains accepted; the failure is limited to residual temporal wording in `BATCH_3_A_1_9.md` (self-contradictory current-state claims that the resulting hash was not embedded, despite its retrospective presence); substantive corrections from 3.A.1.9 are not revoked; Corporate Intake implementation `67439533` remains accepted; no production code or test is reopened.
 
 ## External Finding (Locked) — Plus Residual Temporal Wording Fixed by 3.A.1.11
 
@@ -35,7 +37,7 @@ Additionally, `BATCH_3_A_1_9.md` retained residual temporal-wording contradictio
 |---|------------|---------------|
 | CP-00 | Preflight and provenance | Branch `batch-3a-corporate-intake`; HEAD `6c3f38c340b05a9b6ae404e925b4a8d5192c1f6b`; HEAD^ `979c7932d99d80819c2307042637a1d777ac10aa`; index empty; no active merge/rebase/cherry-pick/revert; four allowlisted paths clean. |
 | CP-01 | Correct 3.A.1.9 metadata and status | Ambiguous ancestry lines removed; four named relationships inserted; historical status reconciled in DBB and DBS. Substantive corrections preserved. |
-| CP-02 | Create 3.A.1.10 DBB and DBS (`BATCH_3_A_1_10.md`, `BATCH_3_A_1_10_DBS.md`) | Both files created; only verified Git relationships cited; no future 3.A.1.10 hash embedded. |
+| CP-02 | Create 3.A.1.10 DBB and DBS (`BATCH_3_A_1_10.md`, `BATCH_3_A_1_10_DBS.md`) | Both files created; only verified Git relationships cited; **at original creation time, no future 3.A.1.10 hash was embedded; present-state acknowledges the verified result commit `e347594...`**. |
 | CP-03 | Targeted verification | All four files valid UTF-8 without BOM; no trailing whitespace; no ambiguous "parent" wording without label; chain `67439533 → 979c7932 → 6c3f38c` preserved; no future Batch 3.A.1.10 hash; no executable Git recipe; no secret; no CJK accident. |
 | CP-04 | Two-axis review | Axis A (factual/spec): every ancestry statement matches `git rev-parse`; input fixed point and resulting commit are not conflated; metadata failure is not confused with substantive or implementation failure; DBB/DBS contain actual facts only. Axis B (safety/scope): exactly four files changed; no executable Git recipe; no secret, BOM, trailing whitespace, scope creep, or future hash; unrelated dirty-tree files untouched. Both axes clean. |
 | CP-05 | Exact staging and commit | Staged exactly the four allowlisted Markdown files; bidirectional set equality verified; `git diff --cached --check` passes; complete staged diff inspected; commit message exact. |
@@ -64,13 +66,14 @@ Batch 3.A.1.10 is **Markdown-only documentation correction**. Corporate Intake i
 
 1. This batch does not add new behavioral failure-path tests; it only reconciles ancestry metadata claims with `git rev-parse` evidence.
 2. The repository's inherited dirty-tree remains untouched; future batches that rely on clean-candidate generator runs must re-verify independently.
-3. This document does not embed the final 3.A.1.10 commit hash (a document cannot truthfully contain its own final hash); the hash will be reported externally by the executor after commit.
+3. **At original creation time, this document could not embed the final 3.A.1.10 commit hash (a document cannot truthfully contain its own final hash); the hash `e347594...` is verified retrospectively by descendant Batch 3.A.1.11.** The hash will be reported externally by the executor after commit.
 4. No claim is made that future Batch 3.B or any downstream audit will pass; status remains `READY FOR EXTERNAL RE-AUDIT` until confirmed by the external controller.
 
 ## Next Exact Action
 
-External controller audit of the commit produced by Batch 3.A.1.10. Until the audit returns, status remains `READY FOR EXTERNAL RE-AUDIT`, never PASS.
+- **Historical next action at original creation time:** external audit of Batch 3.A.1.10. That audit occurred and failed (temporal wording remained).
+- **Present next action after Batch 3.A.1.12:** external controller audit of Batch 3.A.1.12.
 
 ## Status
 
-**READY FOR EXTERNAL RE-AUDIT** (never PASS).
+Batch 3.A.1.10 historical status: **DOCUMENTATION RETROSPECTIVE HASH AUDIT FAILED; SUPERSEDED BY 3.A.1.11** — the ancestry correction remains accepted; the failure was residual temporal wording in `BATCH_3_A_1_9.md`; substantive corrections from 3.A.1.9 are not revoked; Corporate Intake implementation `67439533` remains accepted; no production code or test reopened. Batch 3.A.1.11 carries the temporal reconciliation; Batch 3.A.1.12 completes the residual documentation reconciliation after 3.A.1.11 also failed its completeness audit.
