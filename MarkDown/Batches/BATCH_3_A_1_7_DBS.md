@@ -2,6 +2,8 @@
 
 Dokumen ini adalah penjelasan sederhana (DBS) untuk Batch 3.A.1.7. Bahasa yang dipakai sehari-hari, tanpa istilah teknik yang berat. Tujuannya agar pembaca non-teknis memahami kenapa batch ini ada dan apa saja yang berubah.
 
+> Catatan rekonsiliasi: dokumen ini dikoreksi oleh `BATCH_3_A_1_8_DBS.md` untuk memperbaiki beberapa kalimat faktual (karakter aksidental, penjelasan status untracked, klaim middleware-mode, dan pembedaan behavioral vs struktural).
+
 ---
 
 ## 1. Mengapa "Render Komponen Asli" Saja Tidak Cukup
@@ -17,7 +19,7 @@ Yang diperiksa cuma **apakah fungsi handler ada**, bukan **apakah handler mengar
 - Kalau produksi secara diam-diam kembali ke `document.getElementById('global-input')`, handler tetap function → test tetap pass. **Bug tidak tertangkap.**
 - Kalau `click` di mock adalah no-op (tidak melakukan apa-apa), handler tetap function → test tetap pass. **Bug tidak tertangkap.**
 
-Inilah yang disebut **false-green**: test hijau tapi bug di produksi. Ini tidak aman untuk监管.
+Inilah yang disebut **false-green**: test hijau tapi bug di produksi. Ini tidak aman untuk audit.
 
 ### Solusi 3.A.1.7
 
@@ -57,8 +59,8 @@ Kalau side effect tidak sesuai, test gagal dan kita tahu ada bug di produksi. In
 Pada helper lama (`loadComponent/closeViteServer`), server Vite dibuat pakai singleton module-level. Kalau test gagal di tengah jalan, kita mungkin lupa memanggil `closeViteServer()`. Akibatnya:
 
 - Server Vite tetap hidup di memory sampai proses Node selesai.
-- Test berikutnya bisa gagal karena port conflict atau watcher Vite bentrok.
 - Setiap run bisa meninggalkan watcher aktif.
+- Modul yang sudah diload bisa bocor ke test berikutnya (state leakage antar test).
 
 ### Solusi: `withViteModule` + `try/finally`
 
@@ -85,7 +87,11 @@ Strukturnya:
 
 Tidak ada singleton, tidak ada state modul-level, tidak ada kemungkinan lupa close.
 
-**Di dalam test**, kita tambah nested try/finally:
+### Catatan faktual tentang "middleware mode"
+
+Vite dalam mode middleware **tidak mendengarkan port aplikasi** — server dipakai lewat API internal, bukan lewat HTTP listen. Klaim risiko terkait nomor port aplikasi yang tertulis di versi DBS sebelumnya tidak akurat untuk mode ini. Risiko faktual dari helper lama adalah kebocoran resource (handle server, watcher Vite), cache modul yang bocor, dan interferensi antar test.
+
+### Di dalam test: nested try/finally
 
 ```typescript
 await withViteModule(path, async ({ BeneficialOwnerEvidencePanel }) => {
@@ -100,13 +106,35 @@ await withViteModule(path, async ({ BeneficialOwnerEvidencePanel }) => {
 });
 ```
 
-Artinya: kalau `renderer.unmount()` gagal (misalnya act error), server Vite di **luar** tetap akan di-close oleh finally-nya `withViteModule`. Tidak ada jalur eksekusi yang meninggalkan resource terbuka.
+Kalau `renderer.unmount()` gagal (misalnya act error), server Vite di **luar** tetap akan di-close oleh finally-nya `withViteModule`. Tidak ada jalur eksekusi yang meninggalkan resource terbuka.
 
 **Mini-kuis:** Kenapa tidak cukup satu `try/finally` saja? Karena kita punya **dua resource yang harus di-cleanup**: renderer React dan server Vite. Kalau cleanup renderer gagal, kita tetap ingin cleanup server. Itu sebabnya butuhnya nested try/finally.
 
 ---
 
-## 4. Kenapa Mutable Global Test Server Itu Risiko
+## 4. Pembedaan Bukti: Behavioral vs Struktural
+
+Dokumen ini penting karena mencampur dua jenis bukti:
+
+- **Bukti behavioral** = test yang benar-benar menjalankan kode dan mengamati side effect. Untuk ref-isolation, buktinya adalah urutan counter `[0,0] → [1,0] → [1,1]`.
+- **Bukti struktural** = inspeksi visual kode yang menunjukkan struktur kontrol yang dimaksud. Untuk resource safety, buktinya adalah blok `try/finally` di implementasi `withViteModule` dan nested try/finally di test.
+
+Keduanya valid, tapi **tidak boleh saling mengklaim**. Tes 3.A.1.7:
+
+- **Membuktikan secara behavioral**: counter transisi benar.
+- **Menunjukkan secara struktural**: `try/finally` ada di implementasi, dan `await server.close()` berada dalam blok `finally`.
+
+### Apa yang TIDAK dibuktikan secara behavioral
+
+Tes 3.A.1.7 **tidak** menyuntikkan kegagalan pada `createServer`, `ssrLoadModule`, atau `server.close`. Artinya, klaim "kalau renderer unmount melempar, server Vite tetap ter-close" adalah klaim **struktural** — benar secara pembacaan kode, tetapi **tidak diuji oleh test**. Untuk membuktikan klaim tersebut secara behavioral, butuh test tambahan yang stub salah satu dari fungsi itu agar melempar, dan kemudian assert bahwa server.close() tetap dipanggil. Test itu tidak ada di 3.A.1.7.
+
+Mengakui keterbatasan ini bukan berarti helper salah; artinya, dokumentasi tidak boleh mengklaim bukti yang lebih kuat dari yang sebenarnya diberikan.
+
+**Mini-kuis:** Apakah "server.close() selalu dipanggil" fakta struktural atau behavioral di 3.A.1.7? Struktural — terlihat di kode, tapi tidak ada test yang membuktikan path failure-nya.
+
+---
+
+## 5. Kenapa Mutable Global Test Server Itu Risiko
 
 Mutable global = variabel yang bisa diubah dari mana saja. Singleton Vite server lama adalah variabel `let viteServer = null` di level modul. Risikonya:
 
@@ -120,45 +148,58 @@ Mutable global = variabel yang bisa diubah dari mana saja. Singleton Vite server
 
 ---
 
-## 5. Dirty Tree vs Clean Candidate Symbol Map
+## 6. Dirty Tree vs Clean Candidate Symbol Map
 
 ### Apa itu dirty tree?
 
-Working tree Git = salinan kerja di disk Anda. Saat ini banyak file user yang **untracked** (belum di-`git add`) dan file tracked yang punya perubahan stat/line-ending. Ini kita sebut **dirty tree** — ada "sampah" yang tidak akan masuk commit.
+Working tree Git = salinan kerja di disk Anda. Ada dua jenis kondisi:
+
+- **Tracked file dengan perubahan lokal** (dirty tracked) — perubahan yang sudah terlacak tapi belum di-commit.
+- **Untracked file** — file baru yang belum pernah ditambahkan ke Git. **`git status` menampilkan untracked file secara default**, kecuali diabaikan oleh `.gitignore` atau disembunyikan oleh flag seperti `--untracked-files=no`.
+
+Jadi klaim bahwa "git status bersih" bisa menyiratkan tidak ada tracked-dirty dan tidak ada untracked, **atau** ada untracked tapi disembunyikan dari tampilan. Generator tidak peduli pada tampilan `git status`; ia membaca filesystem.
 
 ### Mengapa ini mengganggu generator symbol map?
 
-Generator symbol map membaca **semua file** di working tree. Kalau di sana ada file user yang tidak masuk repo resmi (misalnya `.agents/ponytail/`, `.continue/`, mockup draft), simbol-simbol dari file itu ikut masuk ke peta simbol. Peta jadi **terkontaminasi**.
+`Tools/symbol_map_lib.mjs` hanya menelusuri tiga akar tetap:
+
+- `justifiqa-frontend/src` — TypeScript/TSX.
+- `database/migrations` — SQL, hanya bila path itu ada.
+- `supabase/migrations` — SQL.
+
+Ia **tidak** pernah membaca `.agents/`, `.continue/`, mockup, diagram, atau artefak build. Kontaminasi peta simbol tidak mungkin datang dari direktori yang tidak dipindai; kontaminasi hanya mungkin datang dari **berkas untracked/dirty yang hidup di salah satu akar tetap di atas**. Jadi cukup pastikan tidak ada `.ts`/`.tsx`/`.sql` untracked di tiga akar itu.
 
 ### Solusi: clean candidate
 
 ```
 1. Stage HANYA file milik batch 3.A.1.7
 2. git write-tree → buat tree object dari staged file saja
-3. git archive <TREE_ID> → ekstrak ke folder /tmp terpisah
-4. node Tools/generate_symbol_map.mjs DI folder /tmp tersebut
+3. git archive <TREE_ID> → ekstrak ke folder terpisah (di luar repo)
+4. node Tools/generate_symbol_map.mjs DI folder tersebut
 5. Salin MarkDown/SYMBOLS_MAP.md dan MarkDown/SQL_SECURITY_SYMBOLS.md kembali
 6. Stage kedua map HANYA kalau isinya beda dari HEAD
 ```
 
-Artinya: generator peta simbol jalan di **snapshot bersih** (hanya file yang akan di-commit), bukan di working tree yang kotor. Hasilnya: peta simbol tidak tercemar file user yang tidak masuk repo.
+Generator peta simbol jalan di **snapshot bersih** (hanya file yang akan di-commit), bukan di working tree yang kotor. Hasilnya: peta simbol tidak tercemar file user.
 
-**Mini-kuis:** Kenapa tidak cukup `git status` bersih dulu baru generator dijalankan di root? Karena `git status` bisa bersih tapi working tree masih punya file yang sebenarnya TIDAK akan di-commit (untracked). Generator di root akan tetap baca file-file itu dan mencemari output. Clean candidate = snapshot eksplisit dari staged-only files.
+**Mini-kuis:** Mengapa direktori seperti `.agents/` tidak relevan bagi generator? Karena `Tools/symbol_map_lib.mjs` hanya menelusuri tiga akar tetap (`justifiqa-frontend/src`, `database/migrations`, `supabase/migrations`). Direktori lain tidak pernah disentuh; satu-satunya sumber kontaminasi adalah berkas yang hidup di dalam salah satu akar itu sendiri.
 
 ---
 
-## 6. Mini-Kuis Ringkasan
+## 7. Mini-Kuis Ringkasan
 
 1. **Render asli saja tidak cukup** — butuh counter observable per mock untuk mengukur click isolation nyata.
 2. **Behavioral assertion = side effect yang bisa diamati**, bukan sekadar "handler ada".
 3. **Resource ownership** = setiap resource (Vite server, renderer) harus di-close di `finally`, sukses maupun gagal.
 4. **Nested try/finally** = untuk dua resource berbeda, supaya cleanup yang satu tidak skip cleanup yang lain.
-5. **Mutable singleton** = variabel modul-level bersama = risiko konkruensi dan leakage.
-6. **Clean candidate** = generator jalan di snapshot staged-only, bukan di working tree.
-7. **Dirty tree** = working tree yang punya file user/temp yang tidak akan di-commit.
+5. **Vite middleware mode** = tidak mendengarkan port aplikasi; risiko faktual adalah kebocoran handle/watcher/cache.
+6. **Behavioral vs struktural** = transisi counter dibuktikan behavioral; urutan `try/finally` dibuktikan struktural; tidak ada test failure-path.
+7. **Mutable singleton** = variabel modul-level bersama = risiko konkruensi dan leakage.
+8. **Clean candidate** = generator jalan di snapshot staged-only, bukan di working tree.
+9. **Dirty tree** = working tree yang punya file user/temp yang tidak akan di-commit.
 
 ---
 
 ## Status
 
-**READY FOR EXTERNAL RE-AUDIT** (bukan PASS). Batch 3.A.1.7 menutup semua celah yang tersisa dari audit 3.A.1.6 dan dari pemeriksaan internal 3.A.1.7.
+**IMPLEMENTATION ACCEPTED; DOCUMENTATION AUDIT FAILED; SUPERSEDED BY 3.A.1.8.** Implementasi helper dan test tidak dibuka kembali; dokumen ini dikoreksi oleh 3.A.1.8 agar klaim struktural tidak keliru disebut bukti behavioral, dan agar penjelasan tentang mode Vite serta akar generator menjadi faktual.

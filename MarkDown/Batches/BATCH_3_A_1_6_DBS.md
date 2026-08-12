@@ -1,4 +1,4 @@
-﻿# Batch 3.A.1.6 DBS — Mengapa Behavioral Verification Harus Dibenarkan
+# Batch 3.A.1.6 DBS — Mengapa Behavioral Verification Harus Dibenarkan
 
 > **STATUS OVERRIDE (Batch 3.A.1.7):** Dokumen ini adalah penjelasan sederhana (DBS) untuk Batch 3.A.1.6. Setelah audit eksternal pada 3.A.1.6, status dokumen ini berubah menjadi **FAILED EXTERNAL AUDIT / SUPERSEDED BY 3.A.1.7**. Penjelasan sederhana untuk status baru ada di `BATCH_3_A_1_7_DBS.md`.
 
@@ -222,56 +222,50 @@ test('exact prepare/finalize invoke payload shape — no double body wrapper', a
 
 ---
 
-## 5. Clean-Candidate Generated Artifacts
+## 5. Clean-Candidate Generated Artifacts (Rekonsiliasi Faktual oleh 3.A.1.8)
 
-### Masalah: Dirty Tree Contamination
+### Catatan penting
 
-Generator symbol map dijalankan di working tree dengan:
-- File user untracked (`.agents/ponytail/`, `.continue/`, dll)
-- Diagram yang di-delete tapi masih ada di disk
-- File build artifacts
+Versi sebelumnya dari bagian ini memuat **resep staging yang tidak aman** untuk sebuah batch historis. Perintah `git add ... corporateEvidenceService.ts ...` di bawah adalah **contoh usang** yang salah: file tersebut sebenarnya tidak pernah masuk commit `12c0b4e657aed485e87801e0ac541f08a6a76c90` (commit 3.A.1.6). Bagian ini diperbaiki oleh Batch 3.A.1.8 agar mencerminkan kenyataan dan tidak menyarankan perintah yang bisa mengotori commit lain.
 
-→ Output map **terkontaminasi** simbol dari file bukan repo.
+### Apa yang sebenarnya dikomit oleh 3.A.1.6
 
-### Solusi: Clean Candidate Procedure
+Output faktual dari `git show --name-only --format= 12c0b4e657aed485e87801e0ac541f08a6a76c90`:
 
-```bash
-# 1. Stage HANYA file batch 3.A.1.6
-git add justifiqa-frontend/src/services/corporateEvidenceService.ts \
-        justifiqa-frontend/test/beneficialOwnerEvidenceIntegration.test.ts \
-        justifiqa-frontend/test/useCorporateEvidenceUploads.test.ts \
-        justifiqa-frontend/test/corporateIntakeModel.test.ts \
-        justifiqa-frontend/test/viteSsrTestHelper.ts \
-        justifiqa-frontend/tsconfig.phase2-tests.json \
-        MarkDown/Batches/BATCH_3_A_1_5.md \
-        MarkDown/Batches/BATCH_3_A_1_5_DBS.md \
-        MarkDown/Batches/BATCH_3_A_1_6.md \
-        MarkDown/Batches/BATCH_3_A_1_6_DBS.md
-
-# 2. Create clean tree object
-TREE_ID=$(git write-tree)
-
-# 3. Materialize ke temp dir BERBEDA (di luar repo)
-git archive $TREE_ID | tar -x -C /tmp/clean-candidate-3a16
-
-# 4. Junction node_modules jika perlu (verified, read-only)
-# 5. Run generator DI CLEAN CANDIDATE
-cd /tmp/clean-candidate-3a16
-node Tools/generate_symbol_map.mjs
-
-# 6. Copy back HANYA 2 file map
-cp MarkDown/SYMBOLS_MAP.md MarkDown/SQL_SECURITY_SYMBOLS.md $REPO_ROOT/MarkDown/
-
-# 7. Stage generated maps
-cd $REPO_ROOT
-git add MarkDown/SYMBOLS_MAP.md MarkDown/SQL_SECURITY_SYMBOLS.md
-
-# 8. Verify di clean candidate
-node Tools/generate_symbol_map.mjs --check  # exit 0
-node --test --test-isolation=none Tools/symbol_map_lib.test.mjs  # 7 pass
+```
+MarkDown/Batches/BATCH_3_A_1_5.md
+MarkDown/Batches/BATCH_3_A_1_5_DBS.md
+MarkDown/Batches/BATCH_3_A_1_6.md
+MarkDown/Batches/BATCH_3_A_1_6_DBS.md
+MarkDown/SQL_SECURITY_SYMBOLS.md
+MarkDown/SYMBOLS_MAP.md
+justifiqa-frontend/test/beneficialOwnerEvidenceIntegration.test.ts
+justifiqa-frontend/test/corporateIntakeModel.test.ts
+justifiqa-frontend/test/useCorporateEvidenceUploads.test.ts
+justifiqa-frontend/test/viteSsrTestHelper.ts
+justifiqa-frontend/tsconfig.phase2-tests.json
 ```
 
-**Mini-kuis:** Kenapa tidak `git status` bersih lalu jalan generator di root? Karena working tree user ada file yang TIDAK mau di-commit tapi generator tetap baca. Clean candidate = snapshot HANYA file yang di-stage.
+Catatan faktual:
+
+- `justifiqa-frontend/src/services/corporateEvidenceService.ts` **tidak masuk commit `12c0b4e`**. Versi DBS sebelumnya yang mencantumkannya dalam `git add` adalah keliru.
+- `justifiqa-frontend/test/viteSsrTestHelper.ts` **dipositif secara fisik** dalam `12c0b4e`, namun berada di luar *allowlist* dokumentasi 3.A.1.6 saat itu. Otorisasi eksplisit untuk helper ini diberikan kemudian oleh Batch 3.A.1.7 untuk tujuan tunggal: memuat komponen produksi nyata dan memastikan cleanup yang tahan pengecualian.
+
+### Akar masalah: dirty-tree contamination pada generator
+
+Generator peta simbol (`Tools/symbol_map_lib.mjs`) sebenarnya hanya memindai tiga akar tetap:
+
+- `justifiqa-frontend/src` — berkas TypeScript/TSX.
+- `database/migrations` — berkas SQL, hanya bila path itu ada.
+- `supabase/migrations` — berkas SQL.
+
+Generator **tidak** memindai `.agents/ponytail`, `.continue/`, mockup, diagram, atau artefak build. Direktori-direktori tersebut hanya relevan bagi manusia, bukan oleh generator. Kontaminasi yang muncul di peta simbol tidak mungkin datang dari direktori yang tidak dipindai; kontaminasi hanya mungkin datang dari **berkas kotor/untracked yang kebetulan berada di salah satu akar tetap di atas**. Ini menyederhanakan cerita: alasan prosedur clean-candidate tetap penting adalah untuk **mencegah berkas kotor di dalam akar tetap ikut terhitung**.
+
+### Mengapa prosedur clean-candidate tetap relevan
+
+Tanpa clean-candidate, generator akan memindai akar tetap dari working tree yang kotor. Jika ada berkas `.ts/.tsx/.sql` untracked di salah satu akar itu, simbol dari berkas untracked akan ikut muncul di peta simbol, sehingga peta tidak lagi merepresentasikan **snapshot commit kandidat**. Clean-candidate = menjalankan generator di snapshot `git write-tree` yang hanya berisi staged files, sehingga peta simbol benar-benar mencerminkan apa yang akan dikomit.
+
+**Mini-kuis:** Mengapa direktori seperti `.agents/` tidak relevan bagi generator? Karena `Tools/symbol_map_lib.mjs` hanya menelusuri tiga akar tetap (`justifiqa-frontend/src`, `database/migrations`, `supabase/migrations`). Direktori lain tidak pernah disentuh; satu-satunya sumber kontaminasi adalah berkas yang hidup di dalam salah satu akar itu sendiri.
 
 ---
 
