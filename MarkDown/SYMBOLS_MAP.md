@@ -5,8 +5,8 @@
 
 ## Cakupan
 
-- 221 source files dipindai.
-- 356 exported TypeScript symbols dalam 181 files.
+- 224 source files dipindai.
+- 363 exported TypeScript symbols dalam 184 files.
 - 127 core PostgreSQL objects dari 396 deklarasi migrasi.
 - 156 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
@@ -132,6 +132,8 @@
 | components/gateway/VerifierPanel.tsx | 13v VerifierPanel |
 | components/payment/EscrowDisbursementTrackerPanel.tsx | 19f EscrowDisbursementTrackerPanel |
 | components/payment/PaymentGatewaySelectorModal.tsx | 7t PaymentGatewayMethod, 19f PaymentGatewaySelectorModal |
+| components/presentation/PresentationReadinessGrid.tsx | 10f PresentationReadinessGrid |
+| components/presentation/presentationReadinessModel.ts | 1t PresentationReadinessStatus, 7t PresentationDemoTab, 9i PresentationCapability, 18v PRESENTATION_CAPABILITIES, 27v PRESENTATION_STATUS_LABELS |
 | components/signing/EkycVerificationWizard.tsx | 21f EkycVerificationFlow, 55f EkycVerificationWizard |
 | components/signing/MultiPartySigningPanel.tsx | 9t SigningParty, 22f MultiPartySigningPanel |
 | components/signing/ekyc/EkycLivenessCamera.tsx | 18f EkycLivenessCamera |
@@ -175,13 +177,14 @@
 | pages/ClientConsultationRoomPage.tsx | 13f ClientConsultationRoomPage |
 | pages/ClientDashboardPage.tsx | 16v ClientDashboardPage |
 | pages/ClientDisputeCenterPage.tsx | 7f ClientDisputeCenterPage |
+| pages/DevShowcasePage.tsx | 19f DevShowcasePage |
 | pages/GatewayPage.tsx | 7x GatewayPage |
 | pages/LandingGatewayPage.tsx | 15v LandingGatewayPage |
 | pages/PublicDocumentVerifierPage.tsx | 9v PublicDocumentVerifierPage |
 | pages/admin/AdminLoginPage.tsx | 10f AdminLoginPage |
 | pages/auth/AdvocateLoginPage.tsx | 8x AdvocateLoginPage |
 | pages/auth/ClientLoginPage.tsx | 8x ClientLoginPage |
-| router/AppRouter.tsx | 28v AppRouter |
+| router/AppRouter.tsx | 29v AppRouter |
 | router/PortalProtectedRoute.tsx | 11f PortalProtectedRoute |
 | services/consultationService.ts | 15f getAvailableConsultationSlots, 52f checkoutConsultation |
 | services/corporateEvidenceService.ts | 4t EvidenceUploadStep, 6t PrepareInput, 13t PrepareResult, 17t UploadInput, 23t FinalizeInput, 28t FinalizeResult, 32i EvidenceGateway, 38i GatewayDependencies, 43c CorporateEvidenceError, 106f parseEvidencePrepareData, 121f parseEvidenceFinalizeData, 133f prepareEvidence, 146f uploadEvidence, 163f finalizeEvidence, 190f createCorporateEvidenceGateway, 230v corporateEvidenceGateway |

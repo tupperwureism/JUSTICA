@@ -20,6 +20,7 @@ import { AdvocateDashboardPage } from '../pages/AdvocateDashboardPage';
 import { AiNavigatorPage } from '../pages/AiNavigatorPage';
 import { AdminDashboardPage } from '../pages/AdminDashboardPage';
 import { AdminLoginPage } from '../pages/admin/AdminLoginPage';
+import { DevShowcasePage } from '../pages/DevShowcasePage';
 
 const protectedElement = (role: PortalRole, element: ReactElement) => (
   <PortalProtectedRoute requiredRole={role}>{element}</PortalProtectedRoute>
@@ -33,6 +34,7 @@ export const AppRouter = () => {
         {/* ── Batch 1: Public Routes ── */}
         <Route path="/" element={<LandingGatewayPage />} />
         <Route path="/public/verify" element={<PublicDocumentVerifierPage />} />
+        <Route path="/demo/readiness" element={<DevShowcasePage />} />
 
         {/* Auth: legacy paths (compatible) */}
         <Route path="/client/auth" element={<ClientAuthPage />} />

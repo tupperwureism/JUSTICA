@@ -21,7 +21,8 @@
 | Batch 3.D e-KYC/signing | **FUTURE_WORK** | Target/seam parsial pada `TRACEABILITY_MATRIX.md` | Provider liveness/storage/E2E belum lengkap; tidak boleh dipresentasikan sebagai implemented end-to-end |
 | Phase 4 E2E/security/QA | **FUTURE_WORK** | Belum ada acceptance batch kanonik | Local tests sebelumnya tidak sama dengan full production E2E |
 | Phase 5 production readiness | **NOT_STARTED** | Tidak ada production approval | Deploy, observability, provider readiness, operational runbook, dan go-live audit masih diperlukan |
-| Documentation control plane bootstrap | **READY_FOR_EXTERNAL_REAUDIT** | Paket `Batches/DOC_CONTROL_PLANE/` dan ADR-001 sampai ADR-003 | Harus diaudit sebelum menjadi `ACCEPTED_LOCAL` dan sebelum presentation-readiness dimulai |
+| Documentation control plane bootstrap | **ACCEPTED_LOCAL** | Commit 82e45bb8d17ac0f66dfa51c9e98b333e27317376 | Control plane lokal diterima; bukan production approval |
+| Presentation Readiness & Honest Scope Freeze | **ACCEPTED_LOCAL** | /demo/readiness dan Batches/PRESENTATION_READINESS/ | Presentation aid statis; tidak membuktikan production E2E |
 
 ## Keputusan aktif
 
@@ -33,12 +34,7 @@
 
 ## Next exact action
 
-**External physical audit of this Documentation Control Plane bootstrap.** Bila diterima, lanjutkan ke **Presentation Readiness & Honest Scope Freeze** untuk:
-
-- stabilkan alur demo yang benar-benar implemented;
-- beri label visual/naratif untuk `ACCEPTED_LOCAL`, `PARTIAL/TARGET`, `BLOCKED`, dan `FUTURE_WORK`;
-- jangan membuat fake success untuk 3.C, 3.D, provider initiation, atau production deployment;
-- sesudah itu susun Laporan Tugas Akhir dari source, Git history, evidence test, limitation, serta roadmap future work.
+**Stage dan commit Presentation Readiness batch bila diotorisasi, lalu susun Laporan Tugas Akhir.** Batch 3.C/3.D tidak dimulai untuk delivery presentasi ini.
 
 ## Known documentation debt (non-blocking)
 
@@ -46,6 +42,7 @@
 - DBB 3.B/3.B.1 masih menyimpan status executor sebelum external audit; status kanonik setelah audit berada di dokumen ini dan `BATCH_INDEX.md`.
 - `TRACEABILITY_MATRIX.md` memotret as-built pada fixed point yang disebut di dokumen itu (`72049ef`), sehingga bukan current-state proof untuk commit 3.A/3.B yang lebih baru.
 - Beberapa dokumen legacy memiliki mojibake/line-ending drift. Perbaiki hanya bila mengganggu presentasi atau makna, bukan sebagai cascade cleanup.
+- DEMO_GUIDE.md telah direkonsiliasi dengan status aktual; gunakan bersama Batches/PRESENTATION_READINESS/DEMO_SCRIPT.md.
 
 ## Canonical references
 
@@ -55,6 +52,7 @@
 - [Implementation traceability](TRACEABILITY_MATRIX.md)
 - [Phase 2 backend forensic certification](PHASE_2_BACKEND_FORENSIC_CERTIFICATION.md)
 - [Batch 3.B.1 evidence](Batches/BATCH_3_B_1.md)
+- [Presentation demo script](Batches/PRESENTATION_READINESS/DEMO_SCRIPT.md)
 
 ## Update rule
 

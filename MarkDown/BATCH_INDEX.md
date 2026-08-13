@@ -23,7 +23,8 @@
 | Corporate Intake documentation reconciliation | `ACCEPTED_LOCAL` (documentation only) | `2c7f28a86109d58acf4d1319a84ed04ca2e679bf` | [3.A.1.12 DBB](Batches/BATCH_3_A_1_12.md), [DBS](Batches/BATCH_3_A_1_12_DBS.md) | Terminal reconciliation; debt minor tidak membuka batch baru |
 | Corporate Escrow 3.B | `ACCEPTED_LOCAL` | `4cddf6866c50cf410697d330bc528d0daafd99fe` | [3.B DBB](Batches/BATCH_3_B.md), [DBS](Batches/BATCH_3_B_DBS.md) | Settlement lokal; provider initiation belum dipilih |
 | Corporate Escrow 3.B.1 | `ACCEPTED_LOCAL` | `59ff89dff3f49a8f169f7822c522f14163d5c707` | [3.B.1 DBB](Batches/BATCH_3_B_1.md), [DBS](Batches/BATCH_3_B_1_DBS.md) | Replay after progression + concurrency/ACL hardening; Batch 3.B dibekukan |
-| Documentation control plane bootstrap | `READY_FOR_EXTERNAL_REAUDIT` | `NOT_EMBEDDED_SELF_HASH` | [BATCH](Batches/DOC_CONTROL_PLANE/BATCH.md), [Prompt record](Batches/DOC_CONTROL_PLANE/PROMPT_MASTER.md), [Learning](Batches/DOC_CONTROL_PLANE/LEARNING.md) | Result hash dilaporkan setelah commit; membuat current state, index, ADR, dan standar paket tanpa memindahkan arsip |
+| Documentation control plane bootstrap | ACCEPTED_LOCAL | 82e45bb8d17ac0f66dfa51c9e98b333e27317376 | [BATCH](Batches/DOC_CONTROL_PLANE/BATCH.md), [Prompt record](Batches/DOC_CONTROL_PLANE/PROMPT_MASTER.md), [Learning](Batches/DOC_CONTROL_PLANE/LEARNING.md) | External physical audit diterima untuk scope lokal |
+| Presentation Readiness & Honest Scope Freeze | ACCEPTED_LOCAL | NOT_EMBEDDED_SELF_HASH | [BATCH](Batches/PRESENTATION_READINESS/BATCH.md), [Prompt record](Batches/PRESENTATION_READINESS/PROMPT_MASTER.md), [Learning](Batches/PRESENTATION_READINESS/LEARNING.md), [Demo](Batches/PRESENTATION_READINESS/DEMO_SCRIPT.md) | Honest static presentation boundary; no fake success |
 
 ## Legacy flat-record inventory
 
