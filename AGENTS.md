@@ -19,6 +19,7 @@
 ## 3. Navigasi dan context loading
 
 - Mulai navigasi kode dengan `MarkDown/SYMBOLS_MAP.md` dan `rg`. Buka `MarkDown/SQL_SECURITY_SYMBOLS.md` untuk RLS, ACL, function, atau trigger. Kode tetap sumber kebenaran.
+- Untuk status proyek, roadmap, handoff, atau pemilihan batch, mulai dari `MarkDown/CURRENT_STATE.md` lalu `MarkDown/BATCH_INDEX.md`; jangan merekonstruksi current state dari chat atau DBB historis bila pointer kanonik tersedia.
 - Baca ulang secara terarah source/spec yang benar-benar mengatur tugas pada giliran aktif; jangan mengandalkan ingatan percakapan atau memuat seluruh dokumen domain tanpa kebutuhan.
 - Gunakan skill yang relevan secara on-demand dan baca `SKILL.md` terpilih secara lengkap. Jangan memuat skill yang tidak membantu tugas.
 - Routing umum: UI/frontend memakai `frontend-ui-engineering`; Supabase/PostgreSQL memakai skill Supabase dan `domain-modeling` bila model/lifecycle berubah; arsitektur/UML memakai `domain-modeling`/`codebase-design`; audit menyeluruh memakai `forensic-audit`; review diff memakai `code-review`.
@@ -28,8 +29,8 @@
 - Satu permintaan implementasi menangani satu batch koheren. Jangan memulai fase/batch berikutnya tanpa sign-off bila roadmap menyatakan phase gate.
 - Jangan membuat batas artifisial seperti jumlah baris tetap. Pecah pekerjaan berdasarkan risiko, kontrak, dan kemampuan verifikasi.
 - Perbaiki pola kesalahan serupa hanya jika memiliki akar masalah yang sama dan masih berada dalam scope; jangan membuka rantai koreksi dokumentasi tanpa akhir untuk debt kosmetik/temporal.
-- Untuk batch implementasi atau koreksi yang signifikan, gunakan `MarkDown/Batches/<BATCH>.md` sebagai DBB dan `MarkDown/Batches/<BATCH>_DBS.md` sebagai materi pembelajaran konsep SWE.
-- DBB/DBS tidak wajib untuk edit kecil, konfigurasi agen, atau koreksi dokumentasi sederhana kecuali diminta.
+- Untuk batch implementasi atau koreksi yang signifikan, ikuti paket dokumentasi pada `MarkDown/Batches/README.md`: `BATCH.md` (DBB), `PROMPT_MASTER.md`, dan `LEARNING.md` (DBS) di dalam folder batch. Arsip flat lama tetap valid dan diindeks di `MarkDown/BATCH_INDEX.md`; jangan dipindahkan hanya demi merapikan nama.
+- Paket batch tidak wajib untuk edit kecil, konfigurasi agen, atau koreksi dokumentasi sederhana kecuali diminta.
 - Pada batch panjang/interupsi, perbarui checkpoint dari `MarkDown/CONTEXT_CHECKPOINT_TEMPLATE.md`. Executor melaporkan `READY FOR EXTERNAL RE-AUDIT`, bukan mensertifikasi PASS sendiri.
 
 ## 5. Keamanan working tree dan Git
