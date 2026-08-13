@@ -284,6 +284,10 @@ Daftar exact candidate yang di-stage secara literal setelah audit:
 - Tidak ada dedicated inbound funding ledger; minimized provider event dan compliance/WORM evidence yang ada dipakai.
 - Batch ini bukan persetujuan deployment atau klaim production-ready.
 
+## Hardening Batch 3.B.1
+
+Batch 3.B.1 menutup replay setelah workflow progression, bukti concurrency ke real PostgREST/database disposable, least-privilege ACL provider event, serta konfigurasi HMAC fail-closed. Bukti HTTP lokal menjalankan production handler factory melalui Node wrapper; ini bukan bukti Supabase Deno Edge Runtime. Provider initiation tetap BLOCKED_BY_PROVIDER_SELECTION. Detail faktual ada di MarkDown/Batches/BATCH_3_B_1.md.
+
 ## Next Exact Action
 
-Audit staged diff dan secret/debug scan, commit exact, lalu verifikasi parent/index/user work/operasi Git.
+Selesaikan review, commit lokal Batch 3.B.1, lalu serahkan kepada external re-audit.

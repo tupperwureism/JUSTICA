@@ -5,9 +5,9 @@
 
 ## Cakupan
 
-- 220 source files dipindai.
+- 221 source files dipindai.
 - 356 exported TypeScript symbols dalam 181 files.
-- 127 core PostgreSQL objects dari 395 deklarasi migrasi.
+- 127 core PostgreSQL objects dari 396 deklarasi migrasi.
 - 156 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 - Migrasi `supabase/` diprioritaskan di atas salinan `database/`; peta deklarasi ini bukan rekonstruksi state database setelah seluruh migrasi.
@@ -247,7 +247,7 @@
 | function | public.fn_mutate_wallet_balance_mutex( p_wallet_id UUID, p_amount NUMERIC, p_mutation_typ… | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L92 +3 |
 | function | public.fn_prepare_corporate_intake_evidence_atomic( p_evidence_id UUID, p_client_id UUID,… | S/20260729115454_protected_beneficial_owner_evidence_boundary.sql:L368 |
 | function | public.fn_prevent_worm_mutation() | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L9 +5 |
-| function | public.fn_process_corporate_payment_webhook_atomic( p_provider_name VARCHAR, p_provider_e… | S/20260813032019_process_corporate_payment_webhook_atomic.sql:L4 |
+| function | public.fn_process_corporate_payment_webhook_atomic( p_provider_name VARCHAR, p_provider_e… | S/20260813064656_preserve_corporate_payment_webhook_replay.sql:L5 +1 |
 | function | public.fn_process_ekyc_callback_atomic( p_envelope_id UUID, p_party_id UUID, p_user_id UU… | S/20260722000024_p2_b5c_pg_cron_ttl_scheduler.sql:L65 |
 | function | public.fn_protect_accepted_service_fee_line() | S/20260722000016_p2_b3_service_orders_expand_only.sql:L383 |
 | function | public.fn_protect_payment_milestone_terms() | S/20260729063938_bind_atomic_intake_to_canonical_pricing_catalog.sql:L51 +1 |

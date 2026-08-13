@@ -263,6 +263,17 @@ BEGIN
     ) THEN
     RAISE EXCEPTION 'PROVIDER_WEBHOOK_EVENT_BROWSER_DML_OPEN';
   END IF;
+  IF pg_catalog.has_table_privilege(
+      'service_role', 'public.provider_webhook_events', 'INSERT,UPDATE,DELETE'
+    )
+     OR NOT pg_catalog.has_table_privilege(
+       'service_role',
+       'public.provider_webhook_events',
+       'SELECT'
+     ) THEN
+    RAISE EXCEPTION 'PROVIDER_WEBHOOK_EVENT_SERVICE_ROLE_ACL_INVALID';
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1
     FROM public.corporate_pricing_catalogs AS catalog
@@ -473,6 +484,10 @@ BEGIN
 END;
 $expect$;
 
+GRANT SELECT ON settlement_runtime_context, settlement_fixtures TO service_role;
+GRANT EXECUTE ON FUNCTION pg_temp.webhook_key(TEXT, TEXT) TO service_role;
+
+SET LOCAL ROLE service_role;
 CREATE TEMP TABLE settlement_first_result AS
 SELECT *
 FROM public.fn_process_corporate_payment_webhook_atomic(
@@ -502,6 +517,107 @@ FROM public.fn_process_corporate_payment_webhook_atomic(
     'evt-valid-001'
   )
 );
+RESET ROLE;
+
+DO $$
+DECLARE
+  v_valid pg_temp.settlement_fixtures%ROWTYPE := (
+    SELECT fixture FROM pg_temp.settlement_fixtures AS fixture
+    WHERE fixture.fixture_name = 'valid'
+  );
+BEGIN
+  IF (SELECT pg_catalog.count(*) FROM pg_temp.settlement_first_result) <> 1
+     OR (SELECT replayed FROM pg_temp.settlement_first_result)
+     OR (SELECT escrow_status FROM pg_temp.settlement_first_result)
+          <> 'HELD_IN_ESCROW'
+     OR (SELECT case_stage FROM pg_temp.settlement_first_result)
+          <> 'ESCROW_LOCKED'
+     OR (SELECT order_status FROM pg_temp.settlement_first_result) <> 'ACTIVE'
+     OR (SELECT provider_event_status FROM pg_temp.settlement_first_result)
+          <> 'PROCESSED'
+     OR (SELECT funded_milestone_count FROM pg_temp.settlement_first_result) < 1
+     OR NOT EXISTS (
+       SELECT 1 FROM public.corporate_service_cases
+       WHERE case_id = v_valid.corporate_case_id
+         AND current_stage = 'ESCROW_LOCKED'
+     )
+     OR EXISTS (
+       SELECT 1 FROM public.payment_milestones
+       WHERE order_id = v_valid.order_id AND status <> 'FUNDED'
+     ) THEN
+    RAISE EXCEPTION 'VALID_INITIAL_SETTLEMENT_INVALID';
+  END IF;
+END;
+$$;
+
+CREATE TEMP TABLE settlement_event_snapshot AS
+SELECT
+  event_row.event_id,
+  event_row.order_id,
+  event_row.provider_name,
+  event_row.provider_event_id,
+  event_row.event_type,
+  event_row.payload_digest_sha256,
+  event_row.signature_verified,
+  event_row.processed_status,
+  event_row.received_at,
+  event_row.processed_at,
+  (SELECT pg_catalog.count(*) FROM public.provider_webhook_events
+   WHERE provider_event_id = 'evt-valid-001') AS event_count,
+  (SELECT pg_catalog.count(*) FROM public.payment_milestones
+   WHERE order_id = event_row.order_id) AS milestone_count,
+  (SELECT pg_catalog.count(*) FROM public.service_fee_lines
+   WHERE order_id = event_row.order_id) AS fee_line_count
+FROM public.provider_webhook_events AS event_row
+WHERE event_row.provider_event_id = 'evt-valid-001';
+
+DO $$
+DECLARE
+  v_valid pg_temp.settlement_fixtures%ROWTYPE := (
+    SELECT fixture FROM pg_temp.settlement_fixtures AS fixture
+    WHERE fixture.fixture_name = 'valid'
+  );
+  v_updated BIGINT;
+BEGIN
+  PERFORM public.fn_transition_corporate_service_case(
+    v_valid.corporate_case_id,
+    'ESCROW_LOCKED',
+    'IDENTITY_PENDING'
+  );
+
+  WITH target AS (
+    SELECT milestone_id
+    FROM public.payment_milestones
+    WHERE order_id = v_valid.order_id
+      AND status = 'FUNDED'
+    ORDER BY sequence_number
+    LIMIT 1
+  )
+  UPDATE public.payment_milestones AS milestone
+  SET status = 'RELEASABLE',
+      updated_at = pg_catalog.clock_timestamp()
+  FROM target
+  WHERE milestone.milestone_id = target.milestone_id;
+  GET DIAGNOSTICS v_updated = ROW_COUNT;
+  IF v_updated <> 1 THEN
+    RAISE EXCEPTION 'SETTLEMENT_PROGRESSION_MILESTONE_UPDATE_INVALID';
+  END IF;
+END;
+$$;
+
+CREATE TEMP TABLE settlement_progress_snapshot AS
+SELECT
+  corporate_case.updated_at AS case_updated_at,
+  milestone.milestone_id,
+  milestone.updated_at AS milestone_updated_at
+FROM public.corporate_service_cases AS corporate_case
+JOIN public.payment_milestones AS milestone
+  ON milestone.order_id = corporate_case.order_id
+WHERE corporate_case.case_id = (
+  SELECT corporate_case_id FROM settlement_fixtures WHERE fixture_name = 'valid'
+)
+  AND corporate_case.current_stage = 'IDENTITY_PENDING'
+  AND milestone.status = 'RELEASABLE';
 
 CREATE TEMP TABLE settlement_replay_result AS
 SELECT *
@@ -557,7 +673,14 @@ BEGIN
   IF (SELECT pg_catalog.count(*) FROM pg_temp.settlement_replay_result) <> 1
      OR NOT (SELECT replayed FROM pg_temp.settlement_replay_result)
      OR (SELECT event_id FROM pg_temp.settlement_replay_result)
-          <> (SELECT event_id FROM pg_temp.settlement_first_result) THEN
+          <> (SELECT event_id FROM pg_temp.settlement_first_result)
+     OR (SELECT funded_milestone_count FROM pg_temp.settlement_replay_result)
+          <> (SELECT milestone_count FROM pg_temp.settlement_event_snapshot)
+     OR (SELECT case_stage FROM pg_temp.settlement_replay_result)
+          <> 'ESCROW_LOCKED'
+     OR (SELECT order_status FROM pg_temp.settlement_replay_result) <> 'ACTIVE'
+     OR (SELECT escrow_status FROM pg_temp.settlement_replay_result)
+          <> 'HELD_IN_ESCROW' THEN
     RAISE EXCEPTION 'IDENTICAL_SETTLEMENT_REPLAY_INVALID';
   END IF;
 
@@ -567,25 +690,53 @@ BEGIN
   ) OR NOT EXISTS (
     SELECT 1 FROM public.corporate_service_cases
     WHERE case_id = v_valid.corporate_case_id
-      AND current_stage = 'ESCROW_LOCKED'
+      AND current_stage = 'IDENTITY_PENDING'
+      AND updated_at = (
+        SELECT case_updated_at FROM pg_temp.settlement_progress_snapshot
+      )
   ) OR NOT EXISTS (
     SELECT 1 FROM public.escrow_transactions
     WHERE escrow_id = v_valid.escrow_id
       AND status = 'HELD_IN_ESCROW'
       AND funds_locked_at IS NOT NULL
-  ) OR EXISTS (
+  ) OR (SELECT pg_catalog.count(*) FROM public.payment_milestones
+        WHERE order_id = v_valid.order_id AND status = 'RELEASABLE') <> 1
+     OR EXISTS (
     SELECT 1 FROM public.payment_milestones
-    WHERE order_id = v_valid.order_id AND status <> 'FUNDED'
+    WHERE order_id = v_valid.order_id
+      AND status NOT IN ('FUNDED', 'RELEASABLE')
   ) OR NOT EXISTS (
-    SELECT 1 FROM public.provider_webhook_events
-    WHERE provider_event_id = 'evt-valid-001'
-      AND order_id = v_valid.order_id
-      AND payload_digest_sha256 = pg_catalog.repeat('a', 64)
-      AND signature_verified
-      AND processed_status = 'PROCESSED'
-      AND processed_at IS NOT NULL
-  ) THEN
-    RAISE EXCEPTION 'VALID_SETTLEMENT_CANONICAL_STATE_INVALID';
+    SELECT 1
+    FROM public.payment_milestones AS milestone
+    JOIN pg_temp.settlement_progress_snapshot AS snapshot
+      ON snapshot.milestone_id = milestone.milestone_id
+    WHERE milestone.status = 'RELEASABLE'
+      AND milestone.updated_at = snapshot.milestone_updated_at
+  ) OR NOT EXISTS (
+    SELECT 1
+    FROM public.provider_webhook_events AS event_row
+    JOIN pg_temp.settlement_event_snapshot AS snapshot
+      ON snapshot.event_id = event_row.event_id
+    WHERE event_row.order_id = snapshot.order_id
+      AND event_row.provider_name = snapshot.provider_name
+      AND event_row.provider_event_id = snapshot.provider_event_id
+      AND event_row.event_type = snapshot.event_type
+      AND event_row.payload_digest_sha256 = snapshot.payload_digest_sha256
+      AND event_row.signature_verified = snapshot.signature_verified
+      AND event_row.processed_status = snapshot.processed_status
+      AND event_row.received_at = snapshot.received_at
+      AND event_row.processed_at = snapshot.processed_at
+  ) OR (SELECT pg_catalog.count(*) FROM public.provider_webhook_events
+        WHERE provider_event_id = 'evt-valid-001')
+       <> (SELECT event_count FROM pg_temp.settlement_event_snapshot)
+     OR (SELECT pg_catalog.count(*) FROM public.payment_milestones
+         WHERE order_id = v_valid.order_id)
+       <> (SELECT milestone_count FROM pg_temp.settlement_event_snapshot)
+     OR (SELECT pg_catalog.count(*) FROM public.service_fee_lines
+         WHERE order_id = v_valid.order_id)
+       <> (SELECT fee_line_count FROM pg_temp.settlement_event_snapshot)
+  THEN
+    RAISE EXCEPTION 'PROGRESSED_SETTLEMENT_REPLAY_CHANGED_STATE';
   END IF;
 
   PERFORM pg_temp.expect_settlement_failure(
@@ -612,8 +763,179 @@ BEGIN
 END;
 $$;
 
+-- A processed corporate event must reject a valid consultation escrow whose
+-- corporate_case_id is NULL, rather than accepting SQL three-valued logic.
+INSERT INTO public.users_advocate (
+  advocate_id,
+  full_name,
+  email,
+  phone_e164,
+  sipp_license_no,
+  peradi_card_no,
+  specialization_primary,
+  kyc_status
+) VALUES (
+  'b3b10000-0000-4000-8000-000000000101'::UUID,
+  'Null Binding Runtime Advocate',
+  'null-binding-advocate@example.invalid',
+  '+620000000032',
+  'SIPP-B3B1-NULL',
+  'PERADI-B3B1-NULL',
+  'CORPORATE',
+  'VERIFIED'
+);
+
+INSERT INTO public.advocate_service_tiers (
+  tier_id,
+  advocate_id,
+  tier_level,
+  tier_name,
+  duration_minutes,
+  price_idr
+) VALUES (
+  'b3b10000-0000-4000-8000-000000000102'::UUID,
+  'b3b10000-0000-4000-8000-000000000101'::UUID,
+  1,
+  'Null Binding Runtime Tier',
+  60,
+  300
+);
+
+INSERT INTO public.consultation_slots (
+  slot_id,
+  advocate_id,
+  tier_id,
+  start_time,
+  end_time,
+  status
+) VALUES (
+  'b3b10000-0000-4000-8000-000000000103'::UUID,
+  'b3b10000-0000-4000-8000-000000000101'::UUID,
+  'b3b10000-0000-4000-8000-000000000102'::UUID,
+  pg_catalog.clock_timestamp() + INTERVAL '1 day',
+  pg_catalog.clock_timestamp() + INTERVAL '1 day 1 hour',
+  'BOOKED'
+);
+
+INSERT INTO public.booking_sessions (
+  booking_id,
+  client_id,
+  advocate_id,
+  slot_id,
+  booking_code,
+  status,
+  booked_price_idr
+)
+SELECT
+  'b3b10000-0000-4000-8000-000000000104'::UUID,
+  context.actor_id,
+  'b3b10000-0000-4000-8000-000000000101'::UUID,
+  'b3b10000-0000-4000-8000-000000000103'::UUID,
+  'B3B1-NULL-BINDING',
+  'PENDING_PAYMENT',
+  fixture.total_amount_idr
+FROM pg_temp.settlement_fixtures AS fixture
+CROSS JOIN pg_temp.settlement_runtime_context AS context
+WHERE fixture.fixture_name = 'valid';
+
+INSERT INTO public.escrow_transactions (
+  escrow_id,
+  booking_id,
+  client_id,
+  advocate_id,
+  total_amount_idr,
+  status,
+  holding_expires_at,
+  payment_gateway_ref,
+  corporate_case_id
+)
+SELECT
+  'b3b10000-0000-4000-8000-000000000100'::UUID,
+  'b3b10000-0000-4000-8000-000000000104'::UUID,
+  context.actor_id,
+  'b3b10000-0000-4000-8000-000000000101'::UUID,
+  fixture.total_amount_idr,
+  'PENDING_PAYMENT',
+  pg_catalog.clock_timestamp() + INTERVAL '24 hours',
+  'CORP-' || pg_catalog.lower(fixture.order_id::TEXT),
+  NULL
+FROM pg_temp.settlement_fixtures AS fixture
+CROSS JOIN pg_temp.settlement_runtime_context AS context
+WHERE fixture.fixture_name = 'valid';
+
+INSERT INTO public.provider_webhook_events (
+  order_id,
+  provider_name,
+  provider_event_id,
+  event_type,
+  payload_digest_sha256,
+  signature_verified,
+  processed_status,
+  processed_at
+)
+SELECT
+  fixture.order_id,
+  context.provider_name,
+  'evt-null-escrow-binding',
+  'INVOICE_PAID',
+  pg_catalog.repeat('9', 64),
+  TRUE,
+  'PROCESSED'::public.webhook_processed_status,
+  pg_catalog.clock_timestamp()
+FROM pg_temp.settlement_fixtures AS fixture
+CROSS JOIN pg_temp.settlement_runtime_context AS context
+WHERE fixture.fixture_name = 'valid';
+
 DO $$
 DECLARE
+  v_valid pg_temp.settlement_fixtures%ROWTYPE := (
+    SELECT fixture FROM pg_temp.settlement_fixtures AS fixture
+    WHERE fixture.fixture_name = 'valid'
+  );
+  v_processed_at TIMESTAMPTZ := (
+    SELECT processed_at
+    FROM public.provider_webhook_events
+    WHERE provider_event_id = 'evt-null-escrow-binding'
+  );
+BEGIN
+  PERFORM pg_temp.expect_settlement_failure(
+    'CORPORATE_ESCROW_LOCK_ESCROW_NOT_FOUND',
+    'evt-null-escrow-binding',
+    pg_catalog.repeat('9', 64),
+    v_valid.order_id,
+    v_valid.corporate_case_id,
+    'b3b10000-0000-4000-8000-000000000100'::UUID,
+    v_valid.total_amount_idr,
+    ('CORP-' || pg_catalog.lower(v_valid.order_id::TEXT))::VARCHAR,
+    pg_temp.webhook_key(
+      (SELECT provider_name FROM pg_temp.settlement_runtime_context),
+      'evt-null-escrow-binding'
+    )
+  );
+
+  IF (SELECT pg_catalog.count(*) FROM public.provider_webhook_events
+      WHERE provider_event_id = 'evt-null-escrow-binding') <> 1
+     OR (SELECT processed_at FROM public.provider_webhook_events
+         WHERE provider_event_id = 'evt-null-escrow-binding')
+          IS DISTINCT FROM v_processed_at
+     OR NOT EXISTS (
+       SELECT 1
+       FROM public.escrow_transactions
+       WHERE escrow_id = 'b3b10000-0000-4000-8000-000000000100'::UUID
+         AND corporate_case_id IS NULL
+         AND status = 'PENDING_PAYMENT'
+     ) THEN
+    RAISE EXCEPTION 'NULL_ESCROW_BINDING_REJECTION_WROTE_STATE';
+  END IF;
+END;
+$$;
+
+DO $$
+DECLARE
+  v_valid pg_temp.settlement_fixtures%ROWTYPE := (
+    SELECT fixture FROM pg_temp.settlement_fixtures AS fixture
+    WHERE fixture.fixture_name = 'valid'
+  );
   v_amount pg_temp.settlement_fixtures%ROWTYPE := (
     SELECT fixture FROM pg_temp.settlement_fixtures AS fixture
     WHERE fixture.fixture_name = 'amount_mismatch'
@@ -642,6 +964,72 @@ DECLARE
     SELECT provider_name FROM pg_temp.settlement_runtime_context
   );
 BEGIN
+  -- Mutations against the already-PROCESSED event must remain zero-write failures.
+  PERFORM pg_temp.expect_settlement_failure(
+    'CORPORATE_ESCROW_LOCK_PAYMENT_MISMATCH', 'evt-valid-001', pg_catalog.repeat('a', 64),
+    v_valid.order_id, v_valid.corporate_case_id, v_valid.escrow_id,
+    v_valid.total_amount_idr + 1,
+    ('CORP-' || pg_catalog.lower(v_valid.order_id::TEXT))::VARCHAR,
+    pg_temp.webhook_key(v_provider, 'evt-valid-001')
+  );
+  PERFORM pg_temp.expect_settlement_failure(
+    'CORPORATE_PAYMENT_WEBHOOK_REFERENCE_MISMATCH', 'evt-valid-001', pg_catalog.repeat('a', 64),
+    v_valid.order_id, v_valid.corporate_case_id, v_valid.escrow_id,
+    v_valid.total_amount_idr, 'CORP-b3b00000-0000-4000-8000-ffffffffffff',
+    pg_temp.webhook_key(v_provider, 'evt-valid-001')
+  );
+  PERFORM pg_temp.expect_settlement_failure(
+    'CORPORATE_PAYMENT_WEBHOOK_EVENT_CONFLICT', 'evt-valid-001', pg_catalog.repeat('a', 64),
+    v_amount.order_id, v_valid.corporate_case_id, v_valid.escrow_id,
+    v_valid.total_amount_idr,
+    ('CORP-' || pg_catalog.lower(v_amount.order_id::TEXT))::VARCHAR,
+    pg_temp.webhook_key(v_provider, 'evt-valid-001')
+  );
+  PERFORM pg_temp.expect_settlement_failure(
+    'CORPORATE_ESCROW_WEBHOOK_ORDER_CASE_MISMATCH', 'evt-valid-001', pg_catalog.repeat('a', 64),
+    v_valid.order_id, v_amount.corporate_case_id, v_valid.escrow_id,
+    v_valid.total_amount_idr,
+    ('CORP-' || pg_catalog.lower(v_valid.order_id::TEXT))::VARCHAR,
+    pg_temp.webhook_key(v_provider, 'evt-valid-001')
+  );
+  PERFORM pg_temp.expect_settlement_failure(
+    'CORPORATE_ESCROW_LOCK_ESCROW_NOT_FOUND', 'evt-valid-001', pg_catalog.repeat('a', 64),
+    v_valid.order_id, v_valid.corporate_case_id, v_amount.escrow_id,
+    v_valid.total_amount_idr,
+    ('CORP-' || pg_catalog.lower(v_valid.order_id::TEXT))::VARCHAR,
+    pg_temp.webhook_key(v_provider, 'evt-valid-001')
+  );
+  PERFORM pg_temp.expect_settlement_failure(
+    'CORPORATE_PAYMENT_WEBHOOK_IDEMPOTENCY_CONFLICT', 'evt-valid-001', pg_catalog.repeat('a', 64),
+    v_valid.order_id, v_valid.corporate_case_id, v_valid.escrow_id,
+    v_valid.total_amount_idr,
+    ('CORP-' || pg_catalog.lower(v_valid.order_id::TEXT))::VARCHAR, pg_catalog.repeat('0', 48)::VARCHAR
+  );
+  BEGIN
+    PERFORM * FROM public.fn_process_corporate_payment_webhook_atomic(
+      'MUTATED_PROVIDER', 'evt-valid-001', 'INVOICE_PAID', pg_catalog.repeat('a', 64),
+      v_valid.order_id, v_valid.corporate_case_id, v_valid.escrow_id,
+      v_valid.total_amount_idr,
+      ('CORP-' || pg_catalog.lower(v_valid.order_id::TEXT))::VARCHAR,
+      pg_temp.webhook_key('MUTATED_PROVIDER', 'evt-valid-001')
+    );
+    RAISE EXCEPTION 'EXPECTED_PROCESSED_PROVIDER_MUTATION_REJECTION';
+  EXCEPTION WHEN OTHERS THEN
+    IF pg_catalog.strpos(SQLERRM, 'CORPORATE_PAYMENT_WEBHOOK_EVENT_CONFLICT') = 0 THEN RAISE; END IF;
+  END;
+  BEGIN
+    PERFORM * FROM public.fn_process_corporate_payment_webhook_atomic(
+      v_provider, 'evt-valid-001', 'INVOICE_SETTLED', pg_catalog.repeat('a', 64),
+      v_valid.order_id, v_valid.corporate_case_id, v_valid.escrow_id,
+      v_valid.total_amount_idr,
+      ('CORP-' || pg_catalog.lower(v_valid.order_id::TEXT))::VARCHAR,
+      pg_temp.webhook_key(v_provider, 'evt-valid-001')
+    );
+    RAISE EXCEPTION 'EXPECTED_PROCESSED_EVENT_TYPE_MUTATION_REJECTION';
+  EXCEPTION WHEN OTHERS THEN
+    IF pg_catalog.strpos(SQLERRM, 'CORPORATE_PAYMENT_WEBHOOK_INVALID_EVENT_TYPE') = 0 THEN RAISE; END IF;
+  END;
+
   PERFORM pg_temp.expect_settlement_failure(
     'CORPORATE_ESCROW_LOCK_PAYMENT_MISMATCH',
     'evt-amount-mismatch',
@@ -737,6 +1125,30 @@ BEGIN
     ('CORP-' || pg_catalog.lower(v_amount.order_id::TEXT))::VARCHAR,
     pg_temp.webhook_key(v_provider, 'evt-null')
   );
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.provider_webhook_events AS event_row
+    JOIN pg_temp.settlement_event_snapshot AS snapshot
+      ON snapshot.event_id = event_row.event_id
+    WHERE event_row.order_id = snapshot.order_id
+      AND event_row.provider_name = snapshot.provider_name
+      AND event_row.provider_event_id = snapshot.provider_event_id
+      AND event_row.event_type = snapshot.event_type
+      AND event_row.payload_digest_sha256 = snapshot.payload_digest_sha256
+      AND event_row.signature_verified = snapshot.signature_verified
+      AND event_row.processed_status = snapshot.processed_status
+      AND event_row.received_at = snapshot.received_at
+      AND event_row.processed_at = snapshot.processed_at
+  ) OR (SELECT pg_catalog.count(*) FROM public.provider_webhook_events
+        WHERE provider_event_id = 'evt-valid-001') <> 1
+     OR NOT EXISTS (SELECT 1 FROM public.corporate_service_cases
+        WHERE case_id = v_valid.corporate_case_id
+          AND current_stage = 'IDENTITY_PENDING')
+     OR (SELECT pg_catalog.count(*) FROM public.payment_milestones
+        WHERE order_id = v_valid.order_id AND status = 'RELEASABLE') <> 1 THEN
+    RAISE EXCEPTION 'PROCESSED_MUTATION_CHANGED_CANONICAL_STATE';
+  END IF;
 END;
 $$;
 
@@ -817,6 +1229,58 @@ BEGIN
 END;
 $$;
 
+
+SET LOCAL ROLE service_role;
+DO $$
+BEGIN
+  IF (SELECT pg_catalog.count(*) FROM public.provider_webhook_events
+      WHERE provider_event_id = 'evt-valid-001') <> 1 THEN
+    RAISE EXCEPTION 'SERVICE_ROLE_PROVIDER_EVENT_SELECT_UNAVAILABLE';
+  END IF;
+
+  BEGIN
+    INSERT INTO public.provider_webhook_events (
+      order_id,
+      provider_name,
+      provider_event_id,
+      event_type,
+      payload_digest_sha256,
+      signature_verified
+    ) VALUES (
+      'b3b00000-0000-4000-8000-000000000001'::UUID,
+      'sandbox-provider',
+      'evt-service-role-direct-insert',
+      'INVOICE_PAID',
+      pg_catalog.repeat('8', 64),
+      TRUE
+    );
+    RAISE EXCEPTION 'SERVICE_ROLE_PROVIDER_EVENT_INSERT_WAS_NOT_DENIED';
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      NULL;
+  END;
+
+  BEGIN
+    UPDATE public.provider_webhook_events
+    SET processed_status = processed_status
+    WHERE provider_event_id = 'evt-valid-001';
+    RAISE EXCEPTION 'SERVICE_ROLE_PROVIDER_EVENT_UPDATE_WAS_NOT_DENIED';
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      NULL;
+  END;
+
+  BEGIN
+    DELETE FROM public.provider_webhook_events
+    WHERE provider_event_id = 'evt-valid-001';
+    RAISE EXCEPTION 'SERVICE_ROLE_PROVIDER_EVENT_DELETE_WAS_NOT_DENIED';
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      NULL;
+  END;
+END;
+$$;
+RESET ROLE;
 SET LOCAL ROLE anon;
 DO $$
 BEGIN

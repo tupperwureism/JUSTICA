@@ -109,18 +109,42 @@ function requiredEnvironment(
   return value;
 }
 
+function requireWebhookSecret(
+  dependencies: PaymentWebhookDependencies,
+): string {
+  const secret = dependencies.getEnvironment("PAYMENT_WEBHOOK_SECRET");
+  const byteLength = secret === undefined
+    ? 0
+    : new TextEncoder().encode(secret).byteLength;
+  // This is a key-material length floor, not proof that the value has entropy.
+  if (secret === undefined || byteLength < 32 || byteLength > 4096) {
+    throw new HttpError(500, "SERVER_MISCONFIGURED", "Webhook server configuration is unavailable.");
+  }
+  return secret;
+}
+
+function requireMaximumSkewSeconds(
+  dependencies: PaymentWebhookDependencies,
+): number {
+  const configured = dependencies.getEnvironment("PAYMENT_WEBHOOK_MAX_SKEW_SECONDS");
+  if (configured === undefined) return 300;
+  if (!/^[1-9][0-9]{0,2}$/.test(configured)) {
+    throw new HttpError(500, "SERVER_MISCONFIGURED", "Webhook server configuration is unavailable.");
+  }
+  const seconds = Number(configured);
+  if (seconds > 900) {
+    throw new HttpError(500, "SERVER_MISCONFIGURED", "Webhook server configuration is unavailable.");
+  }
+  return seconds;
+}
+
 async function requireSignature(
   request: Request,
   rawBody: Uint8Array,
   dependencies: PaymentWebhookDependencies,
 ): Promise<void> {
-  const secret = requiredEnvironment(dependencies, "PAYMENT_WEBHOOK_SECRET", 48 * 1024, false);
-  const configuredSkew = Number(
-    dependencies.getEnvironment("PAYMENT_WEBHOOK_MAX_SKEW_SECONDS") ?? "300",
-  );
-  const maxSkewSeconds = Number.isInteger(configuredSkew) && configuredSkew > 0
-    ? configuredSkew
-    : 300;
+  const secret = requireWebhookSecret(dependencies);
+  const maxSkewSeconds = requireMaximumSkewSeconds(dependencies);
   const valid = await verifyHmacSha256Bytes({
     body: rawBody,
     secret,

@@ -8,7 +8,7 @@ import {
   type PaymentWebhookRpcRow,
 } from "./handler.ts";
 
-const SECRET = "local-test-secret-never-persist";
+const SECRET = "0123456789abcdef0123456789abcdef";
 const NOW_SECONDS = 1_800_000_000;
 const ORDER_ID = "22222222-2222-4222-8222-222222222222";
 const CASE_ID = "33333333-3333-4333-8333-333333333333";
@@ -40,11 +40,15 @@ const validRpcRow = (replayed = false): PaymentWebhookRpcRow => ({
   replayed,
 });
 
-async function hmac(rawBody: string | Uint8Array, timestamp = NOW_SECONDS): Promise<string> {
+async function hmac(
+  rawBody: string | Uint8Array,
+  timestamp = NOW_SECONDS,
+  secret = SECRET,
+): Promise<string> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
-    encoder.encode(SECRET),
+    encoder.encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
@@ -86,12 +90,13 @@ async function signedRequest(
     timestamp?: number;
     signature?: string | null;
     method?: string;
+    secret?: string;
   } = {},
 ): Promise<Request> {
   const rawBody = options.rawBody ?? JSON.stringify(body);
   const timestamp = options.timestamp ?? NOW_SECONDS;
   const signature = options.signature === undefined
-    ? await hmac(rawBody, timestamp)
+    ? await hmac(rawBody, timestamp, options.secret)
     : options.signature;
   const headers = new Headers({
     "content-type": "application/json",
@@ -252,6 +257,69 @@ test("missing server environment fails closed", async () => {
   }
 });
 
+test("webhook secret enforces 32..4096 UTF-8 bytes without database mutation", async () => {
+  for (const secret of ["x".repeat(31), "x".repeat(4097), "\u00e9".repeat(2049)]) {
+    let calls = 0;
+    const base = dependencies();
+    const handler = createPaymentWebhookHandler(dependencies({
+      getEnvironment: (name) => name === "PAYMENT_WEBHOOK_SECRET"
+        ? secret
+        : base.getEnvironment(name),
+      callRpc: async () => {
+        calls += 1;
+        return [validRpcRow()];
+      },
+    }));
+    const response = await handler(await signedRequest(validPayload, { secret }));
+    assert.equal(response.status, 500);
+    const text = await response.text();
+    assert.match(text, /SERVER_MISCONFIGURED/);
+    assert.equal(text.includes(secret), false);
+    assert.equal(calls, 0);
+  }
+
+  for (const secret of ["x".repeat(32), "x".repeat(4096), "\u00e9".repeat(16)]) {
+    const base = dependencies();
+    const handler = createPaymentWebhookHandler(dependencies({
+      getEnvironment: (name) => name === "PAYMENT_WEBHOOK_SECRET"
+        ? secret
+        : base.getEnvironment(name),
+    }));
+    const response = await handler(await signedRequest(validPayload, { secret }));
+    assert.equal(response.status, 200);
+  }
+});
+
+test("configured webhook skew must be an integer from 1 through 900", async () => {
+  for (const skew of ["", "0", "-1", "1.5", "NaN", "Infinity", "901", "1e2"]) {
+    let calls = 0;
+    const base = dependencies();
+    const handler = createPaymentWebhookHandler(dependencies({
+      getEnvironment: (name) => name === "PAYMENT_WEBHOOK_MAX_SKEW_SECONDS"
+        ? skew
+        : base.getEnvironment(name),
+      callRpc: async () => {
+        calls += 1;
+        return [validRpcRow()];
+      },
+    }));
+    const response = await handler(await signedRequest());
+    assert.equal(response.status, 500);
+    assert.equal((await responseBody(response)).code, "SERVER_MISCONFIGURED");
+    assert.equal(calls, 0);
+  }
+
+  for (const skew of [undefined, "1", "900"]) {
+    const base = dependencies();
+    const handler = createPaymentWebhookHandler(dependencies({
+      getEnvironment: (name) => name === "PAYMENT_WEBHOOK_MAX_SKEW_SECONDS"
+        ? skew
+        : base.getEnvironment(name),
+    }));
+    assert.equal((await handler(await signedRequest())).status, 200);
+  }
+});
+
 test("valid signed callback calls only the atomic RPC and correlates canonical result", async () => {
   let captured: { name: string; parameters: Record<string, unknown> } | null = null;
   const handler = createPaymentWebhookHandler(dependencies({
@@ -337,9 +405,9 @@ test("concurrent identical callbacks settle through one atomic boundary each and
   let calls = 0;
   const handler = createPaymentWebhookHandler(dependencies({
     callRpc: async () => {
-      calls += 1;
+      const callNumber = ++calls;
       await Promise.resolve();
-      return [validRpcRow(calls > 1)];
+      return [validRpcRow(callNumber > 1)];
     },
   }));
   const [first, second] = await Promise.all([
@@ -353,4 +421,43 @@ test("concurrent identical callbacks settle through one atomic boundary each and
     (await responseBody(second)).replayed,
   ];
   assert.deepEqual(replayFlags.sort(), [false, true]);
+});
+
+test("local PostgREST RPC caller sends bearer and apikey headers", async () => {
+  const harness = await import("../../../Tools/corporate_escrow_local_webhook_server.mjs");
+  let captured: {
+    input: string;
+    init: RequestInit;
+  } | undefined;
+  const callRpc = harness.createPostgrestRpcCaller({
+    restUrl: "http://127.0.0.1:59999",
+    serviceRoleKey: "ephemeral-service-role-key",
+    fetchImpl: async (input: string | URL | Request, init?: RequestInit) => {
+      captured = { input: String(input), init: init ?? {} };
+      return new Response(JSON.stringify([validRpcRow()]), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    },
+  });
+
+  await callRpc("fn_process_corporate_payment_webhook_atomic", {
+    p_provider_event_id: EVENT_ID,
+  });
+
+  assert.ok(captured);
+  assert.equal(
+    captured.input,
+    "http://127.0.0.1:59999/rpc/fn_process_corporate_payment_webhook_atomic",
+  );
+  const headers = new Headers(captured.init.headers);
+  assert.equal(
+    headers.get("authorization"),
+    "Bearer ephemeral-service-role-key",
+  );
+  assert.equal(headers.get("apikey"), "ephemeral-service-role-key");
+  assert.equal(
+    JSON.parse(String(captured.init.body)).p_provider_event_id,
+    EVENT_ID,
+  );
 });

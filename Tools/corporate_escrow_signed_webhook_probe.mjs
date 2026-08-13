@@ -11,7 +11,6 @@ const webhookSecret = required('PAYMENT_WEBHOOK_SECRET');
 const supabaseUrl = required('SUPABASE_URL').replace(/\/$/, '');
 const restUrl = (process.env.SUPABASE_REST_URL ?? `${supabaseUrl}/rest/v1`).replace(/\/$/, '');
 const serviceRoleKey = required('SUPABASE_SERVICE_ROLE_KEY');
-const providerName = required('PAYMENT_PROVIDER_NAME');
 const orderId = required('B3B_ORDER_ID').toLowerCase();
 const caseId = required('B3B_CASE_ID').toLowerCase();
 const escrowId = required('B3B_ESCROW_ID').toLowerCase();
@@ -75,7 +74,7 @@ async function restRows(table, query) {
 }
 
 async function canonicalState() {
-  const [orders, cases, escrows, milestones, events] = await Promise.all([
+  const [orders, cases, escrows, milestones, events, feeLines] = await Promise.all([
     restRows('service_orders', {
       select: 'order_id,status',
       order_id: `eq.${orderId}`,
@@ -91,10 +90,16 @@ async function canonicalState() {
     restRows('payment_milestones', {
       select: 'milestone_id,status',
       order_id: `eq.${orderId}`,
+      order: 'milestone_id.asc',
     }),
     restRows('provider_webhook_events', {
       select: 'event_id,provider_event_id,processed_status,payload_digest_sha256',
       provider_event_id: `eq.${providerEventId}`,
+    }),
+    restRows('service_fee_lines', {
+      select: 'fee_line_id',
+      order_id: `eq.${orderId}`,
+      order: 'fee_line_id.asc',
     }),
   ]);
   return {
@@ -102,7 +107,8 @@ async function canonicalState() {
     corporateCase: cases[0],
     escrow: escrows[0],
     milestones,
-    event: events[0],
+    events,
+    feeLines,
   };
 }
 
@@ -114,33 +120,68 @@ function assertCanonical(state) {
     || !state.escrow?.funds_locked_at
     || !state.milestones.length
     || state.milestones.some(({ status }) => status !== 'FUNDED')
-    || state.event?.processed_status !== 'PROCESSED'
+    || state.events.length !== 1
+    || state.events[0]?.processed_status !== 'PROCESSED'
   ) {
     throw new Error('Webhook response was not followed by complete canonical database state');
   }
 }
 
-const now = Math.floor(Date.now() / 1000);
-const valid = await post(body, now);
+const before = await canonicalState();
 if (
-  valid.status !== 200
-  || valid.body?.ok !== true
-  || valid.body?.replayed !== false
-  || valid.body?.status !== 'HELD_IN_ESCROW'
+  before.events.length !== 0
+  || before.order?.status !== 'PAYMENT_PENDING'
+  || before.corporateCase?.current_stage !== 'DRAFT'
+  || before.escrow?.status !== 'PENDING_PAYMENT'
+  || !before.milestones.length
+  || before.milestones.some(({ status }) => status !== 'PENDING')
 ) {
-  throw new Error(`Valid signed callback failed safely: HTTP ${valid.status}`);
+  throw new Error('Disposable fixture is not in the required pre-settlement state');
 }
-const afterValid = await canonicalState();
-assertCanonical(afterValid);
+const milestoneIdsBefore = before.milestones.map(({ milestone_id }) => milestone_id);
+const feeLineIdsBefore = before.feeLines.map(({ fee_line_id }) => fee_line_id);
 
-const replay = await post(body, now);
+const now = Math.floor(Date.now() / 1000);
+const concurrent = await Promise.all([
+  post(body, now),
+  post(body, now),
+]);
+if (concurrent.some(({ status, body: responseBody }) => (
+  status !== 200
+  || responseBody?.ok !== true
+  || responseBody?.status !== 'HELD_IN_ESCROW'
+))) {
+  throw new Error(`Concurrent signed callbacks failed: HTTP ${concurrent.map(({ status }) => status).join(',')}`);
+}
+const replayDistribution = concurrent
+  .map(({ body: responseBody }) => responseBody?.replayed)
+  .sort();
 if (
-  replay.status !== 200
-  || replay.body?.ok !== true
-  || replay.body?.replayed !== true
-  || replay.body?.eventId !== valid.body?.eventId
+  JSON.stringify(replayDistribution) !== JSON.stringify([false, true])
+  || concurrent[0].body?.eventId !== concurrent[1].body?.eventId
 ) {
-  throw new Error(`Identical replay failed: HTTP ${replay.status}`);
+  throw new Error('Concurrent callback initial/replay distribution is not canonical');
+}
+
+const afterConcurrent = await canonicalState();
+assertCanonical(afterConcurrent);
+if (
+  JSON.stringify(afterConcurrent.milestones.map(({ milestone_id }) => milestone_id))
+    !== JSON.stringify(milestoneIdsBefore)
+  || JSON.stringify(afterConcurrent.feeLines.map(({ fee_line_id }) => fee_line_id))
+    !== JSON.stringify(feeLineIdsBefore)
+) {
+  throw new Error('Concurrent callback created duplicate financial rows');
+}
+
+const sequentialReplay = await post(body, now);
+if (
+  sequentialReplay.status !== 200
+  || sequentialReplay.body?.ok !== true
+  || sequentialReplay.body?.replayed !== true
+  || sequentialReplay.body?.eventId !== concurrent[0].body?.eventId
+) {
+  throw new Error(`Identical replay failed: HTTP ${sequentialReplay.status}`);
 }
 assertCanonical(await canonicalState());
 
@@ -166,18 +207,24 @@ const stale = await post(body, now - 301);
 if (stale.status !== 401 || stale.body?.code !== 'INVALID_SIGNATURE') {
   throw new Error(`Stale signature was not rejected: HTTP ${stale.status}`);
 }
-assertCanonical(await canonicalState());
+const finalState = await canonicalState();
+assertCanonical(finalState);
 
 console.log(JSON.stringify({
   status: 'assertions-complete',
-  validHttpStatus: valid.status,
-  replayHttpStatus: replay.status,
+  concurrentHttpStatuses: concurrent.map(({ status }) => status),
+  replayDistribution,
+  eventIds: concurrent.map(({ body: responseBody }) => responseBody.eventId),
+  sequentialReplayHttpStatus: sequentialReplay.status,
   conflictHttpStatus: conflict.status,
   invalidSignatureHttpStatus: invalidSignature.status,
   staleSignatureHttpStatus: stale.status,
-  orderStatus: afterValid.order.status,
-  caseStage: afterValid.corporateCase.current_stage,
-  escrowStatus: afterValid.escrow.status,
-  milestoneStatuses: afterValid.milestones.map(({ status }) => status),
-  providerEventStatus: afterValid.event.processed_status,
+  providerEventRowCount: finalState.events.length,
+  milestoneRowCount: finalState.milestones.length,
+  feeLineRowCount: finalState.feeLines.length,
+  orderStatus: finalState.order.status,
+  caseStage: finalState.corporateCase.current_stage,
+  escrowStatus: finalState.escrow.status,
+  milestoneStatuses: finalState.milestones.map(({ status }) => status),
+  providerEventStatus: finalState.events[0].processed_status,
 }));
