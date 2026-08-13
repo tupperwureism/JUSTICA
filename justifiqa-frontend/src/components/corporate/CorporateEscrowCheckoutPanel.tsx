@@ -50,6 +50,13 @@ export function CorporateEscrowCheckoutPanel(props: Props) {
   const onRefresh = legacyShowcase ? undefined : props.onRefresh;
   const onRetry = legacyShowcase ? undefined : props.onRetry;
   const locked = status === 'HELD_IN_ESCROW';
+  const canonicalStatusMessage = locked
+    ? success
+      ? 'Dana telah terkonfirmasi dan status escrow kanonik berhasil diperbarui.'
+      : 'Dana telah berada dalam rekening bersama berdasarkan status kanonik.'
+    : status === 'PENDING_PAYMENT'
+      ? 'Pembayaran belum terkonfirmasi. Status ini belum merupakan keberhasilan pembayaran.'
+      : `Status escrow kanonik saat ini: ${ESCROW_STATUS_COPY[status]}.`;
   return (
     <Card className="corporate-card-shell">
       <CardHeader className="gap-3 p-0">
@@ -65,12 +72,20 @@ export function CorporateEscrowCheckoutPanel(props: Props) {
         <div className="corporate-summary-item"><LockKeyhole className="size-5 text-primary" /><span><strong>Rekening bersama</strong><small>Referensi: {paymentReference}</small></span></div>
       </CardContent>
       <CardFooter className="grid gap-3 p-0 pt-2">
-        <Button type="button" size="lg" disabled={loading || !onRefresh} onClick={onRefresh} className="w-full">
+        <Button
+          type="button"
+          size="lg"
+          disabled={loading || !onRefresh}
+          aria-busy={loading}
+          onClick={onRefresh}
+          className="w-full"
+        >
           <LockKeyhole />{loading ? 'Memeriksa webhook...' : onRefresh ? 'Perbarui status escrow' : 'Boundary pembayaran belum tersedia'}
         </Button>
+        <p className="text-xs text-muted-foreground">Kanal pembayaran sandbox belum dikonfigurasi. Referensi pembayaran ini disiapkan server untuk integrasi provider.</p>
+        <p role="status" aria-live="polite" className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">{canonicalStatusMessage}</p>
         <p className="text-xs text-muted-foreground">Browser hanya membaca status kanonik yang dihasilkan webhook dan transisi server terotorisasi.</p>
         {error && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm"><span>{error}</span>{onRetry && <Button type="button" variant="outline" size="sm" onClick={onRetry} disabled={loading}>Coba lagi</Button>}</div>}
-        {success && <p role="status" className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">Status escrow kanonik {ESCROW_STATUS_COPY[status]} telah dimuat dari Supabase.</p>}
       </CardFooter>
     </Card>
   );

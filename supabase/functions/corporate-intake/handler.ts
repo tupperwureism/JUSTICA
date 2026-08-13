@@ -226,7 +226,6 @@ function parsePayload(raw: unknown): IntakePayload {
     "paidUpCapitalIdr",
     "corporateParties",
     "beneficialOwners",
-    "paymentGatewayRef",
     "idempotencyKey",
   ]);
   const orderId = requireUuid(body, "orderId");
@@ -276,14 +275,11 @@ function parsePayload(raw: unknown): IntakePayload {
   if (ownerEvidenceSet.size !== beneficialOwners.length) {
     throw new HttpError(400, "EVIDENCE_REFERENCE_DUPLICATE", "evidenceReference duplicates detected.");
   }
-  const paymentGatewayRef = requireString(body, "paymentGatewayRef", MAX_PAYMENT_REF_LENGTH);
-  if (paymentGatewayRef.trim() === "") {
-    throw new HttpError(400, "INVALID_FIELD", "paymentGatewayRef is required.");
-  }
   const idempotencyKey = requireString(body, "idempotencyKey", MAX_IDEMPOTENCY_KEY_LENGTH);
   if (idempotencyKey.trim() === "") {
     throw new HttpError(400, "INVALID_FIELD", "idempotencyKey is required.");
   }
+  const canonicalPaymentRef = `CORP-${orderId.toLowerCase()}`;
   return {
     orderId,
     entityType,
@@ -295,7 +291,7 @@ function parsePayload(raw: unknown): IntakePayload {
     paidUpCapitalIdr: String(body.paidUpCapitalIdr),
     corporateParties,
     beneficialOwners,
-    paymentGatewayRef,
+    paymentGatewayRef: canonicalPaymentRef,
     idempotencyKey,
   };
 }

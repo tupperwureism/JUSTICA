@@ -41,7 +41,6 @@ const validIntakeDraft: CorporateIntakeInput = {
     controlBasis: 'OWNERSHIP',
     percentage: '100',
   }],
-  paymentGatewayRef: 'PG-TEST-001',
   acceptedScope: true,
 };
 

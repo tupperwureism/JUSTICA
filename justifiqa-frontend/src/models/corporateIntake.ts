@@ -49,7 +49,6 @@ export type CorporateIntakeDraft = {
   paidUpCapitalIdr: string;
   corporateParties: CorporatePartyDraft[];
   beneficialOwners: BeneficialOwnerDraft[];
-  paymentGatewayRef: string;
   acceptedScope: boolean;
 };
 
@@ -90,7 +89,6 @@ export const createEmptyCorporateIntakeDraft = (createId?: () => string): Corpor
     paidUpCapitalIdr: '',
     corporateParties: [createEmptyCorporateParty()],
     beneficialOwners: [createEmptyBeneficialOwner(idFn)],
-    paymentGatewayRef: '',
     acceptedScope: false,
   };
 };
@@ -215,13 +213,6 @@ const validateBeneficialOwners = (draft: CorporateIntakeDraft): CorporateIntakeV
   return issues;
 };
 
-const validatePaymentGatewayRef = (draft: CorporateIntakeDraft): CorporateIntakeValidationIssue[] => {
-  const ref = (draft.paymentGatewayRef ?? '').trim();
-  if (!ref) return [issue('PAYMENT_GATEWAY_REF_REQUIRED', 'Referensi pembayaran wajib diisi sebelum mengirim.')];
-  if (ref.length > 64) return [issue('PAYMENT_GATEWAY_REF_TOO_LONG', 'Referensi pembayaran maksimal 64 karakter.')];
-  return [];
-};
-
 const validateScopeAcceptance = (draft: CorporateIntakeDraft): CorporateIntakeValidationIssue[] => (
   draft.acceptedScope
     ? []
@@ -233,7 +224,9 @@ const intakeStepValidators: Readonly<Record<number, (draft: CorporateIntakeDraft
   1: validateBusinessDetails,
   2: validateCorporateParties,
   3: validateBeneficialOwners,
-  4: (draft) => [...validatePaymentGatewayRef(draft), ...validateScopeAcceptance(draft)],
+  4: (draft) => [
+    ...validateScopeAcceptance(draft),
+  ],
 };
 
 export function validateCorporateIntake(draft: CorporateIntakeDraft): CorporateIntakeValidationIssue[] {
@@ -242,7 +235,6 @@ export function validateCorporateIntake(draft: CorporateIntakeDraft): CorporateI
     ...validateBusinessDetails(draft),
     ...validateCorporateParties(draft),
     ...validateBeneficialOwners(draft),
-    ...validatePaymentGatewayRef(draft),
     ...validateScopeAcceptance(draft),
   ];
 }

@@ -5,9 +5,9 @@
 
 ## Cakupan
 
-- 218 source files dipindai.
-- 352 exported TypeScript symbols dalam 180 files.
-- 126 core PostgreSQL objects dari 394 deklarasi migrasi.
+- 220 source files dipindai.
+- 356 exported TypeScript symbols dalam 181 files.
+- 127 core PostgreSQL objects dari 395 deklarasi migrasi.
 - 156 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 - Migrasi `supabase/` diprioritaskan di atas salinan `database/`; peta deklarasi ini bukan rekonstruksi state database setelah seluruh migrasi.
@@ -152,7 +152,8 @@
 | hooks/phase2MutationState.ts | 3t Phase2MutationStatus, 5t Phase2MutationState, 11t Phase2MutationAction, 17v initialPhase2MutationState, 23f phase2MutationReducer, 33f safePhase2MutationError, 38f createSingleFlightMutation |
 | hooks/useAuthSession.tsx | 14f AuthSessionProvider |
 | hooks/useBeneficialOwnerEvidence.ts | 10f useBeneficialOwnerEvidence |
-| hooks/useClientCorporateIntegration.ts | 12f useClientCorporateIntegration |
+| hooks/useClientCorporateIntegration.ts | 4x createUseClientCorporateIntegration, 4x ClientCorporateIntegrationService, 9v useClientCorporateIntegration |
+| hooks/useClientCorporateIntegrationFactory.ts | 15t ClientCorporateIntegrationService, 23f createUseClientCorporateIntegration |
 | hooks/useCorporateEvidenceUploads.ts | 11t AttemptCheckpoint, 13t CorporateEvidenceAttempt, 26t CorporateEvidenceTaskView, 31t CorporateEvidenceAdapter, 84f useCorporateEvidenceUploads |
 | hooks/useDocumentDrafting.ts | 7f useDocumentDrafting |
 | hooks/useEkycIntegration.ts | 5f useEkycIntegration |
@@ -165,7 +166,7 @@
 | hooks/useVaultDelivery.ts | 4f useVaultDelivery |
 | lib/supabase.ts | 20v supabase |
 | lib/utils.ts | 4f cn |
-| models/corporateIntake.ts | 1v CORPORATE_ENTITY_TYPES, 2v CORPORATE_PARTY_TYPES, 3v CORPORATE_PARTY_ROLES, 11v BENEFICIAL_OWNER_CONTROL_BASES, 19t CorporateEntityType, 20t CorporatePartyType, 21t CorporatePartyRole, 22t BeneficialOwnerControlBasis, 24t CorporatePartyDraft, 34t BeneficialOwnerDraft, 42t CorporateIntakeDraft, 56t CorporateIntakeValidationIssue, 61v createEmptyCorporateParty, 71v createEmptyBeneficialOwner, 81v createEmptyCorporateIntakeDraft, 115v addCorporateParty, 120v removeCorporateParty, 128v addBeneficialOwner, 133v removeBeneficialOwner, 141v addKbliCode, 146v removeKbliCode, 239f validateCorporateIntake, 250f validateCorporateIntakeStep |
+| models/corporateIntake.ts | 1v CORPORATE_ENTITY_TYPES, 2v CORPORATE_PARTY_TYPES, 3v CORPORATE_PARTY_ROLES, 11v BENEFICIAL_OWNER_CONTROL_BASES, 19t CorporateEntityType, 20t CorporatePartyType, 21t CorporatePartyRole, 22t BeneficialOwnerControlBasis, 24t CorporatePartyDraft, 34t BeneficialOwnerDraft, 42t CorporateIntakeDraft, 55t CorporateIntakeValidationIssue, 60v createEmptyCorporateParty, 70v createEmptyBeneficialOwner, 80v createEmptyCorporateIntakeDraft, 113v addCorporateParty, 118v removeCorporateParty, 126v addBeneficialOwner, 131v removeBeneficialOwner, 139v addKbliCode, 144v removeKbliCode, 232f validateCorporateIntake, 242f validateCorporateIntakeStep |
 | pages/AdminDashboardPage.tsx | 10f AdminDashboardPage |
 | pages/AdvocateAuthPage.tsx | 15v AdvocateAuthPage |
 | pages/AdvocateDashboardPage.tsx | 20v AdvocateDashboardPage |
@@ -187,7 +188,7 @@
 | services/intakeError.ts | 3v INTAKE_ERROR_ALLOWLIST, 11t IntakeErrorCode, 13v INTAKE_UNKNOWN_FALLBACK, 36f parseIntakeErrorCode, 52f parseEvidenceErrorCode |
 | services/mockConsultationService.ts | 8v TIER_CATALOG, 65v MOCK_ADVOCATE_SLOTS, 98c MockConsultationService |
 | services/mockIracService.ts | 8c MockIracService |
-| services/phase2IntegrationService.ts | 7t Phase2PortalRole, 8t Phase2Actor, 10t CorporateEscrowStatus, 21t CorporateEscrowProjection, 29t ClientCorporateWorkspace, 39t NotaryWorkspace, 69t EkycWorkspace, 99t CorporateIntakeInput, 101t SubmitCorporateIntakeResult, 112t IntakePayload, 141i Phase2IntegrationGateway, 156t Phase2IntegrationErrorCode, 181c Phase2IntegrationError, 216f createPhase2IntegrationService |
+| services/phase2IntegrationService.ts | 7t Phase2PortalRole, 8t Phase2Actor, 10t CorporateEscrowStatus, 21t CorporateEscrowProjection, 29t ClientCorporateWorkspace, 39t NotaryWorkspace, 69t EkycWorkspace, 99t CorporateIntakeInput, 101t SubmitCorporateIntakeResult, 112t IntakePayload, 140i Phase2IntegrationGateway, 155t Phase2IntegrationErrorCode, 180c Phase2IntegrationError, 215f createPhase2IntegrationService |
 | services/phase2SupabaseGateway.ts | 15x parseIntakeErrorCode, 47v phase2SupabaseGateway, 267v phase2IntegrationService |
 | services/portalAuthService.ts | 12f signInPortal, 22f registerPortal, 39f signOutPortal, 44f authErrorMessage |
 | services/roomSessionService.ts | 3i RoomSession, 11f resolveRoomSession |
@@ -196,7 +197,7 @@
 | types/authForms.ts | 1t ThemeMode, 2t AuthTab, 3t SyncStatus, 5i ClientLoginFields, 6i ClientRegistrationFields, 7i AdvocateLoginFields, 8i AdvocateRegistrationFields |
 | types/client.ts | 4t ClientTabKey, 6i ActiveConsultation, 15i HistoryDocument, 23i ServiceOption, 32i Advocate, 49i TimeSlot, 54i CheckoutDraft |
 | types/consultation.ts | 1t ConsultationTierId, 3t EscrowStatus, 5i ConsultationTier, 18i ConsultationSlot, 29i LiveConsultationSlot, 31i ConsultationCheckout, 46i EscrowTransaction, 59i BookingRequest |
-| types/database.types.ts | 1t Json, 9t Database, 3003t Tables, 3032t TablesInsert, 3057t TablesUpdate, 3082t Enums, 3099t CompositeTypes, 3116v Constants |
+| types/database.types.ts | 1t Json, 9t Database, 3030t Tables, 3059t TablesInsert, 3084t TablesUpdate, 3109t Enums, 3126t CompositeTypes, 3143v Constants |
 | types/irac.ts | 1t LegalDocumentTemplateId, 3i IracAnalysis, 16i DocumentClause, 22i LegalDocumentDraft |
 | types/portalAuth.ts | 3t PortalRole, 5v portalHome, 11v portalLogin, 17f getPortalRole, 22f safePortalRedirect |
 
@@ -246,6 +247,7 @@
 | function | public.fn_mutate_wallet_balance_mutex( p_wallet_id UUID, p_amount NUMERIC, p_mutation_typ… | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L92 +3 |
 | function | public.fn_prepare_corporate_intake_evidence_atomic( p_evidence_id UUID, p_client_id UUID,… | S/20260729115454_protected_beneficial_owner_evidence_boundary.sql:L368 |
 | function | public.fn_prevent_worm_mutation() | S/20260721000011_fix_plpgsql_mutex_and_worm_functions.sql:L9 +5 |
+| function | public.fn_process_corporate_payment_webhook_atomic( p_provider_name VARCHAR, p_provider_e… | S/20260813032019_process_corporate_payment_webhook_atomic.sql:L4 |
 | function | public.fn_process_ekyc_callback_atomic( p_envelope_id UUID, p_party_id UUID, p_user_id UU… | S/20260722000024_p2_b5c_pg_cron_ttl_scheduler.sql:L65 |
 | function | public.fn_protect_accepted_service_fee_line() | S/20260722000016_p2_b3_service_orders_expand_only.sql:L383 |
 | function | public.fn_protect_payment_milestone_terms() | S/20260729063938_bind_atomic_intake_to_canonical_pricing_catalog.sql:L51 +1 |

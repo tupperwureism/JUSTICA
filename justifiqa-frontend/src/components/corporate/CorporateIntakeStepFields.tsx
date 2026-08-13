@@ -59,7 +59,11 @@ export function CorporateIntakeStepFields({ step, draft, onChange }: Props) {
 
   return <div className="grid gap-4 md:grid-cols-2">
     <Card className="gap-3 rounded-2xl border-border bg-muted/40 p-5"><Badge variant="outline">Ringkasan intake</Badge><p className="font-semibold">{draft.businessName || 'Nama belum diisi'}</p><p className="text-sm text-muted-foreground">{draft.entityType} · {draft.kbliCodes.filter(Boolean).join(', ') || 'KBLI belum diisi'} · Pihak: {draft.corporateParties.length} · BO: {draft.beneficialOwners.length}</p></Card>
-    <label className="space-y-2 text-sm font-semibold">Referensi pembayaran<Input required value={draft.paymentGatewayRef} onChange={(event) => onChange({ paymentGatewayRef: event.target.value })} placeholder="Contoh: PG-2026-001" maxLength={64} className="min-h-10 rounded-xl border-border bg-background" /></label>
+    <Card className="gap-3 rounded-2xl border-border bg-muted/40 p-5 md:col-span-2">
+      <Badge variant="outline">Referensi pembayaran (server)</Badge>
+      <p className="text-sm text-muted-foreground">Referensi pembayaran diterbitkan server secara deterministik setelah intake berhasil. Tidak perlu diisi manual.</p>
+      <p className="text-xs text-muted-foreground">Kanal pembayaran sandbox belum dikonfigurasi. Referensi pembayaran akan tersedia untuk integrasi provider.</p>
+    </Card>
     <label className="flex items-start gap-3 rounded-xl border border-border bg-background p-4 text-sm font-semibold md:col-span-2"><input type="checkbox" checked={draft.acceptedScope} onChange={(event) => onChange({ acceptedScope: event.target.checked })} className="mt-0.5 size-5 shrink-0 accent-primary" />Saya menyetujui ruang lingkup layanan dan memahami bahwa pengajuan pemerintah tunduk pada pemeriksaan Notaris.</label>
   </div>;
 }

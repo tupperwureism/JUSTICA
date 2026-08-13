@@ -26,14 +26,27 @@ export async function deriveIdempotencyKey(namespace: string, value: string): Pr
   return (await sha256Hex(`${namespace}:${value}`)).slice(0, 48);
 }
 
-export async function verifyHmacSha256(options: {
-  body: string;
+type HmacVerificationOptions<TBody> = {
+  body: TBody;
   secret: string;
   signature: string;
   timestamp: string;
   nowMs?: number;
   maxSkewSeconds?: number;
-}): Promise<boolean> {
+};
+
+export async function verifyHmacSha256(
+  options: HmacVerificationOptions<string>,
+): Promise<boolean> {
+  return verifyHmacSha256Bytes({
+    ...options,
+    body: encoder.encode(options.body),
+  });
+}
+
+export async function verifyHmacSha256Bytes(
+  options: HmacVerificationOptions<Uint8Array>,
+): Promise<boolean> {
   const signature = normalizeHexSignature(options.signature);
   const timestampSeconds = Number(options.timestamp);
   const nowMs = options.nowMs ?? Date.now();
@@ -56,10 +69,14 @@ export async function verifyHmacSha256(options: {
     false,
     ["verify"],
   );
+  const prefix = encoder.encode(`${options.timestamp}.`);
+  const signedBytes = new Uint8Array(prefix.byteLength + options.body.byteLength);
+  signedBytes.set(prefix);
+  signedBytes.set(options.body, prefix.byteLength);
   return crypto.subtle.verify(
     "HMAC",
     key,
     hexToBytes(signature),
-    encoder.encode(`${options.timestamp}.${options.body}`),
+    signedBytes,
   );
 }

@@ -2827,6 +2827,33 @@ export type Database = {
           status: string
         }[]
       }
+      fn_process_corporate_payment_webhook_atomic: {
+        Args: {
+          p_case_id: string
+          p_escrow_id: string
+          p_event_type: string
+          p_expected_amount_idr: number
+          p_idempotency_key: string
+          p_order_id: string
+          p_payment_gateway_ref: string
+          p_provider_event_id: string
+          p_provider_name: string
+          p_raw_payload_sha256: string
+        }
+        Returns: {
+          case_stage: string
+          corporate_case_id: string
+          escrow_id: string
+          escrow_status: string
+          event_id: string
+          funded_milestone_count: number
+          order_id: string
+          order_status: string
+          provider_event_id: string
+          provider_event_status: Database["public"]["Enums"]["webhook_processed_status"]
+          replayed: boolean
+        }[]
+      }
       fn_process_ekyc_callback_atomic: {
         Args: {
           p_envelope_id: string

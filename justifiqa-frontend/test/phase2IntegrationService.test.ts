@@ -159,7 +159,6 @@ const intakeDraft = {
     controlBasis: 'OWNERSHIP' as const,
     percentage: '100',
   }],
-  paymentGatewayRef: 'PG-TEST-101',
   acceptedScope: true,
 };
 

@@ -134,7 +134,6 @@ export type IntakePayload = {
     controlBasis: string;
     percentage?: number;
   }>;
-  paymentGatewayRef: string;
   idempotencyKey: string;
 };
 
@@ -429,7 +428,6 @@ function toIntakePayload(
       controlBasis: o.controlBasis,
       percentage: o.percentage ? Number(o.percentage) : undefined,
     })),
-    paymentGatewayRef: draft.paymentGatewayRef.trim(),
     idempotencyKey,
   };
 }

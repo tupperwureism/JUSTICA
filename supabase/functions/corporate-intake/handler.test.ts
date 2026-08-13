@@ -42,7 +42,6 @@ const validPayload = {
       percentage: 100,
     },
   ],
-  paymentGatewayRef: "pg-ref-001",
   idempotencyKey: "intake-key-01",
 };
 
@@ -228,11 +227,22 @@ test("duplicate evidenceReference in BOs returns 400", async () => {
   assert.equal(body.code, "EVIDENCE_REFERENCE_DUPLICATE");
 });
 
-test("empty paymentGatewayRef returns 400", async () => {
-  const handler = createCorporateIntakeHandler(dependencies());
-  const broken = { ...validPayload, paymentGatewayRef: "" };
-  const response = await invoke(handler, broken);
+test("browser-supplied paymentGatewayRef is rejected as an unknown field", async () => {
+  let rpcCalls = 0;
+  const handler = createCorporateIntakeHandler(dependencies({
+    callRpc: async () => {
+      rpcCalls += 1;
+      return [];
+    },
+  }));
+  const response = await invoke(handler, {
+    ...validPayload,
+    paymentGatewayRef: "CLIENT-CONTROLLED-REF",
+  });
   assert.equal(response.status, 400);
+  const body = await response.json() as { code: string };
+  assert.equal(body.code, "UNKNOWN_FIELD");
+  assert.equal(rpcCalls, 0);
 });
 
 test("idempotencyKey exceeding 48 chars returns 400", async () => {
@@ -276,6 +286,8 @@ test("valid payload maps to snake_case RPC params and returns 200", async () => 
   assert.equal(p.p_client_id, clientId);
   assert.equal(p.p_entity_type, "PT_ORDINARY");
   assert.equal(p.p_idempotency_key, "intake-key-01");
+  assert.equal(p.p_payment_gateway_ref, `CORP-${orderId}`);
+  assert.equal(String(p.p_payment_gateway_ref).includes("pg-ref-001"), false);
   const bo = (p.p_beneficial_owners as Array<Record<string, unknown>>)[0];
   assert.equal(bo.declaration_version, 1);
   assert.equal(bo.evidence_reference, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
@@ -337,6 +349,29 @@ test("RPC actor mismatch maps to 403", async () => {
   });
   const response = await invoke(handler, validPayload);
   assert.equal(response.status, 403);
+});
+
+test("server-derived payment reference is stable across intake replay", async () => {
+  const references: unknown[] = [];
+  const handler = createCorporateIntakeHandler({
+    verifyUser: async () => userId,
+    callRpc: async (_name, params) => {
+      references.push((params as Record<string, unknown>).p_payment_gateway_ref);
+      return [{
+        order_id: orderId,
+        corporate_case_id: caseId,
+        escrow_id: escrowId,
+        pricing_catalog_id: catalogId,
+        quote_version: 1,
+        legal_scope_version: "2026.07",
+        total_amount_idr: "5000000",
+        replayed: references.length > 1,
+      }] as RpcRow[];
+    },
+  });
+  assert.equal((await invoke(handler, validPayload)).status, 200);
+  assert.equal((await invoke(handler, validPayload)).status, 200);
+  assert.deepEqual(references, [`CORP-${orderId}`, `CORP-${orderId}`]);
 });
 
 test("RPC replayed: true forwards 200 verbatim", async () => {

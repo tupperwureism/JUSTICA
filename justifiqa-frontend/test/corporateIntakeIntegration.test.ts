@@ -78,7 +78,6 @@ const validIntakeDraft: CorporateIntakeInput = {
     controlBasis: 'OWNERSHIP',
     percentage: '100',
   }],
-  paymentGatewayRef: 'PG-TEST-001',
   acceptedScope: true,
 };
 
@@ -319,7 +318,7 @@ test('acceptedScope is not sent to Edge Function', async () => {
   assert.equal(payloadKeys.includes('acceptedScope'), false);
 });
 
-test('paymentGatewayRef is included in payload', async () => {
+test('intake payload excludes browser-controlled payment reference', async () => {
   const gateway = new TrackingGateway();
   const service = makeService(gateway);
 
@@ -329,7 +328,7 @@ test('paymentGatewayRef is included in payload', async () => {
     idempotencyKey: KEY_PG_TEST,
   });
 
-  assert.equal(gateway.invokeCalls[0].payload.paymentGatewayRef, 'PG-TEST-001');
+  assert.equal('paymentGatewayRef' in gateway.invokeCalls[0].payload, false);
 });
 
 test('effectiveDate maps to effectiveFrom', async () => {
