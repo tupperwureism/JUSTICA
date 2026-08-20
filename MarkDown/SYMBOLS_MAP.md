@@ -5,10 +5,10 @@
 
 ## Cakupan
 
-- 224 source files dipindai.
-- 363 exported TypeScript symbols dalam 184 files.
-- 127 core PostgreSQL objects dari 396 deklarasi migrasi.
-- 156 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
+- 237 source files dipindai.
+- 385 exported TypeScript symbols dalam 196 files.
+- 132 core PostgreSQL objects dari 406 deklarasi migrasi.
+- 159 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 - Migrasi `supabase/` diprioritaskan di atas salinan `database/`; peta deklarasi ini bukan rekonstruksi state database setelah seluruh migrasi.
 - Indeks SQL sengaja tidak dimuat agar peta tetap ringkas; cari dengan `rg "CREATE .*INDEX" database supabase` bila diperlukan.
@@ -36,13 +36,21 @@
 | components/TierSelectorHeader.tsx | 6f TierSelectorHeader |
 | components/admin/AdminComplianceTab.tsx | 11f AdminComplianceTab |
 | components/admin/AdminDisputeCenterTab.tsx | 19f AdminDisputeCenterTab |
-| components/admin/AdminHeaderAndTabs.tsx | 5t AdminTabKey, 22f AdminHeaderAndTabs |
+| components/admin/AdminHeaderAndTabs.tsx | 5t AdminTabKey, 23f AdminHeaderAndTabs |
+| components/admin/AdminNotaryAssignmentPanel.tsx | 13f AdminNotaryAssignmentPanel |
 | components/admin/AdminSettingsPanel.tsx | 8f AdminSettingsPanel |
 | components/admin/AdminVerificationQueueTab.tsx | 11f AdminVerificationQueueTab |
+| components/advocate/AdvocateDashboardController.tsx | 5f AdvocateDashboardController |
+| components/advocate/AdvocateDashboardTabs.tsx | 23f AdvocateDashboardTabs |
+| components/advocate/AdvocateDeliverablePanel.tsx | 12f AdvocateDeliverablePanel |
 | components/advocate/AdvocateE2EEChatPanel.tsx | 16f AdvocateE2EEChatPanel |
 | components/advocate/AdvocateE2EEHeaderAndSla.tsx | 13f AdvocateE2EEHeaderAndSla |
+| components/advocate/AdvocateE2EERoomController.tsx | 16f AdvocateE2EERoomController |
 | components/advocate/AdvocateGreetingCard.tsx | 13f AdvocateGreetingCard |
 | components/advocate/AdvocateHeaderAndTabs.tsx | 8t AdvocateTabKey, 33f AdvocateHeaderAndTabs |
+| components/advocate/AdvocateProBonoPanel.tsx | 12f AdvocateProBonoPanel |
+| components/advocate/AdvocateSettingsPanel.tsx | 8f AdvocateSettingsPanel |
+| components/advocate/AdvocateWalletPanel.tsx | 12f AdvocateWalletPanel |
 | components/advocate/CommandCenterActiveCasesTable.tsx | 13f CommandCenterActiveCasesTable |
 | components/advocate/ScheduleManagementCard.tsx | 6t ScheduleDayKey, 7t ScheduleSlots, 20f ScheduleManagementCard |
 | components/auth/AdvocateAuthIntro.tsx | 7f AdvocateAuthIntro |
@@ -70,6 +78,7 @@
 | components/client/ClientActiveConsultationsTable.tsx | 9v ClientActiveConsultationsTable |
 | components/client/ClientCatalogFilterBar.tsx | 5i ClientCatalogFilterBarProps, 12v ClientCatalogFilterBar |
 | components/client/ClientCatalogTab.tsx | 6i ClientCatalogTabProps, 14v ClientCatalogTab |
+| components/client/ClientDisputeCenterTab.tsx | 16f ClientDisputeCenterTab |
 | components/client/ClientGreetingCard.tsx | 12v ClientGreetingCard |
 | components/client/ClientHeaderAndTabs.tsx | 16f ClientHeaderAndTabs |
 | components/client/ClientHistoryDocumentsTable.tsx | 8v ClientHistoryDocumentsTable |
@@ -78,6 +87,7 @@
 | components/client/ClientOverviewTab.tsx | 7i ClientOverviewTabProps, 15v ClientOverviewTab |
 | components/client/ClientOverviewTables.tsx | 15v ClientOverviewTables |
 | components/client/ClientTabNav.tsx | 17f ClientTabNav |
+| components/client/ClientWhistleblowingModal.tsx | 19f ClientWhistleblowingModal |
 | components/client/EscrowPaymentForm.tsx | 13v EscrowPaymentForm |
 | components/client/EscrowStatusBanner.tsx | 7i EscrowStatusBannerProps, 12v EscrowStatusBanner |
 | components/client/ProBonoApplicationForm.tsx | 6v ProBonoApplicationForm |
@@ -123,6 +133,7 @@
 | components/document/DocumentDraftPreview.tsx | 6f DocumentDraftPreview |
 | components/document/DocumentDraftingForm.tsx | 18f DocumentDraftingForm |
 | components/gateway/AdvocateQuickProfile.tsx | 11v AdvocateQuickProfile |
+| components/gateway/AdvocateQuickStats.tsx | 3f AdvocateQuickStats |
 | components/gateway/HeroSearchSection.tsx | 21v HeroSearchSection |
 | components/gateway/NavbarGateway.tsx | 15v NavbarGateway |
 | components/gateway/PortalCardItem.tsx | 20v PortalCardItem |
@@ -159,7 +170,8 @@
 | hooks/useCorporateEvidenceUploads.ts | 11t AttemptCheckpoint, 13t CorporateEvidenceAttempt, 26t CorporateEvidenceTaskView, 31t CorporateEvidenceAdapter, 84f useCorporateEvidenceUploads |
 | hooks/useDocumentDrafting.ts | 7f useDocumentDrafting |
 | hooks/useEkycIntegration.ts | 5f useEkycIntegration |
-| hooks/useNotaryWorkspaceIntegration.ts | 8f useNotaryWorkspaceIntegration |
+| hooks/useModalLifecycle.ts | 3f useModalLifecycle |
+| hooks/useNotaryWorkspaceIntegration.ts | 9f useNotaryWorkspaceIntegration |
 | hooks/usePhase2Mutation.ts | 13f usePhase2Mutation |
 | hooks/usePhase2Query.ts | 4f usePhase2Query |
 | hooks/usePortalSession.ts | 4f usePortalSession |
@@ -169,7 +181,7 @@
 | lib/supabase.ts | 20v supabase |
 | lib/utils.ts | 4f cn |
 | models/corporateIntake.ts | 1v CORPORATE_ENTITY_TYPES, 2v CORPORATE_PARTY_TYPES, 3v CORPORATE_PARTY_ROLES, 11v BENEFICIAL_OWNER_CONTROL_BASES, 19t CorporateEntityType, 20t CorporatePartyType, 21t CorporatePartyRole, 22t BeneficialOwnerControlBasis, 24t CorporatePartyDraft, 34t BeneficialOwnerDraft, 42t CorporateIntakeDraft, 55t CorporateIntakeValidationIssue, 60v createEmptyCorporateParty, 70v createEmptyBeneficialOwner, 80v createEmptyCorporateIntakeDraft, 113v addCorporateParty, 118v removeCorporateParty, 126v addBeneficialOwner, 131v removeBeneficialOwner, 139v addKbliCode, 144v removeKbliCode, 232f validateCorporateIntake, 242f validateCorporateIntakeStep |
-| pages/AdminDashboardPage.tsx | 10f AdminDashboardPage |
+| pages/AdminDashboardPage.tsx | 11f AdminDashboardPage |
 | pages/AdvocateAuthPage.tsx | 15v AdvocateAuthPage |
 | pages/AdvocateDashboardPage.tsx | 20v AdvocateDashboardPage |
 | pages/AiNavigatorPage.tsx | 10v AiNavigatorPage |
@@ -191,8 +203,8 @@
 | services/intakeError.ts | 3v INTAKE_ERROR_ALLOWLIST, 11t IntakeErrorCode, 13v INTAKE_UNKNOWN_FALLBACK, 36f parseIntakeErrorCode, 52f parseEvidenceErrorCode |
 | services/mockConsultationService.ts | 8v TIER_CATALOG, 65v MOCK_ADVOCATE_SLOTS, 98c MockConsultationService |
 | services/mockIracService.ts | 8c MockIracService |
-| services/phase2IntegrationService.ts | 7t Phase2PortalRole, 8t Phase2Actor, 10t CorporateEscrowStatus, 21t CorporateEscrowProjection, 29t ClientCorporateWorkspace, 39t NotaryWorkspace, 69t EkycWorkspace, 99t CorporateIntakeInput, 101t SubmitCorporateIntakeResult, 112t IntakePayload, 140i Phase2IntegrationGateway, 155t Phase2IntegrationErrorCode, 180c Phase2IntegrationError, 215f createPhase2IntegrationService |
-| services/phase2SupabaseGateway.ts | 15x parseIntakeErrorCode, 47v phase2SupabaseGateway, 267v phase2IntegrationService |
+| services/phase2IntegrationService.ts | 7t Phase2PortalRole, 8t Phase2Actor, 10t CorporateEscrowStatus, 21t CorporateEscrowProjection, 29t ClientCorporateWorkspace, 39t NotaryWorkspace, 69t EkycWorkspace, 92t EligibleCaseProjection, 105t VerifiedNotaryProjection, 114t AssignmentContext, 119t AssignNotaryResult, 125t ApproveCddResult, 132t CorporateIntakeInput, 134t SubmitCorporateIntakeResult, 145t IntakePayload, 173i Phase2IntegrationGateway, 202t Phase2IntegrationErrorCode, 239c Phase2IntegrationError, 274f createPhase2IntegrationService |
+| services/phase2SupabaseGateway.ts | 15x parseIntakeErrorCode, 47v phase2SupabaseGateway, 331v phase2IntegrationService, 335x AssignmentContext, 335x EligibleCaseProjection, 335x VerifiedNotaryProjection, 335x AssignNotaryResult, 335x ApproveCddResult |
 | services/portalAuthService.ts | 12f signInPortal, 22f registerPortal, 39f signOutPortal, 44f authErrorMessage |
 | services/roomSessionService.ts | 3i RoomSession, 11f resolveRoomSession |
 | services/vaultDeliveryService.ts | 4i VaultDocument, 23f getVaultDocument, 41f createVaultDownloadUrl, 47f releaseVaultEscrow |
@@ -212,8 +224,10 @@
 | function | private.fn_enforce_canonical_intake_snapshot() | S/20260729082554_enforce_canonical_snapshots_and_repair_participant_rls.sql:L31 |
 | function | public.fn_activate_corporate_pricing_catalog( p_catalog_id UUID ) | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L242 |
 | function | public.fn_append_compliance_workflow_event( p_corporate_case_id UUID, p_escrow_id UUID, p… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L30 |
+| function | public.fn_approve_notary_cdd_atomic( p_case_id UUID, p_assessment_id UUID, p_notary_id UU… | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L258 |
 | function | public.fn_assert_completed_envelope_anchor() | S/20260722000021_phase2_holistic_security_hardening.sql:L55 |
 | function | public.fn_assert_service_order_financial_reconciliation() | S/20260722000016_p2_b3_service_orders_expand_only.sql:L439 |
+| function | public.fn_assign_corporate_notary_atomic( p_case_id UUID, p_notary_id UUID, p_admin_id UU… | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L104 |
 | function | public.fn_audit_corporate_escrow_lock() | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L138 |
 | function | public.fn_audit_escrow_state_transition() | S/20260728000025_phase2_backend_forensic_hardening.sql:L91 +1 |
 | function | public.fn_audit_signing_global_transition() | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L200 |
@@ -263,6 +277,7 @@
 | function | public.fn_sync_notary_submission_contract() | S/20260722000020_p2_b8_notary_workspace_and_kemenkumham_seams.sql:L56 |
 | function | public.fn_touch_corporate_pricing_record_updated_at() | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L126 |
 | function | public.fn_touch_corporate_record_updated_at() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L279 |
+| function | public.fn_touch_notary_profiles() | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L35 |
 | function | public.fn_transition_corporate_service_case( p_case_id UUID, p_expected_stage VARCHAR, p_… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L748 +1 |
 | function | public.fn_validate_corporate_service_case_order() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L250 |
 | function | public.fn_validate_document_integrity_anchor() | S/20260722000021_phase2_holistic_security_hardening.sql:L20 |
@@ -300,6 +315,8 @@
 | table | public.document_integrity_anchors | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L39 |
 | table | public.ekyc_verification_logs | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L17 |
 | table | public.government_submission_jobs | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L189 |
+| table | public.notary_profiles | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L7 |
+| table | public.notary_workspace_idempotency_records | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L78 |
 | table | public.payment_milestones | S/20260722000016_p2_b3_service_orders_expand_only.sql:L317 |
 | table | public.payout_idempotency_keys | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L26 |
 | table | public.provider_webhook_events | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L9 |

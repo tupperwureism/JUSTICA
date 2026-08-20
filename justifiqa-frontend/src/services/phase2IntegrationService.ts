@@ -89,11 +89,44 @@ export type EkycWorkspace = {
   }>;
 };
 
-type CddAssessmentInput = {
-  assessmentId: string;
+export type EligibleCaseProjection = {
   caseId: string;
-  reviewerId: string;
-  rulesVersion: string;
+  orderId: string;
+  entityType: string;
+  proposedName: string;
+  currentStage: string;
+  domicileCity: string;
+  domicileProvince: string;
+  escrowStatus: string;
+  fundsLockedAt: string | null;
+  assignedNotaryId: string | null;
+};
+
+export type VerifiedNotaryProjection = {
+  notaryId: string;
+  fullName: string;
+  licenseNumber: string;
+  jurisdictionCity: string;
+  jurisdictionProvince: string;
+  status: string;
+};
+
+export type AssignmentContext = {
+  cases: EligibleCaseProjection[];
+  notaries: VerifiedNotaryProjection[];
+};
+
+export type AssignNotaryResult = {
+  caseId: string;
+  assignedNotaryId: string;
+  replayed: boolean;
+};
+
+export type ApproveCddResult = {
+  caseId: string;
+  assessmentId: string;
+  currentStage: string;
+  replayed: boolean;
 };
 
 export type CorporateIntakeInput = CorporateIntakeDraft;
@@ -141,9 +174,23 @@ export interface Phase2IntegrationGateway {
   getActor(): Promise<Phase2Actor | null>;
   getClientCorporateWorkspace(userId: string): Promise<ClientCorporateWorkspace | null>;
   getNotaryWorkspace(userId: string): Promise<NotaryWorkspace | null>;
+  listNotaryWorkspaces?(userId: string): Promise<NotaryWorkspace[]>;
   getEkycWorkspace(userId: string): Promise<EkycWorkspace | null>;
-  approveCddAssessment(input: CddAssessmentInput): Promise<{
+  listAssignmentContext?(): Promise<AssignmentContext>;
+  assignNotary?(input: {
+    caseId: string;
+    notaryId: string;
+    idempotencyKey: string;
+  }): Promise<AssignNotaryResult>;
+  approveCddAssessment(input: {
     assessmentId: string;
+    caseId?: string;
+    rulesVersion?: string;
+    idempotencyKey?: string;
+  }): Promise<{
+    assessmentId: string;
+    caseId?: string;
+    currentStage?: string;
     replayed: boolean;
   }>;
   invokeCorporateIntake(payload: IntakePayload): Promise<{
@@ -162,7 +209,13 @@ export type Phase2IntegrationErrorCode =
   | 'INTAKE_ACTOR_FORBIDDEN'
   | 'BROWSER_BOUNDARY_UNAVAILABLE'
   | 'INTAKE_SERVER_UNAVAILABLE'
-  | 'PRICING_CATALOG_UNAVAILABLE';
+  | 'PRICING_CATALOG_UNAVAILABLE'
+  | 'ASSIGNMENT_CONFLICT'
+  | 'NOTARY_NOT_VERIFIED'
+  | 'ESCROW_NOT_HELD'
+  | 'CDD_NOT_READY'
+  | 'STAGE_CONFLICT'
+  | 'IDEMPOTENCY_CONFLICT';
 
 const ERROR_MESSAGES: Record<Phase2IntegrationErrorCode, string> = {
   SESSION_REQUIRED: 'Sesi Anda tidak tersedia. Silakan masuk kembali lalu coba ulang.',
@@ -175,6 +228,12 @@ const ERROR_MESSAGES: Record<Phase2IntegrationErrorCode, string> = {
   BROWSER_BOUNDARY_UNAVAILABLE: 'Tindakan ini memerlukan endpoint server terotorisasi yang belum tersedia untuk browser.',
   INTAKE_SERVER_UNAVAILABLE: 'Layanan Corporate Intake sedang tidak tersedia. Coba beberapa saat lagi.',
   PRICING_CATALOG_UNAVAILABLE: 'Layanan belum dapat menerima intake karena katalog harga aktif belum tersedia. Hubungi admin atau coba lagi nanti.',
+  ASSIGNMENT_CONFLICT: 'Perkara ini sudah ditugaskan ke Notaris lain atau terjadi konflik penugasan.',
+  NOTARY_NOT_VERIFIED: 'Notaris yang dipilih belum memiliki kualifikasi terverifikasi aktif.',
+  ESCROW_NOT_HELD: 'Dana escrow perkara ini belum terkunci di rekening penampung.',
+  CDD_NOT_READY: 'Prasyarat screening CDD atau verifikasi Beneficial Owner belum lengkap.',
+  STAGE_CONFLICT: 'Status siklus hidup perkara tidak memungkinkan tindakan ini.',
+  IDEMPOTENCY_CONFLICT: 'Kunci idempotensi sudah pernah digunakan dengan data berbeda.',
 };
 
 export class Phase2IntegrationError extends Error {
@@ -220,10 +279,68 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
   };
   const inFlightIntake = new Map<string, InFlightIntake>();
 
+  type InFlightAssign = {
+    caseId: string;
+    notaryId: string;
+    promise: Promise<AssignNotaryResult>;
+  };
+  const inFlightAssign = new Map<string, InFlightAssign>();
+
   return {
     async loadClientCorporateWorkspace() {
       const actor = await requireActor(gateway, ['CLIENT']);
       return gateway.getClientCorporateWorkspace(actor.userId);
+    },
+
+    async listAssignmentContext(): Promise<AssignmentContext> {
+      await requireActor(gateway, ['ADMIN']);
+      if (typeof gateway.listAssignmentContext !== 'function') {
+        throw new Phase2IntegrationError('BROWSER_BOUNDARY_UNAVAILABLE');
+      }
+      return gateway.listAssignmentContext();
+    },
+
+    assignNotary(input: {
+      caseId: string;
+      notaryId: string;
+      idempotencyKey: string;
+    }): Promise<AssignNotaryResult> {
+      if (!UUID_PATTERN.test(input.caseId) || !UUID_PATTERN.test(input.notaryId) || !UUID_PATTERN.test(input.idempotencyKey)) {
+        return Promise.reject(new Phase2IntegrationError('INVALID_PAYLOAD'));
+      }
+
+      const inFlightKey = `assign:${input.idempotencyKey}`;
+      const existing = inFlightAssign.get(inFlightKey);
+      if (existing) {
+        if (existing.caseId !== input.caseId || existing.notaryId !== input.notaryId) {
+          return requireActor(gateway, ['ADMIN']).then(() => {
+            throw new Phase2IntegrationError('IDEMPOTENCY_CONFLICT');
+          });
+        }
+        return existing.promise;
+      }
+
+      const executeAssign = async (): Promise<AssignNotaryResult> => {
+        await requireActor(gateway, ['ADMIN']);
+        if (typeof gateway.assignNotary !== 'function') {
+          throw new Phase2IntegrationError('BROWSER_BOUNDARY_UNAVAILABLE');
+        }
+        return gateway.assignNotary(input);
+      };
+
+      const promise = executeAssign().finally(() => {
+        if (inFlightAssign.get(inFlightKey)?.promise === promise) {
+          inFlightAssign.delete(inFlightKey);
+        }
+      });
+
+      inFlightAssign.set(inFlightKey, {
+        caseId: input.caseId,
+        notaryId: input.notaryId,
+        promise,
+      });
+
+      return promise;
     },
 
     submitCorporateIntake(input: {
@@ -293,16 +410,37 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
       return workspace;
     },
 
-    async loadNotaryWorkspace() {
+    async loadNotaryWorkspace(caseId?: string): Promise<NotaryWorkspace | null> {
       const actor = await requireActor(gateway, ['ADVOCATE']);
+      if (caseId && typeof gateway.listNotaryWorkspaces === 'function') {
+        const workspaces = await gateway.listNotaryWorkspaces(actor.userId);
+        return workspaces.find((w) => w.caseId === caseId) ?? null;
+      }
       return gateway.getNotaryWorkspace(actor.userId);
     },
 
-    async approveNotaryCdd(input: { caseId: string; rulesVersion: string }) {
+    async loadNotaryWorkspaces(): Promise<NotaryWorkspace[]> {
+      const actor = await requireActor(gateway, ['ADVOCATE']);
+      if (typeof gateway.listNotaryWorkspaces === 'function') {
+        return gateway.listNotaryWorkspaces(actor.userId);
+      }
+      const single = await gateway.getNotaryWorkspace(actor.userId);
+      return single ? [single] : [];
+    },
+
+    async approveNotaryCdd(input: { caseId: string; rulesVersion: string; idempotencyKey?: string }) {
       const actor = await requireActor(gateway, ['ADVOCATE']);
       if (!UUID_PATTERN.test(input.caseId)) throw new Phase2IntegrationError('INVALID_PAYLOAD');
       const rulesVersion = requireText(input.rulesVersion, 32);
-      const workspace = await gateway.getNotaryWorkspace(actor.userId);
+      let workspace: NotaryWorkspace | null = null;
+      if (typeof gateway.listNotaryWorkspaces === 'function') {
+        const workspaces = await gateway.listNotaryWorkspaces(actor.userId);
+        workspace = workspaces.find((w) => w.caseId === input.caseId) ?? null;
+      }
+      if (!workspace) {
+        workspace = await gateway.getNotaryWorkspace(actor.userId);
+      }
+
       if (!workspace || workspace.caseId !== input.caseId) {
         throw new Phase2IntegrationError('RESOURCE_NOT_FOUND');
       }
@@ -318,7 +456,7 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
         throw new Phase2IntegrationError('INVALID_PAYLOAD');
       }
       if (assessment.decision === 'APPROVED') {
-        return { assessmentId: assessment.assessmentId, replayed: true };
+        return { assessmentId: assessment.assessmentId, caseId: input.caseId, currentStage: workspace.currentStage, replayed: true };
       }
       if (assessment.decision !== 'PENDING') {
         throw new Phase2IntegrationError('INVALID_PAYLOAD');
@@ -326,8 +464,8 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
       return gateway.approveCddAssessment({
         assessmentId: assessment.assessmentId,
         caseId: input.caseId,
-        reviewerId: actor.userId,
         rulesVersion,
+        idempotencyKey: input.idempotencyKey,
       });
     },
 

@@ -3,7 +3,7 @@
 > GENERATED FILE — jangan edit manual. Baca file ini secara on-demand setelah `SYMBOLS_MAP.md` mengarahkan ke area database.
 > Perbarui/verifikasi bersama peta utama memakai `node Tools/generate_symbol_map.mjs [--check]`.
 
-- 156 canonical policies/triggers.
+- 159 canonical policies/triggers.
 - Lokasi memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 
 | Kind | Symbol/relation | Deklarasi pilihan/terbaru |
@@ -38,9 +38,9 @@
 | policy | rls_chat_sessions_metadata_participant_insert ON public.chat_sessions_metadata | S/20260721000010_align_frontend_schema_contracts.sql:L458 |
 | policy | rls_chat_sessions_metadata_participant_read ON public.chat_sessions_metadata | S/20260721000010_align_frontend_schema_contracts.sql:L452 |
 | policy | rls_chat_sessions_metadata_participants ON chat_sessions_metadata | S/20260715000002_domain2_consultation_fairclock_sla.sql:L148 +1 |
-| policy | rls_compliance_assessments_restricted_insert ON public.compliance_assessments | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L480 |
+| policy | rls_compliance_assessments_restricted_insert ON public.compliance_assessments | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L415 +1 |
 | policy | rls_compliance_assessments_restricted_read ON public.compliance_assessments | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L459 |
-| policy | rls_compliance_assessments_restricted_update ON public.compliance_assessments | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L504 |
+| policy | rls_compliance_assessments_restricted_update ON public.compliance_assessments | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L420 +1 |
 | policy | rls_compliance_workflow_events_compliance_read ON public.compliance_workflow_events_worm | S/20260722000022_p2_b5a_ekyc_and_escrow_schema.sql:L300 |
 | policy | rls_consultation_slots_advocate_manage ON public.consultation_slots | S/20260721000010_align_frontend_schema_contracts.sql:L321 +2 |
 | policy | rls_consultation_slots_public_read ON consultation_slots | S/20260715000002_domain2_consultation_fairclock_sla.sql:L36 +1 |
@@ -80,6 +80,8 @@
 | policy | rls_legal_opinions_client_access ON legal_opinions | S/20260715000004_domain4_legal_opinions_worm_emeterai.sql:L65 +1 |
 | policy | rls_legal_opinions_client_read ON public.legal_opinions | S/20260721000010_align_frontend_schema_contracts.sql:L354 |
 | policy | rls_legal_opinions_mediator_read ON public.legal_opinions | S/20260721000010_align_frontend_schema_contracts.sql:L613 |
+| policy | rls_notary_profiles_admin_read ON public.notary_profiles | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L56 |
+| policy | rls_notary_profiles_self_read ON public.notary_profiles | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L68 |
 | policy | rls_offline_handshakes_participant_access ON offline_handshakes_totp | S/20260715000002_domain2_consultation_fairclock_sla.sql:L114 +1 |
 | policy | rls_offline_handshakes_participant_insert ON public.offline_handshakes_totp | S/20260721000010_align_frontend_schema_contracts.sql:L442 |
 | policy | rls_offline_handshakes_participant_read ON public.offline_handshakes_totp | S/20260721000010_align_frontend_schema_contracts.sql:L436 |
@@ -150,6 +152,7 @@
 | trigger | trg_touch_corporate_pricing_milestones ON public.corporate_pricing_milestones | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L369 |
 | trigger | trg_touch_corporate_service_cases ON public.corporate_service_cases | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L290 |
 | trigger | trg_touch_government_submission_jobs ON public.government_submission_jobs | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L302 |
+| trigger | trg_touch_notary_profiles ON public.notary_profiles | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L48 |
 | trigger | trg_validate_corporate_service_case_order ON public.corporate_service_cases | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L275 |
 | trigger | trg_validate_document_integrity_anchor ON public.document_integrity_anchors | S/20260722000021_phase2_holistic_security_hardening.sql:L51 |
 | trigger | trg_validate_signing_envelope_case ON public.signing_envelopes | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L250 |

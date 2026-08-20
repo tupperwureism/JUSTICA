@@ -101,65 +101,160 @@ export const phase2SupabaseGateway: Phase2IntegrationGateway = {
     } satisfies ClientCorporateWorkspace;
   },
 
-  async getNotaryWorkspace(userId) {
+  async listNotaryWorkspaces(userId) {
     const cases = await supabase.from('corporate_service_cases')
       .select('case_id,proposed_name,entity_type,current_stage,domicile_city,domicile_province,kbli_snapshot,created_at')
       .eq('assigned_notary_id', userId)
-      .order('created_at', { ascending: false }).limit(1);
+      .order('created_at', { ascending: false });
     if (cases.error) throw queryError(cases.error.message);
-    const corporateCase = cases.data[0];
-    if (!corporateCase) return null;
+    if (!cases.data.length) return [];
 
-    const [owners, assessments, submissions] = await Promise.all([
-      supabase.from('beneficial_owners')
-        .select('beneficial_owner_id,natural_person_name,control_basis,percentage,verification_status')
-        .eq('case_id', corporateCase.case_id)
-        .order('declaration_version', { ascending: false }),
-      supabase.from('compliance_assessments')
-        .select('assessment_id,pep_check_status,sanctions_check_status,reviewer_decision,rules_version')
-        .eq('case_id', corporateCase.case_id)
-        .eq('assessment_level', 'CDD')
-        .eq('reviewer_id', userId)
-        .order('created_at', { ascending: false }).limit(1),
-      supabase.from('government_submission_jobs')
-        .select('job_id,target_system,submission_status,external_registration_number,external_reference_id,created_at')
-        .eq('case_id', corporateCase.case_id)
-        .order('created_at', { ascending: false }),
-    ]);
-    if (owners.error) throw queryError(owners.error.message);
-    if (assessments.error) throw queryError(assessments.error.message);
-    if (submissions.error) throw queryError(submissions.error.message);
+    const workspaces = await Promise.all(
+      cases.data.map(async (corporateCase) => {
+        const [owners, assessments, submissions] = await Promise.all([
+          supabase.from('beneficial_owners')
+            .select('beneficial_owner_id,natural_person_name,control_basis,percentage,verification_status')
+            .eq('case_id', corporateCase.case_id)
+            .order('declaration_version', { ascending: false }),
+          supabase.from('compliance_assessments')
+            .select('assessment_id,pep_check_status,sanctions_check_status,reviewer_decision,rules_version')
+            .eq('case_id', corporateCase.case_id)
+            .eq('assessment_level', 'CDD')
+            .order('created_at', { ascending: false }).limit(1),
+          supabase.from('government_submission_jobs')
+            .select('job_id,target_system,submission_status,external_registration_number,external_reference_id,created_at')
+            .eq('case_id', corporateCase.case_id)
+            .order('created_at', { ascending: false }),
+        ]);
+        if (owners.error) throw queryError(owners.error.message);
+        if (assessments.error) throw queryError(assessments.error.message);
+        if (submissions.error) throw queryError(submissions.error.message);
 
-    return {
-      caseId: corporateCase.case_id,
-      caseCode: corporateCase.case_id,
-      entityName: corporateCase.proposed_name,
-      entityType: corporateCase.entity_type,
-      currentStage: corporateCase.current_stage,
-      domicile: `${corporateCase.domicile_city}, ${corporateCase.domicile_province}`,
-      kbliLabel: kbliLabel(corporateCase.kbli_snapshot),
-      beneficialOwners: owners.data.map((owner) => ({
-        id: owner.beneficial_owner_id,
-        name: owner.natural_person_name,
-        controlBasis: owner.control_basis,
-        percentage: owner.percentage,
-        verificationStatus: owner.verification_status,
-      })),
-      cddAssessment: assessments.data[0] ? {
-        assessmentId: assessments.data[0].assessment_id,
-        pepStatus: assessments.data[0].pep_check_status,
-        sanctionsStatus: assessments.data[0].sanctions_check_status,
-        decision: assessments.data[0].reviewer_decision,
-        rulesVersion: assessments.data[0].rules_version,
-      } : null,
-      submissions: submissions.data.map((submission) => ({
-        id: submission.job_id,
-        system: submission.target_system,
-        status: submission.submission_status,
-        reference: submission.external_registration_number
-          ?? submission.external_reference_id,
-      })),
-    } satisfies NotaryWorkspace;
+        return {
+          caseId: corporateCase.case_id,
+          caseCode: corporateCase.case_id,
+          entityName: corporateCase.proposed_name,
+          entityType: corporateCase.entity_type,
+          currentStage: corporateCase.current_stage,
+          domicile: `${corporateCase.domicile_city}, ${corporateCase.domicile_province}`,
+          kbliLabel: kbliLabel(corporateCase.kbli_snapshot),
+          beneficialOwners: owners.data.map((owner) => ({
+            id: owner.beneficial_owner_id,
+            name: owner.natural_person_name,
+            controlBasis: owner.control_basis,
+            percentage: owner.percentage,
+            verificationStatus: owner.verification_status,
+          })),
+          cddAssessment: assessments.data[0] ? {
+            assessmentId: assessments.data[0].assessment_id,
+            pepStatus: assessments.data[0].pep_check_status,
+            sanctionsStatus: assessments.data[0].sanctions_check_status,
+            decision: assessments.data[0].reviewer_decision,
+            rulesVersion: assessments.data[0].rules_version,
+          } : null,
+          submissions: submissions.data.map((submission) => ({
+            id: submission.job_id,
+            system: submission.target_system,
+            status: submission.submission_status,
+            reference: submission.external_registration_number
+              ?? submission.external_reference_id,
+          })),
+        } satisfies NotaryWorkspace;
+      }),
+    );
+
+    return workspaces;
+  },
+
+  async getNotaryWorkspace(userId) {
+    if (typeof phase2SupabaseGateway.listNotaryWorkspaces === 'function') {
+      const workspaces = await phase2SupabaseGateway.listNotaryWorkspaces(userId);
+      return workspaces[0] ?? null;
+    }
+    return null;
+  },
+
+  async listAssignmentContext() {
+    const { data, error } = await supabase.functions.invoke<{
+      ok: boolean;
+      data: {
+        cases: Array<{
+          caseId: string;
+          orderId: string;
+          entityType: string;
+          proposedName: string;
+          currentStage: string;
+          domicileCity: string;
+          domicileProvince: string;
+          escrowStatus: string;
+          fundsLockedAt: string | null;
+          assignedNotaryId: string | null;
+        }>;
+        notaries: Array<{
+          notaryId: string;
+          fullName: string;
+          licenseNumber: string;
+          jurisdictionCity: string;
+          jurisdictionProvince: string;
+          status: string;
+        }>;
+      };
+    }>('notary-workspace', {
+      body: { action: 'list_assignment_context' },
+    });
+
+    if (error || !data || !data.ok) {
+      throw queryError(error?.message ?? 'Gagal memuat daftar penugasan.');
+    }
+    return data.data;
+  },
+
+  async assignNotary(input) {
+    const { data, error } = await supabase.functions.invoke<{
+      ok: boolean;
+      data: {
+        caseId: string;
+        assignedNotaryId: string;
+        replayed: boolean;
+      };
+    }>('notary-workspace', {
+      body: {
+        action: 'assign_notary',
+        caseId: input.caseId,
+        notaryId: input.notaryId,
+        idempotencyKey: input.idempotencyKey,
+      },
+    });
+
+    if (error || !data || !data.ok) {
+      throw queryError(error?.message ?? 'Gagal menugaskan notaris.');
+    }
+    return data.data;
+  },
+
+  async approveCddAssessment(input) {
+    const { data, error } = await supabase.functions.invoke<{
+      ok: boolean;
+      data: {
+        caseId: string;
+        assessmentId: string;
+        currentStage: string;
+        replayed: boolean;
+      };
+    }>('notary-workspace', {
+      body: {
+        action: 'approve_cdd',
+        caseId: input.caseId,
+        assessmentId: input.assessmentId,
+        rulesVersion: input.rulesVersion,
+        idempotencyKey: input.idempotencyKey ?? crypto.randomUUID(),
+      },
+    });
+
+    if (error || !data || !data.ok) {
+      throw queryError(error?.message ?? 'Gagal menyetujui CDD.');
+    }
+    return data.data;
   },
 
   async getEkycWorkspace(userId) {
@@ -220,37 +315,6 @@ export const phase2SupabaseGateway: Phase2IntegrationGateway = {
     } satisfies EkycWorkspace;
   },
 
-  async approveCddAssessment(input) {
-    const now = new Date().toISOString();
-    const saved = await supabase.from('compliance_assessments').update({
-      reviewer_decision: 'APPROVED',
-      assessed_at: now,
-      updated_at: now,
-    })
-      .eq('assessment_id', input.assessmentId)
-      .eq('case_id', input.caseId)
-      .eq('reviewer_id', input.reviewerId)
-      .eq('rules_version', input.rulesVersion)
-      .eq('reviewer_decision', 'PENDING')
-      .in('pep_check_status', ['NO_MATCH', 'NOT_APPLICABLE'])
-      .in('sanctions_check_status', ['NO_MATCH', 'NOT_APPLICABLE'])
-      .select('assessment_id').maybeSingle();
-    if (saved.error) throw queryError(saved.error.message);
-    if (saved.data) return { assessmentId: saved.data.assessment_id, replayed: false };
-
-    const replay = await supabase.from('compliance_assessments')
-      .select('assessment_id,reviewer_decision')
-      .eq('assessment_id', input.assessmentId)
-      .eq('case_id', input.caseId)
-      .eq('reviewer_id', input.reviewerId)
-      .maybeSingle();
-    if (replay.error) throw queryError(replay.error.message);
-    if (replay.data?.reviewer_decision === 'APPROVED') {
-      return { assessmentId: replay.data.assessment_id, replayed: true };
-    }
-    throw queryError('CDD_ASSESSMENT_STATE_CONFLICT');
-  },
-
   async invokeCorporateIntake(payload: IntakePayload) {
     const { data, error } = await supabase.functions.invoke<SubmitCorporateIntakeResult>(
       'corporate-intake',
@@ -267,3 +331,11 @@ export const phase2SupabaseGateway: Phase2IntegrationGateway = {
 export const phase2IntegrationService = createPhase2IntegrationService(
   phase2SupabaseGateway,
 );
+
+export type {
+  AssignmentContext,
+  EligibleCaseProjection,
+  VerifiedNotaryProjection,
+  AssignNotaryResult,
+  ApproveCddResult,
+} from './phase2IntegrationService.ts';

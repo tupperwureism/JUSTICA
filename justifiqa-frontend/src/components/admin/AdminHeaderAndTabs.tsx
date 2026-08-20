@@ -2,7 +2,7 @@ import { ArrowLeft, LogOut, Moon, Scale, Settings, ShieldCheck, Sun, UserCheck }
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
-export type AdminTabKey = 'compliance' | 'dispute_center' | 'verification_queue' | 'settings';
+export type AdminTabKey = 'compliance' | 'notary_assignment' | 'dispute_center' | 'verification_queue' | 'settings';
 
 interface AdminHeaderAndTabsProps {
   activeTab: AdminTabKey;
@@ -14,6 +14,7 @@ interface AdminHeaderAndTabsProps {
 
 const tabs = [
   { key: 'compliance', label: 'Kepatuhan SLA & Audit — MOCK-J-ADM-01', icon: ShieldCheck },
+  { key: 'notary_assignment', label: 'Penugasan Notaris Korporasi', icon: UserCheck },
   { key: 'dispute_center', label: 'Pusat Mediasi Escrow — MOCK-J-ADM-02', icon: Scale },
   { key: 'verification_queue', label: 'Antrean Verifikasi Advokat (KYC / SIPP)', icon: UserCheck },
   { key: 'settings', label: 'Pengaturan & Parameter Sistem', icon: Settings },

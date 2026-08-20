@@ -8,8 +8,9 @@
 |---|---|---|
 | Corporate Intake | ACCEPTED_LOCAL | Form, protected BO evidence, Edge Function, dan RPC atomik telah diverifikasi pada scope lokal |
 | Corporate Escrow Settlement | ACCEPTED_LOCAL | Signed webhook, replay idempoten, concurrency, dan canonical status telah diverifikasi lokal |
+| Notary Workspace & CDD Approval | READY_FOR_EXTERNAL_REAUDIT | Admin assignment panel, verified notary profile, atomic CDD approval RPC, multi-case workspace |
 | Payment Provider Initiation | BLOCKED | Provider checkout belum dipilih; tidak ada tombol bayar atau URL palsu |
-| Notary Workspace | FUTURE_WORK | Target Batch 3.C; belum diterima end-to-end |
+| AHU & OSS Live Stamping | BLOCKED | Live government submission belum terintegrasi; UI hanya menyimpan reference ID |
 | e-KYC & Signing | FUTURE_WORK | Target Batch 3.D; belum diterima end-to-end |
 | Full E2E/security/QA | FUTURE_WORK | Phase 4 belum selesai |
 | Production Readiness | NOT_STARTED | Deployment, observability, runbook, provider readiness, dan go-live audit belum dilakukan |

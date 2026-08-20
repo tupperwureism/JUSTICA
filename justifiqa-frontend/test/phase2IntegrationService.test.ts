@@ -105,21 +105,39 @@ class FakeGateway implements Phase2IntegrationGateway {
     return this.notaryWorkspace;
   }
 
+  async listNotaryWorkspaces() {
+    return this.notaryWorkspace ? [this.notaryWorkspace] : [];
+  }
+
   async getEkycWorkspace() {
     return this.ekycWorkspace;
   }
 
-  async approveCddAssessment(input: { assessmentId: string }) {
+  async listAssignmentContext() {
+    return { cases: [], notaries: [] };
+  }
+
+  async assignNotary(input: { caseId: string; notaryId: string; idempotencyKey: string }) {
+    return { caseId: input.caseId, assignedNotaryId: input.notaryId, replayed: false };
+  }
+
+  async approveCddAssessment(input: { assessmentId: string; caseId: string; rulesVersion: string }) {
     if (this.notaryWorkspace?.cddAssessment) {
       this.notaryWorkspace = {
         ...this.notaryWorkspace,
+        currentStage: 'DOCUMENTS_PENDING',
         cddAssessment: {
           ...this.notaryWorkspace.cddAssessment,
           decision: 'APPROVED',
         },
       };
     }
-    return { assessmentId: input.assessmentId, replayed: false };
+    return {
+      assessmentId: input.assessmentId,
+      caseId: input.caseId,
+      currentStage: 'DOCUMENTS_PENDING',
+      replayed: false,
+    };
   }
 
   async invokeCorporateIntake(_payload: {
@@ -349,11 +367,11 @@ test('e-KYC UI refuses to reuse the latest envelope for an unrelated document', 
   );
 });
 
-test('browser adapter never invokes privileged RPCs and only mutates screened CDD', () => {
+test('browser adapter never invokes privileged RPCs and performs zero direct table DML mutations', () => {
   assert.doesNotMatch(gatewaySource, /\.rpc\s*\(/);
   assert.doesNotMatch(gatewaySource, /service[_-]?role/i);
   const writes = [...gatewaySource.matchAll(
     /\.from\('([^']+)'\)\.(insert|update|upsert|delete)\s*\(/g,
   )].map((match) => `${match[1]}:${match[2]}`);
-  assert.deepEqual(writes, ['compliance_assessments:update']);
+  assert.deepEqual(writes, []);
 });
