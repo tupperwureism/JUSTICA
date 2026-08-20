@@ -8,6 +8,7 @@ type StampingInput = NotaryStampingRequest & { caseId: string };
 
 export function useNotaryWorkspaceIntegration() {
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [attemptKey, setAttemptKey] = useState<string>('');
 
   const workspacesQuery = usePhase2Query(
     () => phase2IntegrationService.loadNotaryWorkspaces(),
@@ -23,12 +24,25 @@ export function useNotaryWorkspaceIntegration() {
   }, [workspacesQuery.data, selectedCaseId]);
 
   const cddApproval = usePhase2Mutation(
-    (input: { caseId: string; rulesVersion: string; idempotencyKey?: string }) => (
-      phase2IntegrationService.approveNotaryCdd(input)
-    ),
+    async (input: { caseId: string; rulesVersion: string; idempotencyKey?: string }) => {
+      const key = input.idempotencyKey || attemptKey || crypto.randomUUID();
+      if (!attemptKey) {
+        setAttemptKey(key);
+      }
+      return phase2IntegrationService.approveNotaryCdd({
+        caseId: input.caseId,
+        rulesVersion: input.rulesVersion,
+        idempotencyKey: key,
+      });
+    },
     {
-      onSuccess: async () => {
-        await workspacesQuery.refresh();
+      onSuccess: async (result) => {
+        setAttemptKey('');
+        const refreshedWorkspaces = await workspacesQuery.refresh();
+        const verified = refreshedWorkspaces?.find((w) => w.caseId === result.caseId);
+        if (verified && verified.currentStage !== 'DOCUMENTS_PENDING') {
+          throw new Error('Konfirmasi penyegaran gagal: Status perkara belum terverifikasi DOCUMENTS_PENDING di server.');
+        }
       },
     },
   );

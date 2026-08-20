@@ -102,6 +102,7 @@ function createMockGateway(
     assignNotary: async (input) => ({
       caseId: input.caseId,
       assignedNotaryId: input.notaryId,
+      currentStage: 'ESCROW_LOCKED',
       replayed: false,
     }),
     approveCddAssessment: async (input) => ({
@@ -151,7 +152,7 @@ test('assignNotary single-flight blocks duplicate in-flight requests with same k
     assignNotary: async (input) => {
       callCount += 1;
       await new Promise((resolve) => setTimeout(resolve, 20));
-      return { caseId: input.caseId, assignedNotaryId: input.notaryId, replayed: false };
+      return { caseId: input.caseId, assignedNotaryId: input.notaryId, currentStage: 'ESCROW_LOCKED', replayed: false };
     },
   });
   const service = createPhase2IntegrationService(gateway);

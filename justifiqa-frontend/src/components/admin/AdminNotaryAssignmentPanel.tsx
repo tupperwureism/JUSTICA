@@ -17,7 +17,8 @@ export function AdminNotaryAssignmentPanel() {
 
   const [selectedCaseId, setSelectedCaseId] = useState<string>('');
   const [selectedNotaryId, setSelectedNotaryId] = useState<string>('');
-  const [idempotencyKey, setIdempotencyKey] = useState<string>('');
+  const [attemptKey, setAttemptKey] = useState<string>('');
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -26,37 +27,40 @@ export function AdminNotaryAssignmentPanel() {
   const caseSelectId = useId();
   const notarySelectId = useId();
 
-  const loadContext = useCallback(async () => {
+  const loadContext = useCallback(async (): Promise<AssignmentContext | null> => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await phase2IntegrationService.listAssignmentContext();
       setContext(data);
-      if (data.cases.length > 0 && !selectedCaseId) {
-        setSelectedCaseId(data.cases[0].caseId);
-      }
-      if (data.notaries.length > 0 && !selectedNotaryId) {
-        setSelectedNotaryId(data.notaries[0].notaryId);
-      }
+      return data;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal memuat daftar perkara dan notaris.');
+      const msg = err instanceof Error ? err.message : 'Gagal memuat daftar perkara dan notaris.';
+      setError(msg);
+      return null;
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCaseId, selectedNotaryId]);
+  }, []);
 
   useEffect(() => {
     void loadContext();
   }, [loadContext]);
 
-  const handleAssign = async () => {
+  const handleInitiateAssignment = () => {
     if (!selectedCaseId || !selectedNotaryId) {
-      setSubmitError('Pilih perkara dan notaris terlebih dahulu.');
+      setSubmitError('Silakan pilih perkara dan notaris terlebih dahulu secara eksplisit.');
       return;
     }
+    setSubmitError(null);
+    setShowConfirmation(true);
+  };
 
-    const currentKey = idempotencyKey || crypto.randomUUID();
-    setIdempotencyKey(currentKey);
+  const handleConfirmAssignment = async () => {
+    if (!selectedCaseId || !selectedNotaryId) return;
+
+    const currentKey = attemptKey || crypto.randomUUID();
+    setAttemptKey(currentKey);
     setIsSubmitting(true);
     setSubmitError(null);
     setSuccessMessage(null);
@@ -68,13 +72,28 @@ export function AdminNotaryAssignmentPanel() {
         idempotencyKey: currentKey,
       });
 
+      // Canonical refresh confirmation gate
+      const refreshed = await phase2IntegrationService.listAssignmentContext();
+      setContext(refreshed);
+
+      const verifiedCase = refreshed.cases.find((c) => c.caseId === selectedCaseId);
+      const isConfirmed = verifiedCase
+        ? verifiedCase.assignedNotaryId === selectedNotaryId && verifiedCase.currentStage === 'ESCROW_LOCKED'
+        : result.assignedNotaryId === selectedNotaryId && result.currentStage === 'ESCROW_LOCKED';
+
+      if (!isConfirmed) {
+        throw new Error('Konfirmasi penyegaran gagal: Data penugasan belum terkonfirmasi di database server.');
+      }
+
       setSuccessMessage(
         result.replayed
           ? 'Penugasan terkonfirmasi (Replay Idempoten: Tidak ada mutasi ganda).'
           : 'Notaris berhasil ditugaskan ke perkara korporasi secara atomik.',
       );
-      setIdempotencyKey('');
-      await loadContext();
+      setAttemptKey('');
+      setShowConfirmation(false);
+      setSelectedCaseId('');
+      setSelectedNotaryId('');
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Gagal menugaskan notaris.');
     } finally {
@@ -100,140 +119,152 @@ export function AdminNotaryAssignmentPanel() {
           </p>
         </div>
         <Button
-          type="button"
           variant="outline"
           size="sm"
-          onClick={() => { void loadContext(); }}
-          disabled={isLoading}
-          className="gap-2 font-bold"
+          onClick={() => void loadContext()}
+          disabled={isLoading || isSubmitting}
+          className="gap-2"
         >
-          <RefreshCw className={isLoading ? 'animate-spin size-4' : 'size-4'} />
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           Segarkan Data
         </Button>
       </div>
 
       {error && (
-        <div role="alert" className="flex items-center gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-          <AlertCircle className="size-5 shrink-0" />
-          <span>{error}</span>
+        <div role="alert" className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 shrink-0" />
+            <p className="text-sm font-semibold">{error}</p>
+          </div>
         </div>
       )}
 
       {successMessage && (
-        <div role="status" className="flex items-center gap-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-600 dark:text-emerald-400">
-          <CheckCircle2 className="size-5 shrink-0" />
-          <span>{successMessage}</span>
+        <div role="status" className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-600">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 shrink-0" />
+            <p className="text-sm font-semibold">{successMessage}</p>
+          </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Kolom 1: Pemilihan Perkara */}
-        <Card className="space-y-4 rounded-2xl border-border bg-secondary/20 p-6">
-          <CardHeader className="p-0">
-            <CardTitle className="flex items-center gap-2 text-base font-bold">
-              <Building2 className="size-5 text-primary" />
-              1. Pilih Perkara Korporasi Layak
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Case Selection Card */}
+        <Card className="border-border bg-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Building2 className="h-5 w-5 text-primary" />
+              1. Pilih Perkara Korporasi (Dana Terkunci di Escrow)
             </CardTitle>
             <CardDescription>
-              Menampilkan perkara berstatus <Badge variant="outline" className="font-mono">ESCROW_LOCKED</Badge> dengan dana tertahan.
+              Menampilkan perkara berstatus ESCROW_LOCKED dengan bukti dana tersimpan.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 p-0">
-            <label htmlFor={caseSelectId} className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Daftar Perkara Siap Penugasan
-            </label>
-            <select
-              id={caseSelectId}
-              value={selectedCaseId}
-              onChange={(e) => setSelectedCaseId(e.target.value)}
-              disabled={isLoading || isSubmitting || !context?.cases.length}
-              className="min-h-11 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {!context?.cases.length && (
-                <option value="">Tidak ada perkara berstatus ESCROW_LOCKED</option>
-              )}
-              {context?.cases.map((c: EligibleCaseProjection) => (
-                <option key={c.caseId} value={c.caseId}>
-                  {c.proposedName} ({c.entityType}) — {c.domicileCity}
-                </option>
-              ))}
-            </select>
+          <CardContent className="space-y-4">
+            <div>
+              <label htmlFor={caseSelectId} className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Daftar Perkara Tersedia
+              </label>
+              <select
+                id={caseSelectId}
+                aria-label="Pilih Perkara Korporasi"
+                value={selectedCaseId}
+                onChange={(e) => {
+                  setSelectedCaseId(e.target.value);
+                  setShowConfirmation(false);
+                }}
+                disabled={isLoading || isSubmitting}
+                className="mt-2 w-full rounded-xl border border-border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">-- Pilih Perkara Korporasi --</option>
+                {context?.cases.map((c) => (
+                  <option key={c.caseId} value={c.caseId} disabled={Boolean(c.assignedNotaryId)}>
+                    {c.proposedName} ({c.entityType}) — {c.domicileCity} {c.assignedNotaryId ? '• [SUDAH DITUGASKAN]' : '• [BELUM ADA NOTARIS]'}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {selectedCase && (
-              <div className="rounded-xl border border-border/80 bg-card p-4 text-xs space-y-2">
+              <div className="rounded-xl border border-border/60 bg-muted/30 p-4 text-xs space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ID Perkara:</span>
-                  <span className="font-mono font-semibold">{selectedCase.caseId}</span>
+                  <span className="font-mono font-medium">{selectedCase.caseId}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Bentuk Entitas:</span>
-                  <span className="font-semibold">{selectedCase.entityType}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Domisili:</span>
-                  <span>{selectedCase.domicileCity}, {selectedCase.domicileProvince}</span>
+                  <span className="text-muted-foreground">Entitas:</span>
+                  <span className="font-medium">{selectedCase.entityType}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status Escrow:</span>
-                  <Badge variant="outline" className="border-emerald-500 text-emerald-500 font-bold">
+                  <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 bg-emerald-500/10">
+                    <ShieldCheck className="mr-1 h-3 w-3" />
                     {selectedCase.escrowStatus}
                   </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tahap Perkara:</span>
+                  <Badge variant="secondary">{selectedCase.currentStage}</Badge>
                 </div>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Kolom 2: Pemilihan Notaris */}
-        <Card className="space-y-4 rounded-2xl border-border bg-secondary/20 p-6">
-          <CardHeader className="p-0">
-            <CardTitle className="flex items-center gap-2 text-base font-bold">
-              <UserCheck className="size-5 text-primary" />
+        {/* Notary Selection Card */}
+        <Card className="border-border bg-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Scale className="h-5 w-5 text-primary" />
               2. Pilih Notaris Terverifikasi Aktif
             </CardTitle>
             <CardDescription>
-              Menampilkan notaris dengan status kualifikasi <Badge variant="outline" className="font-mono">VERIFIED_ACTIVE</Badge>.
+              Menampilkan rekanan notaris yang kualifikasi dan SK Kemenkumham-nya aktif.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 p-0">
-            <label htmlFor={notarySelectId} className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Daftar Notaris Mitra Terverifikasi
-            </label>
-            <select
-              id={notarySelectId}
-              value={selectedNotaryId}
-              onChange={(e) => setSelectedNotaryId(e.target.value)}
-              disabled={isLoading || isSubmitting || !context?.notaries.length}
-              className="min-h-11 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {!context?.notaries.length && (
-                <option value="">Tidak ada notaris terverifikasi aktif</option>
-              )}
-              {context?.notaries.map((n: VerifiedNotaryProjection) => (
-                <option key={n.notaryId} value={n.notaryId}>
-                  {n.fullName} ({n.licenseNumber}) — {n.jurisdictionCity}
-                </option>
-              ))}
-            </select>
+          <CardContent className="space-y-4">
+            <div>
+              <label htmlFor={notarySelectId} className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Daftar Notaris Rekanan
+              </label>
+              <select
+                id={notarySelectId}
+                aria-label="Pilih Notaris Terverifikasi"
+                value={selectedNotaryId}
+                onChange={(e) => {
+                  setSelectedNotaryId(e.target.value);
+                  setShowConfirmation(false);
+                }}
+                disabled={isLoading || isSubmitting}
+                className="mt-2 w-full rounded-xl border border-border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">-- Pilih Notaris Terverifikasi --</option>
+                {context?.notaries.map((n) => (
+                  <option key={n.notaryId} value={n.notaryId}>
+                    {n.fullName} ({n.licenseNumber}) — {n.jurisdictionCity}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {selectedNotary && (
-              <div className="rounded-xl border border-border/80 bg-card p-4 text-xs space-y-2">
+              <div className="rounded-xl border border-border/60 bg-muted/30 p-4 text-xs space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ID Notaris:</span>
-                  <span className="font-mono font-semibold">{selectedNotary.notaryId}</span>
+                  <span className="font-mono font-medium">{selectedNotary.notaryId}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Nomor SK / Lisensi:</span>
-                  <span className="font-semibold">{selectedNotary.licenseNumber}</span>
+                  <span className="text-muted-foreground">No. Lisensi:</span>
+                  <span className="font-medium">{selectedNotary.licenseNumber}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Wilayah Kerja:</span>
-                  <span>{selectedNotary.jurisdictionCity}, {selectedNotary.jurisdictionProvince}</span>
+                  <span className="text-muted-foreground">Yurisdiksi:</span>
+                  <span className="font-medium">{selectedNotary.jurisdictionCity}, {selectedNotary.jurisdictionProvince}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status Kualifikasi:</span>
-                  <Badge variant="outline" className="border-blue-500 text-blue-500 font-bold">
-                    <ShieldCheck className="mr-1 size-3" />
+                  <Badge variant="outline" className="border-blue-500/30 text-blue-600 bg-blue-500/10">
+                    <UserCheck className="mr-1 h-3 w-3" />
                     {selectedNotary.status}
                   </Badge>
                 </div>
@@ -243,25 +274,63 @@ export function AdminNotaryAssignmentPanel() {
         </Card>
       </div>
 
-      {submitError && (
-        <div role="alert" className="flex items-center justify-between rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-          <span>{submitError}</span>
-          <Button type="button" variant="outline" size="sm" onClick={() => { void handleAssign(); }}>
-            Coba Ulang
-          </Button>
-        </div>
-      )}
+      {/* Confirmation and Submit Section */}
+      <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+        {submitError && (
+          <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            {submitError}
+          </div>
+        )}
 
-      <Button
-        type="button"
-        size="lg"
-        onClick={() => { void handleAssign(); }}
-        disabled={isLoading || isSubmitting || !selectedCaseId || !selectedNotaryId}
-        className="h-12 w-full shrink-0 gap-2 rounded-xl bg-primary font-bold text-primary-foreground shadow-lg hover:bg-primary/90"
-      >
-        <Scale className="size-5" />
-        {isSubmitting ? 'Memproses Penugasan Atomik...' : 'Tugaskan Notaris ke Perkara'}
-      </Button>
+        {showConfirmation ? (
+          <div className="space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <h4 className="text-sm font-bold text-foreground">Konfirmasi Penugasan Notaris</h4>
+            <p className="text-xs text-muted-foreground">
+              Apakah Anda yakin ingin menugaskan notaris <strong className="text-foreground">{selectedNotary?.fullName}</strong> ke perkara <strong className="text-foreground">{selectedCase?.proposedName}</strong>?
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={() => void handleConfirmAssignment()}
+                disabled={isSubmitting}
+                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Memproses Penugasan Atomik...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    Ya, Konfirmasi Penugasan Sekarang
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowConfirmation(false)}
+                disabled={isSubmitting}
+              >
+                Batal
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <p className="text-xs text-muted-foreground">
+              Pastikan kedua pihak (perkara dan notaris) telah dipilih dengan benar sebelum melanjutkan.
+            </p>
+            <Button
+              onClick={handleInitiateAssignment}
+              disabled={isLoading || isSubmitting || !selectedCaseId || !selectedNotaryId}
+              className="gap-2"
+            >
+              <UserCheck className="h-4 w-4" />
+              Lanjutkan ke Konfirmasi Penugasan
+            </Button>
+          </div>
+        )}
+      </div>
     </Card>
   );
 }

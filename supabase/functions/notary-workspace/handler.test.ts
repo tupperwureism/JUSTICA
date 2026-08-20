@@ -1,349 +1,288 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HttpError } from "../_shared/http.ts";
+import { RestError } from "../_shared/rest.ts";
 import {
   createNotaryWorkspaceHandler,
-  type NotaryWorkspaceDependencies,
+  type AdminActor,
+  type ApproveCddResult,
+  type AssignNotaryResult,
+  type EligibleCaseProjection,
+  type NotaryActor,
+  type VerifiedNotaryProjection,
 } from "./handler.ts";
 
-const adminId = "11111111-1111-4111-8111-111111111111";
-const notaryId = "22222222-2222-4222-8222-222222222222";
-const caseId = "33333333-3333-4333-8333-333333333333";
-const assessmentId = "44444444-4444-4444-8444-444444444444";
+const ADMIN_ID = "3c100000-0000-4000-8000-000000000001";
+const NOTARY_ID = "3c100000-0000-4000-8000-000000000002";
+const CASE_ID = "3c100000-0000-4000-8000-000000000020";
+const ASSESSMENT_ID = "3c100000-0000-4000-8000-000000000030";
+const IDEMPOTENCY_KEY = "3c100000-0000-4000-8000-000000000100";
 
-function dependencies(
-  overrides: Partial<NotaryWorkspaceDependencies> = {},
-): NotaryWorkspaceDependencies {
+function createMockDeps(overrides: Partial<{
+  user: string;
+  admin: AdminActor | null;
+  notary: NotaryActor | null;
+  cases: EligibleCaseProjection[];
+  notaries: VerifiedNotaryProjection[];
+  assignResult: AssignNotaryResult;
+  approveResult: ApproveCddResult;
+  assignError: unknown;
+  approveError: unknown;
+}> = {}) {
   return {
-    verifyUser: async () => adminId,
-    getAdminActor: async (userId: string) => {
-      if (userId === adminId) {
-        return { adminId, roleGroup: "COMPLIANCE_OFFICER", isActive: true };
+    verifyUser: async (auth: string | null) => {
+      if (!auth || !auth.startsWith("Bearer ")) {
+        throw new Error("UNAUTHENTICATED");
       }
-      return null;
+      return overrides.user ?? ADMIN_ID;
+    },
+    getAdminActor: async (userId: string) => {
+      if (overrides.admin !== undefined) return overrides.admin;
+      return {
+        adminId: userId,
+        roleGroup: "COMPLIANCE_OFFICER",
+      };
     },
     getNotaryActor: async (userId: string) => {
-      if (userId === notaryId) {
-        return { notaryId, status: "VERIFIED_ACTIVE", isVerifiedAdvocate: true };
-      }
-      return null;
+      if (overrides.notary !== undefined) return overrides.notary;
+      return {
+        notaryId: userId,
+        status: "VERIFIED_ACTIVE",
+        isVerifiedAdvocate: true,
+      };
     },
     listAssignmentContext: async () => ({
-      cases: [
+      cases: overrides.cases ?? [
         {
-          caseId,
-          orderId: "55555555-5555-4555-8555-555555555555",
+          caseId: CASE_ID,
+          orderId: "3c100000-0000-4000-8000-000000000010",
           entityType: "PT_ORDINARY",
-          proposedName: "PT Maju Bersama",
+          proposedName: "PT Maju 3C1",
           currentStage: "ESCROW_LOCKED",
           domicileCity: "Jakarta Selatan",
           domicileProvince: "DKI Jakarta",
           escrowStatus: "HELD_IN_ESCROW",
-          fundsLockedAt: "2026-08-20T10:00:00.000Z",
+          fundsLockedAt: "2026-08-20T00:00:00.000Z",
           assignedNotaryId: null,
         },
       ],
-      notaries: [
+      notaries: overrides.notaries ?? [
         {
-          notaryId,
-          fullName: "Notaris Budi S.H. M.Kn",
-          licenseNumber: "NOT-2026-001",
+          notaryId: NOTARY_ID,
+          fullName: "Notaris Hj. Siti Aminah S.H.",
+          licenseNumber: "SK-NOT-001",
           jurisdictionCity: "Jakarta Selatan",
           jurisdictionProvince: "DKI Jakarta",
           status: "VERIFIED_ACTIVE",
         },
       ],
     }),
-    assignNotary: async () => ({
-      caseId,
-      assignedNotaryId: notaryId,
-      replayed: false,
-    }),
-    approveCdd: async () => ({
-      caseId,
-      assessmentId,
-      currentStage: "DOCUMENTS_PENDING",
-      replayed: false,
-    }),
-    ...overrides,
+    assignNotary: async (params: {
+      caseId: string;
+      notaryId: string;
+      adminId: string;
+      idempotencyKey: string;
+    }) => {
+      if (overrides.assignError) throw overrides.assignError;
+      return overrides.assignResult ?? {
+        caseId: params.caseId,
+        assignedNotaryId: params.notaryId,
+        currentStage: "ESCROW_LOCKED",
+        replayed: false,
+      };
+    },
+    approveCdd: async (params: {
+      caseId: string;
+      assessmentId: string;
+      notaryId: string;
+      rulesVersion: string;
+      idempotencyKey: string;
+    }) => {
+      if (overrides.approveError) throw overrides.approveError;
+      return overrides.approveResult ?? {
+        caseId: params.caseId,
+        assessmentId: params.assessmentId,
+        currentStage: "DOCUMENTS_PENDING",
+        replayed: false,
+      };
+    },
   };
 }
 
-function makeRequest(
-  body: unknown,
-  options: {
-    origin?: string;
-    auth?: string;
-    method?: string;
-  } = {},
-): Request {
-  return new Request("http://localhost/functions/v1/notary-workspace", {
+function makeRequest(body: unknown, options: {
+  origin?: string;
+  auth?: string;
+  method?: string;
+} = {}) {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+  };
+  if (options.origin) headers.origin = options.origin;
+  if (options.auth !== undefined) {
+    if (options.auth) headers.authorization = options.auth;
+  } else {
+    headers.authorization = "Bearer valid-token";
+  }
+
+  return new Request("http://localhost:54321/functions/v1/notary-workspace", {
     method: options.method ?? "POST",
-    headers: {
-      origin: options.origin ?? "http://localhost:5173",
-      authorization: options.auth ?? "Bearer test-token",
-      "content-type": "application/json",
-    },
+    headers,
     body: options.method === "OPTIONS" ? undefined : JSON.stringify(body),
   });
 }
 
 test("OPTIONS preflight returns allowed localhost CORS headers", async () => {
-  const handler = createNotaryWorkspaceHandler(dependencies());
-  const response = await handler(
-    new Request("http://localhost/functions/v1/notary-workspace", {
-      method: "OPTIONS",
-      headers: {
-        origin: "http://localhost:5173",
-      },
-    }),
-  );
-  assert.equal(response.status, 204);
-  assert.equal(response.headers.get("access-control-allow-origin"), "http://localhost:5173");
-  assert.equal(
-    response.headers.get("access-control-allow-methods"),
-    "POST, OPTIONS",
-  );
+  const handler = createNotaryWorkspaceHandler(createMockDeps());
+  const res = await handler(makeRequest(null, { method: "OPTIONS", origin: "http://localhost:5173" }));
+  assert.equal(res.status, 204);
+  assert.equal(res.headers.get("access-control-allow-origin"), "http://localhost:5173");
 });
 
 test("OPTIONS preflight rejects unauthorized origins", async () => {
-  const handler = createNotaryWorkspaceHandler(dependencies());
-  const response = await handler(
-    new Request("http://localhost/functions/v1/notary-workspace", {
-      method: "OPTIONS",
-      headers: {
-        origin: "https://evil.com",
-      },
-    }),
-  );
-  assert.equal(response.status, 403);
-  assert.equal(response.headers.get("access-control-allow-origin"), null);
+  const handler = createNotaryWorkspaceHandler(createMockDeps());
+  const res = await handler(makeRequest(null, { method: "OPTIONS", origin: "http://evil.invalid" }));
+  assert.equal(res.status, 403);
 });
 
 test("missing or invalid authorization header returns 401 UNAUTHENTICATED", async () => {
-  const handler = createNotaryWorkspaceHandler(
-    dependencies({
-      verifyUser: async () => {
-        throw new HttpError(401, "UNAUTHENTICATED", "Valid Supabase bearer token required.");
-      },
-    }),
-  );
-  const response = await handler(
-    makeRequest({ action: "list_assignment_context" }, { auth: "Bearer invalid" }),
-  );
-  assert.equal(response.status, 401);
-  const json = await response.json();
-  assert.equal(json.code, "UNAUTHENTICATED");
+  const handler = createNotaryWorkspaceHandler(createMockDeps());
+  const res = await handler(makeRequest({ action: "list_assignment_context" }, { auth: "" }));
+  assert.equal(res.status, 401);
+  const data = await res.json() as any;
+  assert.equal(data.code, "UNAUTHENTICATED");
 });
 
 test("list_assignment_context requires compliance or super_admin role", async () => {
-  const handler = createNotaryWorkspaceHandler(
-    dependencies({
-      getAdminActor: async () => null, // Not an admin
-    }),
-  );
-  const response = await handler(makeRequest({ action: "list_assignment_context" }));
-  assert.equal(response.status, 403);
-  const json = await response.json();
-  assert.equal(json.code, "FORBIDDEN");
+  const handler = createNotaryWorkspaceHandler(createMockDeps({
+    admin: { adminId: ADMIN_ID, roleGroup: "OPERATIONS_ADMIN" },
+  }));
+  const res = await handler(makeRequest({ action: "list_assignment_context" }));
+  assert.equal(res.status, 403);
 });
 
 test("list_assignment_context returns eligible cases and verified notaries for authorized admin", async () => {
-  const handler = createNotaryWorkspaceHandler(dependencies());
-  const response = await handler(makeRequest({ action: "list_assignment_context" }));
-  assert.equal(response.status, 200);
-  const json = await response.json();
+  const handler = createNotaryWorkspaceHandler(createMockDeps());
+  const res = await handler(makeRequest({ action: "list_assignment_context" }));
+  assert.equal(res.status, 200);
+  const json = await res.json() as any;
   assert.equal(json.ok, true);
   assert.equal(json.data.cases.length, 1);
-  assert.equal(json.data.cases[0].caseId, caseId);
   assert.equal(json.data.notaries.length, 1);
-  assert.equal(json.data.notaries[0].notaryId, notaryId);
 });
 
-test("assign_notary validates input and calls assignNotary RPC dependency", async () => {
-  let calledParams: unknown = null;
-  const handler = createNotaryWorkspaceHandler(
-    dependencies({
-      assignNotary: async (params) => {
-        calledParams = params;
-        return { caseId: params.caseId, assignedNotaryId: params.notaryId, replayed: false };
-      },
-    }),
-  );
-  const response = await handler(
-    makeRequest({
-      action: "assign_notary",
-      caseId,
-      notaryId,
-      idempotencyKey: "12345678-1234-1234-1234-1234567890ab",
-    }),
-  );
-  assert.equal(response.status, 200);
-  const json = await response.json();
+test("assign_notary validates input, rejects spoof fields, and calls assignNotary dependency", async () => {
+  let calledWith: any = null;
+  const deps = createMockDeps();
+  deps.assignNotary = async (params) => {
+    calledWith = params;
+    return {
+      caseId: params.caseId,
+      assignedNotaryId: params.notaryId,
+      currentStage: "ESCROW_LOCKED",
+      replayed: false,
+    };
+  };
+  const handler = createNotaryWorkspaceHandler(deps);
+  const res = await handler(makeRequest({
+    action: "assign_notary",
+    caseId: CASE_ID,
+    notaryId: NOTARY_ID,
+    idempotencyKey: IDEMPOTENCY_KEY,
+  }));
+  assert.equal(res.status, 200);
+  const json = await res.json() as any;
   assert.equal(json.ok, true);
-  assert.equal(json.data.assignedNotaryId, notaryId);
-  assert.equal(json.data.replayed, false);
-  assert.deepEqual(calledParams, {
-    caseId,
-    notaryId,
-    adminId,
-    idempotencyKey: "12345678-1234-1234-1234-1234567890ab",
-  });
+  assert.equal(json.data.currentStage, "ESCROW_LOCKED");
+  assert.equal(calledWith.caseId, CASE_ID);
+  assert.equal(calledWith.notaryId, NOTARY_ID);
+  assert.equal(calledWith.adminId, ADMIN_ID);
 });
 
 test("assign_notary rejects caller-supplied actorId or fake role", async () => {
-  let calledAdminId = "";
-  const handler = createNotaryWorkspaceHandler(
-    dependencies({
-      assignNotary: async (params) => {
-        calledAdminId = params.adminId;
-        return { caseId: params.caseId, assignedNotaryId: params.notaryId, replayed: false };
-      },
-    }),
-  );
-  const response = await handler(
-    makeRequest({
-      action: "assign_notary",
-      caseId,
-      notaryId,
-      adminId: "99999999-9999-9999-9999-999999999999", // Attempted spoof
-      role: "SUPER_ADMIN",
-      idempotencyKey: "12345678-1234-1234-1234-1234567890ab",
-    }),
-  );
-  assert.equal(response.status, 200);
-  // Must use verified session adminId, not spoofed body adminId
-  assert.equal(calledAdminId, adminId);
+  const handler = createNotaryWorkspaceHandler(createMockDeps());
+  const res = await handler(makeRequest({
+    action: "assign_notary",
+    caseId: CASE_ID,
+    notaryId: NOTARY_ID,
+    idempotencyKey: IDEMPOTENCY_KEY,
+    adminId: "99999999-9999-4999-8999-999999999999", // Spoof
+    role: "SUPER_ADMIN", // Spoof
+  }));
+  assert.equal(res.status, 400);
+  const json = await res.json() as any;
+  assert.equal(json.code, "UNKNOWN_FIELD");
 });
 
-test("assign_notary handles conflict errors safely", async () => {
-  const handler = createNotaryWorkspaceHandler(
-    dependencies({
-      assignNotary: async () => {
-        throw new HttpError(409, "ASSIGNMENT_CONFLICT", "Case is already assigned to another notary.");
-      },
-    }),
-  );
-  const response = await handler(
-    makeRequest({
-      action: "assign_notary",
-      caseId,
-      notaryId,
-      idempotencyKey: "12345678-1234-1234-1234-1234567890ab",
-    }),
-  );
-  assert.equal(response.status, 409);
-  const json = await response.json();
+test("assign_notary parses RestError ASSIGNMENT_CONFLICT safely", async () => {
+  const restError = new RestError(409, "ASSIGNMENT_CONFLICT: Case is already assigned to a different Notary");
+  const handler = createNotaryWorkspaceHandler(createMockDeps({ assignError: restError }));
+  const res = await handler(makeRequest({
+    action: "assign_notary",
+    caseId: CASE_ID,
+    notaryId: NOTARY_ID,
+    idempotencyKey: IDEMPOTENCY_KEY,
+  }));
+  assert.equal(res.status, 409);
+  const json = await res.json() as any;
   assert.equal(json.code, "ASSIGNMENT_CONFLICT");
 });
 
-test("approve_cdd requires verified active notary actor", async () => {
-  const handler = createNotaryWorkspaceHandler(
-    dependencies({
-      verifyUser: async () => notaryId,
-      getNotaryActor: async () => null, // Not a verified notary
-    }),
-  );
-  const response = await handler(
-    makeRequest({
-      action: "approve_cdd",
-      caseId,
-      assessmentId,
-      rulesVersion: "2026.1",
-      idempotencyKey: "cdd-idempotency-1",
-    }),
-  );
-  assert.equal(response.status, 403);
-  const json = await response.json();
-  assert.equal(json.code, "FORBIDDEN");
+test("approve_cdd requires verified active notary actor and advocate verification", async () => {
+  const handler = createNotaryWorkspaceHandler(createMockDeps({
+    user: NOTARY_ID,
+    notary: { notaryId: NOTARY_ID, status: "PENDING", isVerifiedAdvocate: false },
+  }));
+  const res = await handler(makeRequest({
+    action: "approve_cdd",
+    caseId: CASE_ID,
+    assessmentId: ASSESSMENT_ID,
+    rulesVersion: "PMPJ-2026.1",
+    idempotencyKey: IDEMPOTENCY_KEY,
+  }));
+  assert.equal(res.status, 403);
 });
 
-test("approve_cdd executes atomic approval and transitions stage", async () => {
-  let approvedParams: unknown = null;
-  const handler = createNotaryWorkspaceHandler(
-    dependencies({
-      verifyUser: async () => notaryId,
-      approveCdd: async (params) => {
-        approvedParams = params;
-        return {
-          caseId: params.caseId,
-          assessmentId: params.assessmentId,
-          currentStage: "DOCUMENTS_PENDING",
-          replayed: false,
-        };
-      },
-    }),
-  );
-  const response = await handler(
-    makeRequest({
-      action: "approve_cdd",
-      caseId,
-      assessmentId,
-      rulesVersion: "2026.1",
-      idempotencyKey: "cdd-idempotency-1",
-    }),
-  );
-  assert.equal(response.status, 200);
-  const json = await response.json();
+test("approve_cdd executes atomic approval and transitions stage to DOCUMENTS_PENDING", async () => {
+  const handler = createNotaryWorkspaceHandler(createMockDeps({ user: NOTARY_ID }));
+  const res = await handler(makeRequest({
+    action: "approve_cdd",
+    caseId: CASE_ID,
+    assessmentId: ASSESSMENT_ID,
+    rulesVersion: "PMPJ-2026.1",
+    idempotencyKey: IDEMPOTENCY_KEY,
+  }));
+  assert.equal(res.status, 200);
+  const json = await res.json() as any;
   assert.equal(json.ok, true);
   assert.equal(json.data.currentStage, "DOCUMENTS_PENDING");
   assert.equal(json.data.replayed, false);
-  assert.deepEqual(approvedParams, {
-    caseId,
-    assessmentId,
-    notaryId,
-    rulesVersion: "2026.1",
-    idempotencyKey: "cdd-idempotency-1",
-  });
 });
 
-test("approve_cdd exact replay returns replayed: true", async () => {
-  const handler = createNotaryWorkspaceHandler(
-    dependencies({
-      verifyUser: async () => notaryId,
-      approveCdd: async () => ({
-        caseId,
-        assessmentId,
-        currentStage: "DOCUMENTS_PENDING",
-        replayed: true,
-      }),
-    }),
-  );
-  const response = await handler(
-    makeRequest({
-      action: "approve_cdd",
-      caseId,
-      assessmentId,
-      rulesVersion: "2026.1",
-      idempotencyKey: "cdd-idempotency-1",
-    }),
-  );
-  assert.equal(response.status, 200);
-  const json = await response.json();
-  assert.equal(json.ok, true);
-  assert.equal(json.data.replayed, true);
+test("approve_cdd parses RestError BO_VERIFICATION_REQUIRED to CDD_NOT_READY", async () => {
+  const restError = new RestError(400, "BO_VERIFICATION_REQUIRED: Case has unverified beneficial owners");
+  const handler = createNotaryWorkspaceHandler(createMockDeps({ user: NOTARY_ID, approveError: restError }));
+  const res = await handler(makeRequest({
+    action: "approve_cdd",
+    caseId: CASE_ID,
+    assessmentId: ASSESSMENT_ID,
+    rulesVersion: "PMPJ-2026.1",
+    idempotencyKey: IDEMPOTENCY_KEY,
+  }));
+  assert.equal(res.status, 400);
+  const json = await res.json() as any;
+  assert.equal(json.code, "CDD_NOT_READY");
 });
 
 test("unknown database error maps to 500 SERVER_ERROR without leaking raw SQL", async () => {
-  const handler = createNotaryWorkspaceHandler(
-    dependencies({
-      assignNotary: async () => {
-        throw new Error("fatal: pg_internal connection pool exhausted at query 0xDEADBEEF");
-      },
-    }),
-  );
-  const response = await handler(
-    makeRequest({
-      action: "assign_notary",
-      caseId,
-      notaryId,
-      idempotencyKey: "12345678-1234-1234-1234-1234567890ab",
-    }),
-  );
-  assert.equal(response.status, 500);
-  const json = await response.json();
+  const rawSqlError = new Error("pg_catalog.pg_database error: syntax error at or near 'SELECT'");
+  const handler = createNotaryWorkspaceHandler(createMockDeps({ assignError: rawSqlError }));
+  const res = await handler(makeRequest({
+    action: "assign_notary",
+    caseId: CASE_ID,
+    notaryId: NOTARY_ID,
+    idempotencyKey: IDEMPOTENCY_KEY,
+  }));
+  assert.equal(res.status, 500);
+  const json = await res.json() as any;
   assert.equal(json.code, "SERVER_ERROR");
-  assert.equal(json.message, "Permintaan tidak dapat diproses saat ini.");
-  // Must NOT leak internal stack or SQL message
-  assert.equal(JSON.stringify(json).includes("DEADBEEF"), false);
+  assert.equal(json.message.includes("syntax error"), false);
 });

@@ -7,8 +7,8 @@
 
 - 237 source files dipindai.
 - 385 exported TypeScript symbols dalam 196 files.
-- 132 core PostgreSQL objects dari 406 deklarasi migrasi.
-- 159 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
+- 131 core PostgreSQL objects dari 404 deklarasi migrasi.
+- 160 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 - Migrasi `supabase/` diprioritaskan di atas salinan `database/`; peta deklarasi ini bukan rekonstruksi state database setelah seluruh migrasi.
 - Indeks SQL sengaja tidak dimuat agar peta tetap ringkas; cari dengan `rg "CREATE .*INDEX" database supabase` bila diperlukan.
@@ -203,8 +203,8 @@
 | services/intakeError.ts | 3v INTAKE_ERROR_ALLOWLIST, 11t IntakeErrorCode, 13v INTAKE_UNKNOWN_FALLBACK, 36f parseIntakeErrorCode, 52f parseEvidenceErrorCode |
 | services/mockConsultationService.ts | 8v TIER_CATALOG, 65v MOCK_ADVOCATE_SLOTS, 98c MockConsultationService |
 | services/mockIracService.ts | 8c MockIracService |
-| services/phase2IntegrationService.ts | 7t Phase2PortalRole, 8t Phase2Actor, 10t CorporateEscrowStatus, 21t CorporateEscrowProjection, 29t ClientCorporateWorkspace, 39t NotaryWorkspace, 69t EkycWorkspace, 92t EligibleCaseProjection, 105t VerifiedNotaryProjection, 114t AssignmentContext, 119t AssignNotaryResult, 125t ApproveCddResult, 132t CorporateIntakeInput, 134t SubmitCorporateIntakeResult, 145t IntakePayload, 173i Phase2IntegrationGateway, 202t Phase2IntegrationErrorCode, 239c Phase2IntegrationError, 274f createPhase2IntegrationService |
-| services/phase2SupabaseGateway.ts | 15x parseIntakeErrorCode, 47v phase2SupabaseGateway, 331v phase2IntegrationService, 335x AssignmentContext, 335x EligibleCaseProjection, 335x VerifiedNotaryProjection, 335x AssignNotaryResult, 335x ApproveCddResult |
+| services/phase2IntegrationService.ts | 7t Phase2PortalRole, 8t Phase2Actor, 10t CorporateEscrowStatus, 21t CorporateEscrowProjection, 29t ClientCorporateWorkspace, 39t NotaryWorkspace, 69t EkycWorkspace, 92t EligibleCaseProjection, 105t VerifiedNotaryProjection, 114t AssignmentContext, 119t AssignNotaryResult, 126t ApproveCddResult, 133t CorporateIntakeInput, 135t SubmitCorporateIntakeResult, 146t IntakePayload, 174i Phase2IntegrationGateway, 203t Phase2IntegrationErrorCode, 240c Phase2IntegrationError, 275f createPhase2IntegrationService |
+| services/phase2SupabaseGateway.ts | 15x parseIntakeErrorCode, 47v phase2SupabaseGateway, 332v phase2IntegrationService, 336x AssignmentContext, 336x EligibleCaseProjection, 336x VerifiedNotaryProjection, 336x AssignNotaryResult, 336x ApproveCddResult |
 | services/portalAuthService.ts | 12f signInPortal, 22f registerPortal, 39f signOutPortal, 44f authErrorMessage |
 | services/roomSessionService.ts | 3i RoomSession, 11f resolveRoomSession |
 | services/vaultDeliveryService.ts | 4i VaultDocument, 23f getVaultDocument, 41f createVaultDownloadUrl, 47f releaseVaultEscrow |
@@ -212,7 +212,7 @@
 | types/authForms.ts | 1t ThemeMode, 2t AuthTab, 3t SyncStatus, 5i ClientLoginFields, 6i ClientRegistrationFields, 7i AdvocateLoginFields, 8i AdvocateRegistrationFields |
 | types/client.ts | 4t ClientTabKey, 6i ActiveConsultation, 15i HistoryDocument, 23i ServiceOption, 32i Advocate, 49i TimeSlot, 54i CheckoutDraft |
 | types/consultation.ts | 1t ConsultationTierId, 3t EscrowStatus, 5i ConsultationTier, 18i ConsultationSlot, 29i LiveConsultationSlot, 31i ConsultationCheckout, 46i EscrowTransaction, 59i BookingRequest |
-| types/database.types.ts | 1t Json, 9t Database, 3030t Tables, 3059t TablesInsert, 3084t TablesUpdate, 3109t Enums, 3126t CompositeTypes, 3143v Constants |
+| types/database.types.ts | 1t Json, 9t Database, 3141t Tables, 3170t TablesInsert, 3195t TablesUpdate, 3220t Enums, 3237t CompositeTypes, 3254v Constants |
 | types/irac.ts | 1t LegalDocumentTemplateId, 3i IracAnalysis, 16i DocumentClause, 22i LegalDocumentDraft |
 | types/portalAuth.ts | 3t PortalRole, 5v portalHome, 11v portalLogin, 17f getPortalRole, 22f safePortalRedirect |
 
@@ -224,10 +224,10 @@
 | function | private.fn_enforce_canonical_intake_snapshot() | S/20260729082554_enforce_canonical_snapshots_and_repair_participant_rls.sql:L31 |
 | function | public.fn_activate_corporate_pricing_catalog( p_catalog_id UUID ) | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L242 |
 | function | public.fn_append_compliance_workflow_event( p_corporate_case_id UUID, p_escrow_id UUID, p… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L30 |
-| function | public.fn_approve_notary_cdd_atomic( p_case_id UUID, p_assessment_id UUID, p_notary_id UU… | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L258 |
+| function | public.fn_approve_notary_cdd_atomic( p_case_id UUID, p_assessment_id UUID, p_notary_id UU… | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L233 |
 | function | public.fn_assert_completed_envelope_anchor() | S/20260722000021_phase2_holistic_security_hardening.sql:L55 |
 | function | public.fn_assert_service_order_financial_reconciliation() | S/20260722000016_p2_b3_service_orders_expand_only.sql:L439 |
-| function | public.fn_assign_corporate_notary_atomic( p_case_id UUID, p_notary_id UUID, p_admin_id UU… | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L104 |
+| function | public.fn_assign_corporate_notary_atomic( p_case_id UUID, p_notary_id UUID, p_admin_id UU… | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L70 |
 | function | public.fn_audit_corporate_escrow_lock() | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L138 |
 | function | public.fn_audit_escrow_state_transition() | S/20260728000025_phase2_backend_forensic_hardening.sql:L91 +1 |
 | function | public.fn_audit_signing_global_transition() | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L200 |
@@ -277,7 +277,6 @@
 | function | public.fn_sync_notary_submission_contract() | S/20260722000020_p2_b8_notary_workspace_and_kemenkumham_seams.sql:L56 |
 | function | public.fn_touch_corporate_pricing_record_updated_at() | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L126 |
 | function | public.fn_touch_corporate_record_updated_at() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L279 |
-| function | public.fn_touch_notary_profiles() | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L35 |
 | function | public.fn_transition_corporate_service_case( p_case_id UUID, p_expected_stage VARCHAR, p_… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L748 +1 |
 | function | public.fn_validate_corporate_service_case_order() | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L250 |
 | function | public.fn_validate_document_integrity_anchor() | S/20260722000021_phase2_holistic_security_hardening.sql:L20 |
@@ -316,7 +315,7 @@
 | table | public.ekyc_verification_logs | S/20260722000018_p2_b5_b6_ekyc_and_signing_seams.sql:L17 |
 | table | public.government_submission_jobs | S/20260722000017_p2_b4_corporate_concierge_and_bo.sql:L189 |
 | table | public.notary_profiles | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L7 |
-| table | public.notary_workspace_idempotency_records | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L78 |
+| table | public.notary_workspace_idempotency_records | S/20260820000001_add_browser_safe_notary_workspace_boundary.sql:L47 |
 | table | public.payment_milestones | S/20260722000016_p2_b3_service_orders_expand_only.sql:L317 |
 | table | public.payout_idempotency_keys | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L26 |
 | table | public.provider_webhook_events | S/20260722000019_p2_b7_b8_payment_webhook_and_idempotency_seams.sql:L9 |

@@ -1,12 +1,9 @@
-# BATCH 3.C — BROWSER-SAFE NOTARY ASSIGNMENT AND CDD APPROVAL WORKSPACE
-
 > **Document Type**: Detailed Batch Blueprint (DBB)
 > **Branch**: `batch-3c-notary-workspace`
 > **Base Commit (Fixed Point)**: `e1620733da62b0851ae9d74b27f4a46886e1fb16`
 > **Target Scope**: Production-Grade Local Implementation (Notary Workspace, CDD Approval, Admin Assignment)
-> **Status**: `READY_FOR_EXTERNAL_REAUDIT`
-> **Current Checkpoint**: `CP-07 Complete / CP-08 Ready`
-> **Next Exact Action**: Commit and Handoff Report
+> **Status**: `FAILED_EXTERNAL_AUDIT; SUPERSEDED BY 3.C.1`
+> **Audit Failure Summary**: External audit rejected commit `1a6c89e` due to schema mismatches (`users_admin.is_active`, `users_advocate.is_verified`, `service_orders.escrow_status` do not exist in canonical schema), invalid stage jumping in notary assignment (skipping `IDENTITY_PENDING` which belongs to Batch 3.D), and non-canonical CDD lifecycle transition.
 
 ---
 

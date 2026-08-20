@@ -48,7 +48,7 @@ async function fetchAdminActor(userId: string): Promise<AdminActor | null> {
   const serviceKey = environment("SUPABASE_SERVICE_ROLE_KEY");
 
   const response = await fetch(
-    `${supabaseUrl}/rest/v1/users_admin?admin_id=eq.${userId}&select=admin_id,role_group,is_active`,
+    `${supabaseUrl}/rest/v1/users_admin?admin_id=eq.${userId}&select=admin_id,role_group`,
     {
       headers: {
         apikey: serviceKey,
@@ -58,13 +58,12 @@ async function fetchAdminActor(userId: string): Promise<AdminActor | null> {
   );
 
   if (!response.ok) return null;
-  const rows = await response.json() as Array<{ admin_id: string; role_group: string; is_active: boolean }>;
+  const rows = await response.json() as Array<{ admin_id: string; role_group: string }>;
   if (!rows || rows.length === 0) return null;
 
   return {
     adminId: rows[0].admin_id,
     roleGroup: rows[0].role_group,
-    isActive: rows[0].is_active,
   };
 }
 
@@ -83,7 +82,7 @@ async function fetchNotaryActor(userId: string): Promise<NotaryActor | null> {
       },
     ),
     fetch(
-      `${supabaseUrl}/rest/v1/users_advocate?advocate_id=eq.${userId}&select=advocate_id,is_verified`,
+      `${supabaseUrl}/rest/v1/users_advocate?advocate_id=eq.${userId}&select=advocate_id,kyc_status`,
       {
         headers: {
           apikey: serviceKey,
@@ -95,14 +94,14 @@ async function fetchNotaryActor(userId: string): Promise<NotaryActor | null> {
 
   if (!profileRes.ok || !advocateRes.ok) return null;
   const profiles = await profileRes.json() as Array<{ notary_id: string; status: string }>;
-  const advocates = await advocateRes.json() as Array<{ advocate_id: string; is_verified: boolean }>;
+  const advocates = await advocateRes.json() as Array<{ advocate_id: string; kyc_status: string }>;
 
   if (!profiles.length || !advocates.length) return null;
 
   return {
     notaryId: profiles[0].notary_id,
     status: profiles[0].status,
-    isVerifiedAdvocate: advocates[0].is_verified,
+    isVerifiedAdvocate: advocates[0].kyc_status === "VERIFIED",
   };
 }
 
@@ -115,7 +114,7 @@ async function fetchAssignmentContext(): Promise<{
 
   const [casesRes, notariesRes] = await Promise.all([
     fetch(
-      `${supabaseUrl}/rest/v1/corporate_service_cases?current_stage=eq.ESCROW_LOCKED&select=case_id,order_id,entity_type,proposed_name,current_stage,domicile_city,domicile_province,assigned_notary_id,service_orders!inner(escrow_status,funds_locked_at)&service_orders.escrow_status=eq.HELD_IN_ESCROW&order=created_at.desc`,
+      `${supabaseUrl}/rest/v1/corporate_service_cases?current_stage=eq.ESCROW_LOCKED&select=case_id,order_id,entity_type,proposed_name,current_stage,domicile_city,domicile_province,assigned_notary_id,escrow_transactions!inner(status,funds_locked_at)&escrow_transactions.status=eq.HELD_IN_ESCROW&escrow_transactions.funds_locked_at=not.is.null&order=created_at.desc`,
       {
         headers: {
           apikey: serviceKey,
@@ -124,7 +123,7 @@ async function fetchAssignmentContext(): Promise<{
       },
     ),
     fetch(
-      `${supabaseUrl}/rest/v1/notary_profiles?status=eq.VERIFIED_ACTIVE&select=notary_id,license_number,jurisdiction_city,jurisdiction_province,status,users_advocate!inner(full_name,is_verified)&users_advocate.is_verified=eq.true&order=created_at.desc`,
+      `${supabaseUrl}/rest/v1/notary_profiles?status=eq.VERIFIED_ACTIVE&select=notary_id,license_number,jurisdiction_city,jurisdiction_province,status,users_advocate!inner(full_name,kyc_status)&users_advocate.kyc_status=eq.VERIFIED&order=created_at.desc`,
       {
         headers: {
           apikey: serviceKey,
@@ -141,18 +140,24 @@ async function fetchAssignmentContext(): Promise<{
   const rawCases = await casesRes.json() as Array<any>;
   const rawNotaries = await notariesRes.json() as Array<any>;
 
-  const cases: EligibleCaseProjection[] = rawCases.map((c) => ({
-    caseId: c.case_id,
-    orderId: c.order_id,
-    entityType: c.entity_type,
-    proposedName: c.proposed_name,
-    currentStage: c.current_stage,
-    domicileCity: c.domicile_city,
-    domicileProvince: c.domicile_province,
-    escrowStatus: c.service_orders?.escrow_status ?? "HELD_IN_ESCROW",
-    fundsLockedAt: c.service_orders?.funds_locked_at ?? null,
-    assignedNotaryId: c.assigned_notary_id,
-  }));
+  const cases: EligibleCaseProjection[] = rawCases.map((c) => {
+    const escrow = Array.isArray(c.escrow_transactions) ? c.escrow_transactions[0] : c.escrow_transactions;
+    if (!escrow || escrow.status !== "HELD_IN_ESCROW" || !escrow.funds_locked_at) {
+      throw new HttpError(500, "SERVER_ERROR", "Data escrow tidak valid.");
+    }
+    return {
+      caseId: c.case_id,
+      orderId: c.order_id,
+      entityType: c.entity_type,
+      proposedName: c.proposed_name,
+      currentStage: c.current_stage,
+      domicileCity: c.domicile_city,
+      domicileProvince: c.domicile_province,
+      escrowStatus: escrow.status,
+      fundsLockedAt: escrow.funds_locked_at,
+      assignedNotaryId: c.assigned_notary_id,
+    };
+  });
 
   const notaries: VerifiedNotaryProjection[] = rawNotaries.map((n) => ({
     notaryId: n.notary_id,
@@ -181,6 +186,7 @@ const handler = createNotaryWorkspaceHandler({
     return {
       caseId: result.case_id,
       assignedNotaryId: result.assigned_notary_id,
+      currentStage: result.current_stage,
       replayed: Boolean(result.replayed),
     };
   },

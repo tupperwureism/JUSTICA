@@ -11,6 +11,7 @@ import {
   requireString,
   requireUuid,
 } from "../_shared/validation.ts";
+import { RestError } from "../_shared/rest.ts";
 
 const allowedOrigins = new Set([
   "http://localhost:5173",
@@ -26,7 +27,7 @@ export type EligibleCaseProjection = {
   domicileCity: string;
   domicileProvince: string;
   escrowStatus: string;
-  fundsLockedAt: string | null;
+  fundsLockedAt: string;
   assignedNotaryId: string | null;
 };
 
@@ -42,7 +43,6 @@ export type VerifiedNotaryProjection = {
 export type AdminActor = {
   adminId: string;
   roleGroup: string;
-  isActive: boolean;
 };
 
 export type NotaryActor = {
@@ -54,6 +54,7 @@ export type NotaryActor = {
 export type AssignNotaryResult = {
   caseId: string;
   assignedNotaryId: string;
+  currentStage: string;
   replayed: boolean;
 };
 
@@ -100,11 +101,21 @@ function corsHeaders(origin: string | null): HeadersInit {
   return { vary: "Origin" };
 }
 
-function sanitizeDatabaseError(error: unknown): HttpError {
+export function sanitizeDatabaseError(error: unknown): HttpError {
   if (error instanceof HttpError) return error;
 
-  const msg = error instanceof Error ? error.message : String(error);
+  let msg = "";
+  if (error instanceof RestError) {
+    msg = typeof error.details === "string" ? error.details : JSON.stringify(error.details ?? {});
+  } else if (error instanceof Error) {
+    msg = error.message;
+  } else {
+    msg = String(error);
+  }
 
+  if (msg.includes("UNAUTHENTICATED")) {
+    return new HttpError(401, "UNAUTHENTICATED", "Sesi autentikasi tidak valid atau sudah kedaluwarsa.");
+  }
   if (msg.includes("FORBIDDEN_ADMIN_ROLE_REQUIRED") || msg.includes("FORBIDDEN_NOT_ASSIGNED_NOTARY")) {
     return new HttpError(403, "FORBIDDEN", "Akun tidak berwenang menjalankan operasi ini.");
   }
@@ -112,16 +123,19 @@ function sanitizeDatabaseError(error: unknown): HttpError {
     return new HttpError(400, "NOTARY_NOT_VERIFIED", "Notaris yang dipilih belum terverifikasi aktif.");
   }
   if (msg.includes("ESCROW_NOT_HELD")) {
-    return new HttpError(400, "ESCROW_NOT_HELD", "Dana escrow perkara belum terkunci.");
+    return new HttpError(400, "ESCROW_NOT_HELD", "Dana escrow perkara belum terkunci di rekening penampung.");
   }
   if (msg.includes("RESOURCE_NOT_FOUND")) {
     return new HttpError(404, "RESOURCE_NOT_FOUND", "Perkara atau penilaian CDD tidak ditemukan.");
   }
+  if (msg.includes("CASE_CANCELLED")) {
+    return new HttpError(400, "CASE_CANCELLED", "Perkara telah dibatalkan.");
+  }
   if (msg.includes("ASSIGNMENT_CONFLICT")) {
     return new HttpError(409, "ASSIGNMENT_CONFLICT", "Perkara sudah ditugaskan ke Notaris lain.");
   }
-  if (msg.includes("STAGE_CONFLICT")) {
-    return new HttpError(409, "STAGE_CONFLICT", "Status perkara tidak memungkinkan operasi ini.");
+  if (msg.includes("STAGE_CONFLICT") || msg.includes("CDD_ALREADY_DECIDED")) {
+    return new HttpError(409, "STAGE_CONFLICT", "Status siklus hidup perkara tidak memungkinkan operasi ini.");
   }
   if (msg.includes("IDEMPOTENCY_CONFLICT")) {
     return new HttpError(409, "IDEMPOTENCY_CONFLICT", "Kunci idempotensi sudah digunakan dengan muatan data berbeda.");
@@ -133,7 +147,7 @@ function sanitizeDatabaseError(error: unknown): HttpError {
     return new HttpError(400, "INVALID_PAYLOAD", "Parameter permintaan tidak valid.");
   }
 
-  // Generic sanitized server error (no leaking internal SQL/PII)
+  // Safe generic fallback (never leak SQL, database schema, or PII)
   return new HttpError(500, "SERVER_ERROR", "Permintaan tidak dapat diproses saat ini.");
 }
 
@@ -172,20 +186,20 @@ export function createNotaryWorkspaceHandler(
       if (action === "list_assignment_context") {
         rejectUnknownKeys(record, ["action"], "list_assignment_context");
         const admin = await deps.getAdminActor(userId);
-        if (!admin || !admin.isActive || !["COMPLIANCE_OFFICER", "SUPER_ADMIN"].includes(admin.roleGroup)) {
+        if (!admin || !["COMPLIANCE_OFFICER", "SUPER_ADMIN"].includes(admin.roleGroup)) {
           throw new HttpError(403, "FORBIDDEN", "Akses daftar penugasan hanya untuk Admin Kepatuhan.");
         }
         responseData = await deps.listAssignmentContext();
       } else if (action === "assign_notary") {
-        rejectUnknownKeys(record, ["action", "caseId", "notaryId", "idempotencyKey", "adminId", "role"], "assign_notary");
+        rejectUnknownKeys(record, ["action", "caseId", "notaryId", "idempotencyKey"], "assign_notary");
         const admin = await deps.getAdminActor(userId);
-        if (!admin || !admin.isActive || !["COMPLIANCE_OFFICER", "SUPER_ADMIN"].includes(admin.roleGroup)) {
+        if (!admin || !["COMPLIANCE_OFFICER", "SUPER_ADMIN"].includes(admin.roleGroup)) {
           throw new HttpError(403, "FORBIDDEN", "Penugasan notaris hanya dapat dilakukan oleh Admin Kepatuhan.");
         }
 
         const caseId = requireUuid(record, "caseId");
         const notaryId = requireUuid(record, "notaryId");
-        const idempotencyKey = requireString(record, "idempotencyKey", 128);
+        const idempotencyKey = requireUuid(record, "idempotencyKey");
 
         try {
           responseData = await deps.assignNotary({
@@ -200,14 +214,14 @@ export function createNotaryWorkspaceHandler(
       } else if (action === "approve_cdd") {
         rejectUnknownKeys(record, ["action", "caseId", "assessmentId", "rulesVersion", "idempotencyKey"], "approve_cdd");
         const notary = await deps.getNotaryActor(userId);
-        if (!notary || notary.status !== "VERIFIED_ACTIVE") {
+        if (!notary || notary.status !== "VERIFIED_ACTIVE" || !notary.isVerifiedAdvocate) {
           throw new HttpError(403, "FORBIDDEN", "Hanya Notaris terverifikasi aktif yang dapat menyetujui CDD.");
         }
 
         const caseId = requireUuid(record, "caseId");
         const assessmentId = requireUuid(record, "assessmentId");
         const rulesVersion = requireString(record, "rulesVersion", 32);
-        const idempotencyKey = requireString(record, "idempotencyKey", 128);
+        const idempotencyKey = requireUuid(record, "idempotencyKey");
 
         try {
           responseData = await deps.approveCdd({

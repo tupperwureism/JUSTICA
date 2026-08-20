@@ -119,6 +119,7 @@ export type AssignmentContext = {
 export type AssignNotaryResult = {
   caseId: string;
   assignedNotaryId: string;
+  currentStage: string;
   replayed: boolean;
 };
 

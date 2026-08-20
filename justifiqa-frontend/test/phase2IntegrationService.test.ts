@@ -118,7 +118,7 @@ class FakeGateway implements Phase2IntegrationGateway {
   }
 
   async assignNotary(input: { caseId: string; notaryId: string; idempotencyKey: string }) {
-    return { caseId: input.caseId, assignedNotaryId: input.notaryId, replayed: false };
+    return { caseId: input.caseId, assignedNotaryId: input.notaryId, currentStage: 'ESCROW_LOCKED', replayed: false };
   }
 
   async approveCddAssessment(input: { assessmentId: string; caseId: string; rulesVersion: string }) {

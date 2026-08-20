@@ -215,6 +215,7 @@ export const phase2SupabaseGateway: Phase2IntegrationGateway = {
       data: {
         caseId: string;
         assignedNotaryId: string;
+        currentStage: string;
         replayed: boolean;
       };
     }>('notary-workspace', {
@@ -247,7 +248,7 @@ export const phase2SupabaseGateway: Phase2IntegrationGateway = {
         caseId: input.caseId,
         assessmentId: input.assessmentId,
         rulesVersion: input.rulesVersion,
-        idempotencyKey: input.idempotencyKey ?? crypto.randomUUID(),
+        idempotencyKey: input.idempotencyKey,
       },
     });
 
