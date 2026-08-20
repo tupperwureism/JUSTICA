@@ -456,12 +456,6 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
         || !['NO_MATCH', 'NOT_APPLICABLE'].includes(assessment.sanctionsStatus)) {
         throw new Phase2IntegrationError('INVALID_PAYLOAD');
       }
-      if (assessment.decision === 'APPROVED') {
-        return { assessmentId: assessment.assessmentId, caseId: input.caseId, currentStage: workspace.currentStage, replayed: true };
-      }
-      if (assessment.decision !== 'PENDING') {
-        throw new Phase2IntegrationError('INVALID_PAYLOAD');
-      }
       return gateway.approveCddAssessment({
         assessmentId: assessment.assessmentId,
         caseId: input.caseId,

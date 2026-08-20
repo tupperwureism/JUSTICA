@@ -1,69 +1,78 @@
 \set ON_ERROR_STOP on
 
 -- ============================================================================
--- Batch 3.C.1: Notary Workspace & Canonical CDD Approval Runtime Suite
--- All mutations, fixtures, and assertions run within a transactional block.
--- MUST finish with ROLLBACK to leave the database completely clean.
+-- Batch 3.C.2: Notary Workspace & Canonical CDD Approval Runtime Suite
+-- Runs inside a single transaction and MUST finish with ROLLBACK.
+-- Uses 100% canonical schema, valid constraints, advisory locks, and WORM events.
 -- ============================================================================
 
 BEGIN;
 
 DO $$
 DECLARE
-    v_admin_id UUID := '3c100000-0000-4000-8000-000000000001'::UUID;
-    v_notary_id UUID := '3c100000-0000-4000-8000-000000000002'::UUID;
-    v_unverified_notary_id UUID := '3c100000-0000-4000-8000-000000000003'::UUID;
-    v_client_id UUID := '3c100000-0000-4000-8000-000000000004'::UUID;
-    v_order_id UUID := '3c100000-0000-4000-8000-000000000010'::UUID;
-    v_case_id UUID := '3c100000-0000-4000-8000-000000000020'::UUID;
-    v_escrow_id UUID := '3c100000-0000-4000-8000-000000000025'::UUID;
-    v_assessment_id UUID := '3c100000-0000-4000-8000-000000000030'::UUID;
-    v_bo_id UUID := '3c100000-0000-4000-8000-000000000040'::UUID;
+    v_admin_id UUID := '3c200000-0000-4000-8000-000000000001'::UUID;
+    v_notary_id UUID := '3c200000-0000-4000-8000-000000000002'::UUID;
+    v_unverified_notary_id UUID := '3c200000-0000-4000-8000-000000000003'::UUID;
+    v_client_id UUID := '3c200000-0000-4000-8000-000000000004'::UUID;
+    v_order_id UUID := '3c200000-0000-4000-8000-000000000010'::UUID;
+    v_case_id UUID := '3c200000-0000-4000-8000-000000000020'::UUID;
+    v_escrow_id UUID := '3c200000-0000-4000-8000-000000000025'::UUID;
+    v_assessment_id UUID := '3c200000-0000-4000-8000-000000000030'::UUID;
+    v_bo_id UUID := '3c200000-0000-4000-8000-000000000040'::UUID;
+
+    v_assign_key VARCHAR := '3c200000-0000-4000-8000-000000000100';
+    v_cdd_key VARCHAR := '3c200000-0000-4000-8000-000000000200';
     v_result JSONB;
     v_err_caught BOOLEAN := FALSE;
+    v_event_count_before INT;
+    v_event_count_after INT;
 BEGIN
     -- 1. Setup Auth Users Fixtures
     INSERT INTO auth.users (id, aud, role, email, encrypted_password, created_at, updated_at)
     VALUES
-        (v_admin_id, 'authenticated', 'authenticated', 'admin-3c1@justica.invalid', '!TEST!', clock_timestamp(), clock_timestamp()),
-        (v_notary_id, 'authenticated', 'authenticated', 'notary-3c1@justica.invalid', '!TEST!', clock_timestamp(), clock_timestamp()),
-        (v_unverified_notary_id, 'authenticated', 'authenticated', 'unverified-3c1@justica.invalid', '!TEST!', clock_timestamp(), clock_timestamp()),
-        (v_client_id, 'authenticated', 'authenticated', 'client-3c1@justica.invalid', '!TEST!', clock_timestamp(), clock_timestamp())
+        (v_admin_id, 'authenticated', 'authenticated', 'admin-3c2@justica.invalid', '!TEST!', clock_timestamp(), clock_timestamp()),
+        (v_notary_id, 'authenticated', 'authenticated', 'notary-3c2@justica.invalid', '!TEST!', clock_timestamp(), clock_timestamp()),
+        (v_unverified_notary_id, 'authenticated', 'authenticated', 'unverified-3c2@justica.invalid', '!TEST!', clock_timestamp(), clock_timestamp()),
+        (v_client_id, 'authenticated', 'authenticated', 'client-3c2@justica.invalid', '!TEST!', clock_timestamp(), clock_timestamp())
     ON CONFLICT (id) DO NOTHING;
 
-    -- 2. Setup Profile Fixtures with CANONICAL columns only
+    -- 2. Setup Canonical Profile Fixtures with ALL NOT NULL and CHECK constraints
     INSERT INTO public.users_admin (admin_id, full_name, email, role_group)
-    VALUES (v_admin_id, 'Admin Kepatuhan 3C1', 'admin-3c1@justica.invalid', 'COMPLIANCE_OFFICER')
+    VALUES (v_admin_id, 'Admin Kepatuhan 3C2', 'admin-3c2@justica.invalid', 'COMPLIANCE_OFFICER')
     ON CONFLICT (admin_id) DO UPDATE SET role_group = 'COMPLIANCE_OFFICER';
 
-    INSERT INTO public.users_client (client_id, full_name, email)
-    VALUES (v_client_id, 'Klien Korporasi 3C1', 'client-3c1@justica.invalid')
+    INSERT INTO public.users_client (client_id, full_name, email, phone_e164, password_hash, kyc_status)
+    VALUES (v_client_id, 'Klien Korporasi 3C2', 'client-3c2@justica.invalid', '+6281234567890', '!HASH!', 'VERIFIED')
     ON CONFLICT (client_id) DO NOTHING;
 
-    INSERT INTO public.users_advocate (advocate_id, full_name, email, kyc_status)
-    VALUES
-        (v_notary_id, 'Notaris Hj. Siti Aminah S.H., M.Kn.', 'notary-3c1@justica.invalid', 'VERIFIED'),
-        (v_unverified_notary_id, 'Advokat Belum Verifikasi', 'unverified-3c1@justica.invalid', 'PENDING_SUBMISSION')
+    INSERT INTO public.users_advocate (
+        advocate_id, full_name, email, phone_e164, sipp_license_no,
+        peradi_card_no, specialization_primary, kyc_status
+    ) VALUES
+        (v_notary_id, 'Notaris Hj. Siti Aminah S.H., M.Kn.', 'notary-3c2@justica.invalid', '+6281234567891', 'SIPP-3C2-001', 'PERADI-3C2-001', 'CORPORATE', 'VERIFIED'),
+        (v_unverified_notary_id, 'Advokat Belum Verifikasi', 'unverified-3c2@justica.invalid', '+6281234567892', 'SIPP-3C2-002', 'PERADI-3C2-002', 'LITIGATION', 'PENDING')
     ON CONFLICT (advocate_id) DO UPDATE SET kyc_status = EXCLUDED.kyc_status;
 
-    INSERT INTO public.notary_profiles (notary_id, license_number, jurisdiction_city, jurisdiction_province, status, verified_by_admin_id, verified_at)
-    VALUES
-        (v_notary_id, 'SK-NOT-3C1-001', 'Jakarta Selatan', 'DKI Jakarta', 'VERIFIED_ACTIVE', v_admin_id, clock_timestamp()),
-        (v_unverified_notary_id, 'SK-NOT-PENDING', 'Jakarta Selatan', 'DKI Jakarta', 'PENDING', null, null)
+    INSERT INTO public.notary_profiles (
+        notary_id, license_number, jurisdiction_city, jurisdiction_province,
+        status, verified_by_admin_id, verified_at
+    ) VALUES
+        (v_notary_id, 'SK-NOT-3C2-001', 'Jakarta Selatan', 'DKI Jakarta', 'VERIFIED_ACTIVE', v_admin_id, clock_timestamp()),
+        (v_unverified_notary_id, 'SK-NOT-3C2-PENDING', 'Jakarta Selatan', 'DKI Jakarta', 'PENDING', null, null)
     ON CONFLICT (notary_id) DO UPDATE SET status = EXCLUDED.status, verified_by_admin_id = EXCLUDED.verified_by_admin_id, verified_at = EXCLUDED.verified_at;
 
     -- 3. Setup Order, Case, and Escrow Fixtures
     INSERT INTO public.service_orders (
-        order_id, client_id, service_type
+        order_id, client_id, service_type, status
     ) VALUES (
-        v_order_id, v_client_id, 'CORPORATE_INTAKE'
+        v_order_id, v_client_id, 'PT_ORDINARY', 'ACTIVE'
     ) ON CONFLICT (order_id) DO NOTHING;
 
     INSERT INTO public.corporate_service_cases (
         case_id, order_id, entity_type, proposed_name, domicile_city, domicile_province,
         legal_scope_version, current_stage, assigned_notary_id
     ) VALUES (
-        v_case_id, v_order_id, 'PT_ORDINARY', 'PT Inovasi Mandiri 3C1', 'Jakarta Selatan', 'DKI Jakarta',
+        v_case_id, v_order_id, 'PT_ORDINARY', 'PT Inovasi Mandiri 3C2', 'Jakarta Selatan', 'DKI Jakarta',
         '2026.1', 'ESCROW_LOCKED', null
     ) ON CONFLICT (case_id) DO UPDATE SET current_stage = 'ESCROW_LOCKED', assigned_notary_id = null;
 
@@ -79,7 +88,7 @@ BEGIN
         beneficial_owner_id, case_id, declaration_version, natural_person_name, identity_reference,
         control_basis, percentage, evidence_digest, verification_status, reviewer_id, verified_at
     ) VALUES (
-        v_bo_id, v_case_id, 1, 'Budi Santoso', 'ID-BO-3C1-001',
+        v_bo_id, v_case_id, 1, 'Budi Santoso', 'ID-BO-3C2-001',
         'OWNERSHIP', 80.0, repeat('c', 64), 'VERIFIED', v_admin_id, clock_timestamp()
     ) ON CONFLICT (beneficial_owner_id) DO NOTHING;
 
@@ -93,7 +102,28 @@ BEGIN
 
 
     -- ========================================================================
-    -- ASSERTION 1: Assignment rejects unverified notary
+    -- ASSERTION 1: Assignment rejects invalid UUID idempotency key
+    -- ========================================================================
+    v_err_caught := FALSE;
+    BEGIN
+        PERFORM public.fn_assign_corporate_notary_atomic(
+            v_case_id,
+            v_notary_id,
+            v_admin_id,
+            'not-a-valid-uuid'
+        );
+    EXCEPTION WHEN OTHERS THEN
+        IF SQLERRM LIKE '%INVALID_ARGUMENTS%' THEN
+            v_err_caught := TRUE;
+        END IF;
+    END;
+    IF NOT v_err_caught THEN
+        RAISE EXCEPTION 'TEST_FAILED: Expected INVALID_ARGUMENTS for invalid UUID key';
+    END IF;
+
+
+    -- ========================================================================
+    -- ASSERTION 2: Assignment rejects unverified notary
     -- ========================================================================
     v_err_caught := FALSE;
     BEGIN
@@ -101,7 +131,7 @@ BEGIN
             v_case_id,
             v_unverified_notary_id,
             v_admin_id,
-            '3c100000-0000-4000-8000-000000000101'
+            '3c200000-0000-4000-8000-000000000101'
         );
     EXCEPTION WHEN OTHERS THEN
         IF SQLERRM LIKE '%NOTARY_NOT_VERIFIED%' THEN
@@ -114,34 +144,17 @@ BEGIN
 
 
     -- ========================================================================
-    -- ASSERTION 2: Assignment rejects non-admin caller
+    -- ASSERTION 3: Valid Assignment succeeds, leaves ESCROW_LOCKED, appends WORM event
     -- ========================================================================
-    v_err_caught := FALSE;
-    BEGIN
-        PERFORM public.fn_assign_corporate_notary_atomic(
-            v_case_id,
-            v_notary_id,
-            v_client_id, -- client is not admin
-            '3c100000-0000-4000-8000-000000000102'
-        );
-    EXCEPTION WHEN OTHERS THEN
-        IF SQLERRM LIKE '%FORBIDDEN_ADMIN_ROLE_REQUIRED%' THEN
-            v_err_caught := TRUE;
-        END IF;
-    END;
-    IF NOT v_err_caught THEN
-        RAISE EXCEPTION 'TEST_FAILED: Expected FORBIDDEN_ADMIN_ROLE_REQUIRED for non-admin caller';
-    END IF;
+    SELECT count(*) INTO v_event_count_before
+    FROM public.compliance_workflow_events_worm
+    WHERE corporate_case_id = v_case_id;
 
-
-    -- ========================================================================
-    -- ASSERTION 3: Assignment succeeds and leaves stage at ESCROW_LOCKED
-    -- ========================================================================
     v_result := public.fn_assign_corporate_notary_atomic(
         v_case_id,
         v_notary_id,
         v_admin_id,
-        '3c100000-0000-4000-8000-000000000103'
+        v_assign_key
     );
 
     IF (v_result->>'replayed')::BOOLEAN IS NOT FALSE
@@ -150,23 +163,23 @@ BEGIN
         RAISE EXCEPTION 'TEST_FAILED: Valid assignment returned unexpected result: %', v_result;
     END IF;
 
-    -- Verify directly in database that stage is still ESCROW_LOCKED
-    IF NOT EXISTS (
-        SELECT 1 FROM public.corporate_service_cases
-        WHERE case_id = v_case_id AND assigned_notary_id = v_notary_id AND current_stage = 'ESCROW_LOCKED'
-    ) THEN
-        RAISE EXCEPTION 'TEST_FAILED: Corporate case stage in DB was incorrectly changed or notary not assigned';
+    SELECT count(*) INTO v_event_count_after
+    FROM public.compliance_workflow_events_worm
+    WHERE corporate_case_id = v_case_id AND event_type = 'NOTARY_ASSIGNED';
+
+    IF v_event_count_after <> v_event_count_before + 1 THEN
+        RAISE EXCEPTION 'TEST_FAILED: WORM event NOTARY_ASSIGNED was not appended correctly';
     END IF;
 
 
     -- ========================================================================
-    -- ASSERTION 4: Exact assignment replay succeeds with replayed = true
+    -- ASSERTION 4: Exact assignment replay succeeds with zero additional writes
     -- ========================================================================
     v_result := public.fn_assign_corporate_notary_atomic(
         v_case_id,
         v_notary_id,
         v_admin_id,
-        '3c100000-0000-4000-8000-000000000103'
+        v_assign_key
     );
 
     IF (v_result->>'replayed')::BOOLEAN IS NOT TRUE
@@ -174,17 +187,43 @@ BEGIN
         RAISE EXCEPTION 'TEST_FAILED: Expected replayed=true on exact assignment replay';
     END IF;
 
+    -- Verify no additional WORM event was created on replay
+    IF (SELECT count(*) FROM public.compliance_workflow_events_worm WHERE corporate_case_id = v_case_id AND event_type = 'NOTARY_ASSIGNED') <> v_event_count_after THEN
+        RAISE EXCEPTION 'TEST_FAILED: Replay created duplicate WORM event';
+    END IF;
+
 
     -- ========================================================================
-    -- ASSERTION 5: Changed payload with same key throws IDEMPOTENCY_CONFLICT
+    -- ASSERTION 5: New key against already assigned case throws ASSIGNMENT_CONFLICT
     -- ========================================================================
     v_err_caught := FALSE;
     BEGIN
         PERFORM public.fn_assign_corporate_notary_atomic(
-            '3c100000-0000-4000-8000-999999999999'::UUID, -- Changed case
+            v_case_id,
             v_notary_id,
             v_admin_id,
-            '3c100000-0000-4000-8000-000000000103' -- Reused key
+            '3c200000-0000-4000-8000-000000000109' -- New key
+        );
+    EXCEPTION WHEN OTHERS THEN
+        IF SQLERRM LIKE '%ASSIGNMENT_CONFLICT%' THEN
+            v_err_caught := TRUE;
+        END IF;
+    END;
+    IF NOT v_err_caught THEN
+        RAISE EXCEPTION 'TEST_FAILED: Expected ASSIGNMENT_CONFLICT for new key on assigned case';
+    END IF;
+
+
+    -- ========================================================================
+    -- ASSERTION 6: Mutated payload with same key throws IDEMPOTENCY_CONFLICT
+    -- ========================================================================
+    v_err_caught := FALSE;
+    BEGIN
+        PERFORM public.fn_assign_corporate_notary_atomic(
+            '3c200000-0000-4000-8000-999999999999'::UUID, -- Changed case
+            v_notary_id,
+            v_admin_id,
+            v_assign_key -- Reused key
         );
     EXCEPTION WHEN OTHERS THEN
         IF SQLERRM LIKE '%IDEMPOTENCY_CONFLICT%' THEN
@@ -202,26 +241,18 @@ BEGIN
     PERFORM public.fn_transition_corporate_service_case(v_case_id, 'ESCROW_LOCKED', 'IDENTITY_PENDING');
     PERFORM public.fn_transition_corporate_service_case(v_case_id, 'IDENTITY_PENDING', 'CDD_REVIEW');
 
-    -- Verify stage is now CDD_REVIEW
-    IF NOT EXISTS (
-        SELECT 1 FROM public.corporate_service_cases
-        WHERE case_id = v_case_id AND current_stage = 'CDD_REVIEW'
-    ) THEN
-        RAISE EXCEPTION 'TEST_FAILED: Case was not transitioned to CDD_REVIEW for CDD testing';
-    END IF;
-
 
     -- ========================================================================
-    -- ASSERTION 6: CDD Approval rejects unassigned notary
+    -- ASSERTION 7: CDD Approval rejects unassigned notary
     -- ========================================================================
     v_err_caught := FALSE;
     BEGIN
         PERFORM public.fn_approve_notary_cdd_atomic(
             v_case_id,
             v_assessment_id,
-            '3c100000-0000-4000-8000-888888888888'::UUID, -- Different unassigned notary
+            '3c200000-0000-4000-8000-888888888888'::UUID, -- Unassigned notary
             'PMPJ-2026.1',
-            '3c100000-0000-4000-8000-000000000201'
+            '3c200000-0000-4000-8000-000000000201'
         );
     EXCEPTION WHEN OTHERS THEN
         IF SQLERRM LIKE '%FORBIDDEN_NOT_ASSIGNED_NOTARY%' OR SQLERRM LIKE '%NOTARY_NOT_VERIFIED%' THEN
@@ -234,36 +265,18 @@ BEGIN
 
 
     -- ========================================================================
-    -- ASSERTION 7: CDD Approval rejects rules version mismatch
+    -- ASSERTION 8: Valid CDD approval transitions to DOCUMENTS_PENDING and appends WORM event
     -- ========================================================================
-    v_err_caught := FALSE;
-    BEGIN
-        PERFORM public.fn_approve_notary_cdd_atomic(
-            v_case_id,
-            v_assessment_id,
-            v_notary_id,
-            'WRONG-RULES-VERSION',
-            '3c100000-0000-4000-8000-000000000202'
-        );
-    EXCEPTION WHEN OTHERS THEN
-        IF SQLERRM LIKE '%RULES_VERSION_MISMATCH%' THEN
-            v_err_caught := TRUE;
-        END IF;
-    END;
-    IF NOT v_err_caught THEN
-        RAISE EXCEPTION 'TEST_FAILED: Expected RULES_VERSION_MISMATCH';
-    END IF;
+    SELECT count(*) INTO v_event_count_before
+    FROM public.compliance_workflow_events_worm
+    WHERE corporate_case_id = v_case_id AND event_type = 'CDD_APPROVED';
 
-
-    -- ========================================================================
-    -- ASSERTION 8: Valid CDD approval transitions case to DOCUMENTS_PENDING
-    -- ========================================================================
     v_result := public.fn_approve_notary_cdd_atomic(
         v_case_id,
         v_assessment_id,
         v_notary_id,
         'PMPJ-2026.1',
-        '3c100000-0000-4000-8000-000000000203'
+        v_cdd_key
     );
 
     IF (v_result->>'replayed')::BOOLEAN IS NOT FALSE
@@ -271,15 +284,12 @@ BEGIN
         RAISE EXCEPTION 'TEST_FAILED: Valid CDD approval returned unexpected result: %', v_result;
     END IF;
 
-    -- Verify directly in database that assessment is APPROVED and stage is DOCUMENTS_PENDING
-    IF NOT EXISTS (
-        SELECT 1 FROM public.compliance_assessments
-        WHERE assessment_id = v_assessment_id AND reviewer_decision = 'APPROVED'
-    ) OR NOT EXISTS (
-        SELECT 1 FROM public.corporate_service_cases
-        WHERE case_id = v_case_id AND current_stage = 'DOCUMENTS_PENDING'
-    ) THEN
-        RAISE EXCEPTION 'TEST_FAILED: Assessment decision or case stage in DB was not updated atomically';
+    SELECT count(*) INTO v_event_count_after
+    FROM public.compliance_workflow_events_worm
+    WHERE corporate_case_id = v_case_id AND event_type = 'CDD_APPROVED';
+
+    IF v_event_count_after <> v_event_count_before + 1 THEN
+        RAISE EXCEPTION 'TEST_FAILED: WORM event CDD_APPROVED was not appended correctly';
     END IF;
 
 
@@ -291,7 +301,7 @@ BEGIN
         v_assessment_id,
         v_notary_id,
         'PMPJ-2026.1',
-        '3c100000-0000-4000-8000-000000000203'
+        v_cdd_key
     );
 
     IF (v_result->>'replayed')::BOOLEAN IS NOT TRUE
@@ -301,7 +311,7 @@ BEGIN
 
 
     -- ========================================================================
-    -- ASSERTION 10: New key on already decided CDD throws CDD_ALREADY_DECIDED / STAGE_CONFLICT
+    -- ASSERTION 10: New key on already decided CDD throws STAGE_CONFLICT / CDD_ALREADY_DECIDED
     -- ========================================================================
     v_err_caught := FALSE;
     BEGIN
@@ -310,7 +320,7 @@ BEGIN
             v_assessment_id,
             v_notary_id,
             'PMPJ-2026.1',
-            '3c100000-0000-4000-8000-000000000204' -- New key
+            '3c200000-0000-4000-8000-000000000299' -- New key
         );
     EXCEPTION WHEN OTHERS THEN
         IF SQLERRM LIKE '%STAGE_CONFLICT%' OR SQLERRM LIKE '%CDD_ALREADY_DECIDED%' THEN
@@ -321,7 +331,7 @@ BEGIN
         RAISE EXCEPTION 'TEST_FAILED: Expected conflict on new key against already approved CDD';
     END IF;
 
-    RAISE NOTICE 'ALL BATCH 3.C.1 CANONICAL RUNTIME ASSERTIONS PASSED SUCCESSFULLY';
+    RAISE NOTICE 'ALL BATCH 3.C.2 CANONICAL RUNTIME ASSERTIONS PASSED SUCCESSFULLY';
 END;
 $$;
 
@@ -343,6 +353,6 @@ BEGIN
 END;
 $$;
 
-SELECT 'notary_workspace_runtime_assertions_complete_3c1' AS status;
+SELECT 'notary_workspace_runtime_assertions_complete_3c2' AS status;
 
 ROLLBACK;

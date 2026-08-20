@@ -1,13 +1,10 @@
-# BATCH 3.C.1 — REPAIR CANONICAL NOTARY ASSIGNMENT AND CDD BOUNDARIES
-
 > **Document Type**: Detailed Batch Blueprint (DBB)
 > **Branch**: `batch-3c-notary-workspace`
-> **Base Fixed Point (HEAD)**: `1a6c89e00d8d6087542b9bb230d50197f020f23f`
-> **Parent Commit**: `e1620733da62b0851ae9d74b27f4a46886e1fb16`
+> **Base Fixed Point (HEAD)**: `3e5e4a705241a82ef9b669892cd4dd2230fc0033`
+> **Parent Commit**: `1a6c89e00d8d6087542b9bb230d50197f020f23f`
 > **Target Scope**: Production-Grade Local Implementation Correction (Canonical Schema, Row-Mutex, Atomic Lifecycle, Zero Browser Table DML)
-> **Status**: `READY_FOR_EXTERNAL_REAUDIT`
-> **Current Checkpoint**: `CP-07 Complete / CP-08 Ready`
-> **Next Exact Action**: Commit and Handoff Report
+> **Status**: `FAILED_EXTERNAL_AUDIT; SUPERSEDED BY 3.C.2`
+> **Audit Failure Summary**: External audit rejected commit `3e5e4a7` due to reference to nonexistent `public.audit_events` (causing RPC runtime failure), invalid in-place migration editing, missing idempotency advisory-lock serialization, service_role column update bypass on `assigned_notary_id`, invalid SQL runtime fixtures, manual editing of `database.types.ts`, fail-open UI refresh, and synthetic browser replay.
 
 ---
 

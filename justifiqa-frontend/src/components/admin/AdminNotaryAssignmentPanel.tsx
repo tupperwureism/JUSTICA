@@ -77,11 +77,7 @@ export function AdminNotaryAssignmentPanel() {
       setContext(refreshed);
 
       const verifiedCase = refreshed.cases.find((c) => c.caseId === selectedCaseId);
-      const isConfirmed = verifiedCase
-        ? verifiedCase.assignedNotaryId === selectedNotaryId && verifiedCase.currentStage === 'ESCROW_LOCKED'
-        : result.assignedNotaryId === selectedNotaryId && result.currentStage === 'ESCROW_LOCKED';
-
-      if (!isConfirmed) {
+      if (!verifiedCase || verifiedCase.assignedNotaryId !== selectedNotaryId || verifiedCase.currentStage !== 'ESCROW_LOCKED') {
         throw new Error('Konfirmasi penyegaran gagal: Data penugasan belum terkonfirmasi di database server.');
       }
 

@@ -37,12 +37,12 @@ export function useNotaryWorkspaceIntegration() {
     },
     {
       onSuccess: async (result) => {
-        setAttemptKey('');
         const refreshedWorkspaces = await workspacesQuery.refresh();
         const verified = refreshedWorkspaces?.find((w) => w.caseId === result.caseId);
-        if (verified && verified.currentStage !== 'DOCUMENTS_PENDING') {
+        if (!verified || verified.currentStage !== 'DOCUMENTS_PENDING' || verified.cddAssessment?.decision !== 'APPROVED' || verified.cddAssessment?.assessmentId !== result.assessmentId) {
           throw new Error('Konfirmasi penyegaran gagal: Status perkara belum terverifikasi DOCUMENTS_PENDING di server.');
         }
+        setAttemptKey('');
       },
     },
   );

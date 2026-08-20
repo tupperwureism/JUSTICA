@@ -220,3 +220,33 @@ test('submitNotaryStamping remains honestly blocked as future work', async () =>
     (err: Error) => err instanceof Phase2IntegrationError && err.code === 'BROWSER_BOUNDARY_UNAVAILABLE',
   );
 });
+
+test('approveNotaryCdd always calls gateway and never synthesizes local replay', async () => {
+  let callCount = 0;
+  const gateway = createMockGateway(ADVOCATE_NOTARY, {
+    approveCddAssessment: async (input) => {
+      callCount += 1;
+      return {
+        assessmentId: input.assessmentId,
+        caseId: input.caseId,
+        currentStage: 'DOCUMENTS_PENDING',
+        replayed: callCount > 1,
+      };
+    },
+  });
+  const service = createPhase2IntegrationService(gateway);
+  const input = {
+    caseId: CASE_ID_1,
+    rulesVersion: 'PMPJ-2026.1',
+    idempotencyKey: '88888888-8888-4888-8888-888888888888',
+  };
+
+  const res1 = await service.approveNotaryCdd(input);
+  assert.equal(res1.replayed, false);
+  assert.equal(callCount, 1);
+
+  // Second call must call gateway again (server decides replay based on idempotency record)
+  const res2 = await service.approveNotaryCdd(input);
+  assert.equal(res2.replayed, true);
+  assert.equal(callCount, 2);
+});

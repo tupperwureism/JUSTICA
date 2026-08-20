@@ -121,7 +121,8 @@ class FakeGateway implements Phase2IntegrationGateway {
     return { caseId: input.caseId, assignedNotaryId: input.notaryId, currentStage: 'ESCROW_LOCKED', replayed: false };
   }
 
-  async approveCddAssessment(input: { assessmentId: string; caseId: string; rulesVersion: string }) {
+  async approveCddAssessment(input: { assessmentId: string; caseId: string; rulesVersion: string; idempotencyKey?: string }) {
+    const isReplay = this.notaryWorkspace?.cddAssessment?.decision === 'APPROVED';
     if (this.notaryWorkspace?.cddAssessment) {
       this.notaryWorkspace = {
         ...this.notaryWorkspace,
@@ -136,7 +137,7 @@ class FakeGateway implements Phase2IntegrationGateway {
       assessmentId: input.assessmentId,
       caseId: input.caseId,
       currentStage: 'DOCUMENTS_PENDING',
-      replayed: false,
+      replayed: isReplay,
     };
   }
 
