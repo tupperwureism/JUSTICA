@@ -2,12 +2,11 @@
 
 > **Document Type**: Detailed Batch Blueprint (DBB)
 > **Branch**: `batch-3c-notary-workspace`
-> **Base Fixed Point (HEAD)**: `3e5e4a705241a82ef9b669892cd4dd2230fc0033`
-> **Parent Commit**: `1a6c89e00d8d6087542b9bb230d50197f020f23f`
+> **Base Fixed Point (HEAD)**: `63766fea107f2cd3e3af3c56bb7d247dfdec5ea4`
+> **Parent Commit**: `3e5e4a705241a82ef9b669892cd4dd2230fc0033`
 > **Target Scope**: Forward Migration, Canonical WORM Events, Advisory-Lock Mutex, ACL Tightening, Valid SQL Runtime & Concurrency Probe, Fail-Closed Canonical Refresh Gate
-> **Status**: `READY_FOR_EXTERNAL_REAUDIT`
-> **Current Checkpoint**: `CP-06 Complete / CP-07 Ready`
-> **Next Exact Action**: Staging, Commit, and Final Report
+> **Status**: `FAILED_EXTERNAL_AUDIT; SUPERSEDED BY 3.C.3`
+> **Audit Failure Summary**: External audit rejected commit `63766fe` because database verification gates (clean replay, SQL runtime, concurrency probe, advisors, typegen) were never physically executed; concurrency probe was false-green; SQL runtime fixtures had schema violations (missing submitted_at on active order, missing client_id/holding_expires_at on escrow); SECURITY DEFINER search_path was unhardened; and stable frontend attempt identity was incomplete.
 
 ---
 

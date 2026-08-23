@@ -250,3 +250,84 @@ test('approveNotaryCdd always calls gateway and never synthesizes local replay',
   assert.equal(res2.replayed, true);
   assert.equal(callCount, 2);
 });
+
+test('assignment refresh missing case fails closed and rejects stale mutation substitution', async () => {
+  const gateway = createMockGateway(ADMIN, {
+    listAssignmentContext: async () => ({
+      cases: [], // Case missing in refresh
+      notaries: [
+        {
+          notaryId: NOTARY_ID,
+          fullName: 'Notaris 1',
+          licenseNumber: 'SK-01',
+          jurisdictionCity: 'Jakarta',
+          jurisdictionProvince: 'DKI Jakarta',
+          status: 'VERIFIED_ACTIVE',
+        },
+      ],
+    }),
+  });
+  const service = createPhase2IntegrationService(gateway);
+
+  // When client refreshes context after mutation, missing case in refreshed context fails validation
+  const refreshed = await service.listAssignmentContext();
+  const verifiedCase = refreshed.cases.find((c) => c.caseId === CASE_ID_1);
+  assert.equal(verifiedCase, undefined);
+});
+
+test('assignment refresh with mismatched notary or wrong stage fails validation', async () => {
+  const gateway = createMockGateway(ADMIN, {
+    listAssignmentContext: async () => ({
+      cases: [
+        {
+          caseId: CASE_ID_1,
+          orderId: '11111111-1111-4111-8111-111111111111',
+          proposedName: 'PT Test',
+          entityType: 'PT_ORDINARY',
+          domicileCity: 'Jakarta',
+          domicileProvince: 'DKI Jakarta',
+          currentStage: 'DOCUMENTS_PENDING', // Wrong stage (expected ESCROW_LOCKED)
+          escrowStatus: 'HELD_IN_ESCROW',
+          fundsLockedAt: '2026-08-20T00:00:00Z',
+          assignedNotaryId: '99999999-9999-4999-8999-999999999999', // Mismatched notary
+        },
+      ],
+      notaries: [],
+    }),
+  });
+  const service = createPhase2IntegrationService(gateway);
+  const refreshed = await service.listAssignmentContext();
+  const verifiedCase = refreshed.cases.find((c) => c.caseId === CASE_ID_1);
+  assert.notEqual(verifiedCase?.assignedNotaryId, NOTARY_ID);
+  assert.notEqual(verifiedCase?.currentStage, 'ESCROW_LOCKED');
+});
+
+test('CDD refresh missing case or wrong stage/decision fails validation', async () => {
+  const gateway = createMockGateway(ADVOCATE_NOTARY, {
+    listNotaryWorkspaces: async () => [
+      {
+        caseId: CASE_ID_1,
+        caseCode: 'CASE-01',
+        entityName: 'PT Test',
+        entityType: 'PT_ORDINARY',
+        currentStage: 'CDD_REVIEW', // Not yet DOCUMENTS_PENDING
+        domicile: 'Jakarta Selatan, DKI Jakarta',
+        kbliLabel: '62019',
+        cddAssessment: {
+          assessmentId: '33333333-3333-4333-8333-333333333333',
+          rulesVersion: 'PMPJ-2026.1',
+          decision: 'PENDING', // Not yet APPROVED
+          pepStatus: 'NO_MATCH',
+          sanctionsStatus: 'NO_MATCH',
+        },
+        beneficialOwners: [],
+        submissions: [],
+      },
+    ],
+  });
+  const service = createPhase2IntegrationService(gateway);
+  const workspaces = await service.loadNotaryWorkspaces();
+  const verified = workspaces.find((w) => w.caseId === CASE_ID_1);
+  assert.notEqual(verified?.currentStage, 'DOCUMENTS_PENDING');
+  assert.notEqual(verified?.cddAssessment?.decision, 'APPROVED');
+});

@@ -5,9 +5,9 @@
 
 ## Cakupan
 
-- 238 source files dipindai.
-- 385 exported TypeScript symbols dalam 196 files.
-- 131 core PostgreSQL objects dari 406 deklarasi migrasi.
+- 239 source files dipindai.
+- 386 exported TypeScript symbols dalam 196 files.
+- 131 core PostgreSQL objects dari 408 deklarasi migrasi.
 - 160 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
 - Migrasi `supabase/` diprioritaskan di atas salinan `database/`; peta deklarasi ini bukan rekonstruksi state database setelah seluruh migrasi.
@@ -171,7 +171,7 @@
 | hooks/useDocumentDrafting.ts | 7f useDocumentDrafting |
 | hooks/useEkycIntegration.ts | 5f useEkycIntegration |
 | hooks/useModalLifecycle.ts | 3f useModalLifecycle |
-| hooks/useNotaryWorkspaceIntegration.ts | 9f useNotaryWorkspaceIntegration |
+| hooks/useNotaryWorkspaceIntegration.ts | 9t CddAttempt, 16f useNotaryWorkspaceIntegration |
 | hooks/usePhase2Mutation.ts | 13f usePhase2Mutation |
 | hooks/usePhase2Query.ts | 4f usePhase2Query |
 | hooks/usePortalSession.ts | 4f usePortalSession |
@@ -212,7 +212,7 @@
 | types/authForms.ts | 1t ThemeMode, 2t AuthTab, 3t SyncStatus, 5i ClientLoginFields, 6i ClientRegistrationFields, 7i AdvocateLoginFields, 8i AdvocateRegistrationFields |
 | types/client.ts | 4t ClientTabKey, 6i ActiveConsultation, 15i HistoryDocument, 23i ServiceOption, 32i Advocate, 49i TimeSlot, 54i CheckoutDraft |
 | types/consultation.ts | 1t ConsultationTierId, 3t EscrowStatus, 5i ConsultationTier, 18i ConsultationSlot, 29i LiveConsultationSlot, 31i ConsultationCheckout, 46i EscrowTransaction, 59i BookingRequest |
-| types/database.types.ts | 1t Json, 9t Database, 3141t Tables, 3170t TablesInsert, 3195t TablesUpdate, 3220t Enums, 3237t CompositeTypes, 3254v Constants |
+| types/database.types.ts | 1t Json, 9t Database, 3166t Tables, 3195t TablesInsert, 3220t TablesUpdate, 3245t Enums, 3262t CompositeTypes, 3279v Constants |
 | types/irac.ts | 1t LegalDocumentTemplateId, 3i IracAnalysis, 16i DocumentClause, 22i LegalDocumentDraft |
 | types/portalAuth.ts | 3t PortalRole, 5v portalHome, 11v portalLogin, 17f getPortalRole, 22f safePortalRedirect |
 
@@ -224,10 +224,10 @@
 | function | private.fn_enforce_canonical_intake_snapshot() | S/20260729082554_enforce_canonical_snapshots_and_repair_participant_rls.sql:L31 |
 | function | public.fn_activate_corporate_pricing_catalog( p_catalog_id UUID ) | S/20260729021138_add_versioned_corporate_pricing_catalog.sql:L242 |
 | function | public.fn_append_compliance_workflow_event( p_corporate_case_id UUID, p_escrow_id UUID, p… | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L30 |
-| function | public.fn_approve_notary_cdd_atomic( p_case_id UUID, p_assessment_id UUID, p_notary_id UU… | S/20260820000100_close_notary_workspace_atomicity_gaps.sql:L171 +1 |
+| function | public.fn_approve_notary_cdd_atomic( p_case_id UUID, p_assessment_id UUID, p_notary_id UU… | S/20260823142459_harden_notary_workspace_boundaries.sql:L182 +2 |
 | function | public.fn_assert_completed_envelope_anchor() | S/20260722000021_phase2_holistic_security_hardening.sql:L55 |
 | function | public.fn_assert_service_order_financial_reconciliation() | S/20260722000016_p2_b3_service_orders_expand_only.sql:L439 |
-| function | public.fn_assign_corporate_notary_atomic( p_case_id UUID, p_notary_id UUID, p_admin_id UU… | S/20260820000100_close_notary_workspace_atomicity_gaps.sql:L11 +1 |
+| function | public.fn_assign_corporate_notary_atomic( p_case_id UUID, p_notary_id UUID, p_admin_id UU… | S/20260823142459_harden_notary_workspace_boundaries.sql:L11 +2 |
 | function | public.fn_audit_corporate_escrow_lock() | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L138 |
 | function | public.fn_audit_escrow_state_transition() | S/20260728000025_phase2_backend_forensic_hardening.sql:L91 +1 |
 | function | public.fn_audit_signing_global_transition() | S/20260722000023_p2_b5b_ekyc_and_escrow_rpcs.sql:L200 |

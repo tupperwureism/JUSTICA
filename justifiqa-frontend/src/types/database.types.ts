@@ -7,6 +7,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       advocate_reviews: {
@@ -1565,6 +1590,98 @@ export type Database = {
           },
         ]
       }
+      notary_profiles: {
+        Row: {
+          created_at: string
+          jurisdiction_city: string
+          jurisdiction_province: string
+          license_number: string
+          notary_id: string
+          status: string
+          updated_at: string
+          verified_at: string | null
+          verified_by_admin_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          jurisdiction_city: string
+          jurisdiction_province: string
+          license_number: string
+          notary_id: string
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by_admin_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          jurisdiction_city?: string
+          jurisdiction_province?: string
+          license_number?: string
+          notary_id?: string
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by_admin_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notary_profiles_notary_id_fkey"
+            columns: ["notary_id"]
+            isOneToOne: true
+            referencedRelation: "users_advocate"
+            referencedColumns: ["advocate_id"]
+          },
+          {
+            foreignKeyName: "notary_profiles_verified_by_admin_id_fkey"
+            columns: ["verified_by_admin_id"]
+            isOneToOne: false
+            referencedRelation: "users_admin"
+            referencedColumns: ["admin_id"]
+          },
+        ]
+      }
+      notary_workspace_idempotency_records: {
+        Row: {
+          actor_id: string
+          case_id: string
+          created_at: string
+          idempotency_key: string
+          operation_type: string
+          payload_digest: string
+          result_payload: Json
+          target_id: string | null
+        }
+        Insert: {
+          actor_id: string
+          case_id: string
+          created_at?: string
+          idempotency_key: string
+          operation_type: string
+          payload_digest: string
+          result_payload: Json
+          target_id?: string | null
+        }
+        Update: {
+          actor_id?: string
+          case_id?: string
+          created_at?: string
+          idempotency_key?: string
+          operation_type?: string
+          payload_digest?: string
+          result_payload?: Json
+          target_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notary_workspace_idempotency_records_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "corporate_service_cases"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
       offline_handshakes_totp: {
         Row: {
           booking_id: string
@@ -2530,119 +2647,8 @@ export type Database = {
         }
         Relationships: []
       }
-      notary_profiles: {
-        Row: {
-          created_at: string
-          jurisdiction_city: string
-          jurisdiction_province: string
-          license_number: string
-          notary_id: string
-          status: "PENDING" | "VERIFIED_ACTIVE" | "SUSPENDED" | "REVOKED"
-          updated_at: string
-          verified_at: string | null
-          verified_by_admin_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          jurisdiction_city: string
-          jurisdiction_province: string
-          license_number: string
-          notary_id: string
-          status?: "PENDING" | "VERIFIED_ACTIVE" | "SUSPENDED" | "REVOKED"
-          updated_at?: string
-          verified_at?: string | null
-          verified_by_admin_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          jurisdiction_city?: string
-          jurisdiction_province?: string
-          license_number?: string
-          notary_id?: string
-          status?: "PENDING" | "VERIFIED_ACTIVE" | "SUSPENDED" | "REVOKED"
-          updated_at?: string
-          verified_at?: string | null
-          verified_by_admin_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notary_profiles_notary_id_fkey"
-            columns: ["notary_id"]
-            isOneToOne: true
-            referencedRelation: "users_advocate"
-            referencedColumns: ["advocate_id"]
-          },
-          {
-            foreignKeyName: "notary_profiles_verified_by_admin_id_fkey"
-            columns: ["verified_by_admin_id"]
-            isOneToOne: false
-            referencedRelation: "users_admin"
-            referencedColumns: ["admin_id"]
-          },
-        ]
-      }
-      notary_workspace_idempotency_records: {
-        Row: {
-          actor_id: string
-          case_id: string
-          created_at: string
-          idempotency_key: string
-          operation_type: "ASSIGN_NOTARY" | "APPROVE_CDD"
-          payload_digest: string
-          result_payload: Json
-          target_id: string | null
-        }
-        Insert: {
-          actor_id: string
-          case_id: string
-          created_at?: string
-          idempotency_key: string
-          operation_type: "ASSIGN_NOTARY" | "APPROVE_CDD"
-          payload_digest: string
-          result_payload: Json
-          target_id?: string | null
-        }
-        Update: {
-          actor_id?: string
-          case_id?: string
-          created_at?: string
-          idempotency_key?: string
-          operation_type?: "ASSIGN_NOTARY" | "APPROVE_CDD"
-          payload_digest?: string
-          result_payload?: Json
-          target_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notary_workspace_idempotency_records_case_id_fkey"
-            columns: ["case_id"]
-            isOneToOne: false
-            referencedRelation: "corporate_service_cases"
-            referencedColumns: ["case_id"]
-          },
-        ]
-      }
     }
     Functions: {
-      fn_assign_corporate_notary_atomic: {
-        Args: {
-          p_case_id: string
-          p_notary_id: string
-          p_admin_id: string
-          p_idempotency_key: string
-        }
-        Returns: Json
-      }
-      fn_approve_notary_cdd_atomic: {
-        Args: {
-          p_case_id: string
-          p_assessment_id: string
-          p_notary_id: string
-          p_rules_version: string
-          p_idempotency_key: string
-        }
-        Returns: Json
-      }
       fn_activate_corporate_pricing_catalog: {
         Args: { p_catalog_id: string }
         Returns: undefined
@@ -2659,6 +2665,25 @@ export type Database = {
           p_verification_id: string
         }
         Returns: string
+      }
+      fn_approve_notary_cdd_atomic: {
+        Args: {
+          p_assessment_id: string
+          p_case_id: string
+          p_idempotency_key: string
+          p_notary_id: string
+          p_rules_version: string
+        }
+        Returns: Json
+      }
+      fn_assign_corporate_notary_atomic: {
+        Args: {
+          p_admin_id: string
+          p_case_id: string
+          p_idempotency_key: string
+          p_notary_id: string
+        }
+        Returns: Json
       }
       fn_book_consultation_slot_mutex: {
         Args: {
@@ -3252,6 +3277,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       document_anchor_source: [

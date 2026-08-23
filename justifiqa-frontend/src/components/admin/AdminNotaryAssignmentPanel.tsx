@@ -17,7 +17,6 @@ export function AdminNotaryAssignmentPanel() {
 
   const [selectedCaseId, setSelectedCaseId] = useState<string>('');
   const [selectedNotaryId, setSelectedNotaryId] = useState<string>('');
-  const [attemptKey, setAttemptKey] = useState<string>('');
   const [showConfirmation, setShowConfirmation] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,6 +25,7 @@ export function AdminNotaryAssignmentPanel() {
 
   const caseSelectId = useId();
   const notarySelectId = useId();
+  const [currentAttempt, setCurrentAttempt] = useState<{ caseId: string; notaryId: string; idempotencyKey: string } | null>(null);
 
   const loadContext = useCallback(async (): Promise<AssignmentContext | null> => {
     setIsLoading(true);
@@ -47,6 +47,20 @@ export function AdminNotaryAssignmentPanel() {
     void loadContext();
   }, [loadContext]);
 
+  const handleSelectCase = (id: string) => {
+    setSelectedCaseId(id);
+    if (currentAttempt && currentAttempt.caseId !== id) {
+      setCurrentAttempt(null);
+    }
+  };
+
+  const handleSelectNotary = (id: string) => {
+    setSelectedNotaryId(id);
+    if (currentAttempt && currentAttempt.notaryId !== id) {
+      setCurrentAttempt(null);
+    }
+  };
+
   const handleInitiateAssignment = () => {
     if (!selectedCaseId || !selectedNotaryId) {
       setSubmitError('Silakan pilih perkara dan notaris terlebih dahulu secara eksplisit.');
@@ -59,17 +73,21 @@ export function AdminNotaryAssignmentPanel() {
   const handleConfirmAssignment = async () => {
     if (!selectedCaseId || !selectedNotaryId) return;
 
-    const currentKey = attemptKey || crypto.randomUUID();
-    setAttemptKey(currentKey);
+    const attempt =
+      currentAttempt && currentAttempt.caseId === selectedCaseId && currentAttempt.notaryId === selectedNotaryId
+        ? currentAttempt
+        : { caseId: selectedCaseId, notaryId: selectedNotaryId, idempotencyKey: crypto.randomUUID() };
+
+    setCurrentAttempt(attempt);
     setIsSubmitting(true);
     setSubmitError(null);
     setSuccessMessage(null);
 
     try {
       const result = await phase2IntegrationService.assignNotary({
-        caseId: selectedCaseId,
-        notaryId: selectedNotaryId,
-        idempotencyKey: currentKey,
+        caseId: attempt.caseId,
+        notaryId: attempt.notaryId,
+        idempotencyKey: attempt.idempotencyKey,
       });
 
       // Canonical refresh confirmation gate
@@ -86,7 +104,7 @@ export function AdminNotaryAssignmentPanel() {
           ? 'Penugasan terkonfirmasi (Replay Idempoten: Tidak ada mutasi ganda).'
           : 'Notaris berhasil ditugaskan ke perkara korporasi secara atomik.',
       );
-      setAttemptKey('');
+      setCurrentAttempt(null);
       setShowConfirmation(false);
       setSelectedCaseId('');
       setSelectedNotaryId('');
@@ -166,7 +184,7 @@ export function AdminNotaryAssignmentPanel() {
                 aria-label="Pilih Perkara Korporasi"
                 value={selectedCaseId}
                 onChange={(e) => {
-                  setSelectedCaseId(e.target.value);
+                  handleSelectCase(e.target.value);
                   setShowConfirmation(false);
                 }}
                 disabled={isLoading || isSubmitting}
@@ -228,7 +246,7 @@ export function AdminNotaryAssignmentPanel() {
                 aria-label="Pilih Notaris Terverifikasi"
                 value={selectedNotaryId}
                 onChange={(e) => {
-                  setSelectedNotaryId(e.target.value);
+                  handleSelectNotary(e.target.value);
                   setShowConfirmation(false);
                 }}
                 disabled={isLoading || isSubmitting}

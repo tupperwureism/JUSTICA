@@ -6,9 +6,16 @@ import { usePhase2Query } from './usePhase2Query';
 
 type StampingInput = NotaryStampingRequest & { caseId: string };
 
+export type CddAttempt = {
+  caseId: string;
+  assessmentId: string;
+  rulesVersion: string;
+  idempotencyKey: string;
+};
+
 export function useNotaryWorkspaceIntegration() {
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-  const [attemptKey, setAttemptKey] = useState<string>('');
+  const [currentAttempt, setCurrentAttempt] = useState<CddAttempt | null>(null);
 
   const workspacesQuery = usePhase2Query(
     () => phase2IntegrationService.loadNotaryWorkspaces(),
@@ -23,26 +30,52 @@ export function useNotaryWorkspaceIntegration() {
     return list[0];
   }, [workspacesQuery.data, selectedCaseId]);
 
+  const selectCase = (caseId: string | null) => {
+    setSelectedCaseId(caseId);
+    if (currentAttempt && currentAttempt.caseId !== caseId) {
+      setCurrentAttempt(null);
+    }
+  };
+
   const cddApproval = usePhase2Mutation(
     async (input: { caseId: string; rulesVersion: string; idempotencyKey?: string }) => {
-      const key = input.idempotencyKey || attemptKey || crypto.randomUUID();
-      if (!attemptKey) {
-        setAttemptKey(key);
-      }
+      const assessmentId = activeWorkspace?.cddAssessment?.assessmentId || '';
+      const isMatchingAttempt =
+        currentAttempt &&
+        currentAttempt.caseId === input.caseId &&
+        currentAttempt.rulesVersion === input.rulesVersion &&
+        (!assessmentId || currentAttempt.assessmentId === assessmentId);
+
+      const attempt: CddAttempt = isMatchingAttempt
+        ? currentAttempt!
+        : {
+            caseId: input.caseId,
+            assessmentId,
+            rulesVersion: input.rulesVersion,
+            idempotencyKey: input.idempotencyKey || crypto.randomUUID(),
+          };
+
+      setCurrentAttempt(attempt);
+
       return phase2IntegrationService.approveNotaryCdd({
-        caseId: input.caseId,
-        rulesVersion: input.rulesVersion,
-        idempotencyKey: key,
+        caseId: attempt.caseId,
+        rulesVersion: attempt.rulesVersion,
+        idempotencyKey: attempt.idempotencyKey,
       });
     },
     {
       onSuccess: async (result) => {
         const refreshedWorkspaces = await workspacesQuery.refresh();
         const verified = refreshedWorkspaces?.find((w) => w.caseId === result.caseId);
-        if (!verified || verified.currentStage !== 'DOCUMENTS_PENDING' || verified.cddAssessment?.decision !== 'APPROVED' || verified.cddAssessment?.assessmentId !== result.assessmentId) {
+        if (
+          !verified ||
+          verified.currentStage !== 'DOCUMENTS_PENDING' ||
+          verified.cddAssessment?.decision !== 'APPROVED' ||
+          verified.cddAssessment?.assessmentId !== result.assessmentId
+        ) {
           throw new Error('Konfirmasi penyegaran gagal: Status perkara belum terverifikasi DOCUMENTS_PENDING di server.');
         }
-        setAttemptKey('');
+        setCurrentAttempt(null);
       },
     },
   );
@@ -65,7 +98,7 @@ export function useNotaryWorkspaceIntegration() {
       data: activeWorkspace,
     },
     selectedCaseId: activeWorkspace?.caseId ?? selectedCaseId,
-    setSelectedCaseId,
+    setSelectedCaseId: selectCase,
     cddApproval,
     stamping,
   };
