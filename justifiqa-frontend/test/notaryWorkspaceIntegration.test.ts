@@ -17,6 +17,7 @@ const CASE_ID_1 = '33333333-3333-4333-8333-333333333333';
 const CASE_ID_2 = '33333333-3333-4333-8333-444444444444';
 const NOTARY_ID = '22222222-2222-4222-8222-222222222222';
 const ASSESSMENT_ID = '44444444-4444-4444-8444-444444444444';
+const OTHER_ASSESSMENT_ID = '44444444-4444-4444-8444-999999999999';
 
 const sampleWorkspace1: NotaryWorkspace = {
   caseId: CASE_ID_1,
@@ -183,9 +184,11 @@ test('unrelated advocate sees empty notary workspaces', async () => {
 
 test('approveNotaryCdd validates prerequisites and executes atomic approval', async () => {
   let approveCalled = false;
+  let passedAssessmentId = '';
   const gateway = createMockGateway(ADVOCATE_NOTARY, {
     approveCddAssessment: async (input) => {
       approveCalled = true;
+      passedAssessmentId = input.assessmentId;
       return {
         assessmentId: input.assessmentId,
         caseId: input.caseId,
@@ -197,13 +200,41 @@ test('approveNotaryCdd validates prerequisites and executes atomic approval', as
   const service = createPhase2IntegrationService(gateway);
   const result = await service.approveNotaryCdd({
     caseId: CASE_ID_1,
+    assessmentId: ASSESSMENT_ID,
     rulesVersion: 'PMPJ-2026.1',
     idempotencyKey: '88888888-8888-4888-8888-888888888888',
   });
 
   assert.equal(approveCalled, true);
+  assert.equal(passedAssessmentId, ASSESSMENT_ID);
   assert.equal(result.currentStage, 'DOCUMENTS_PENDING');
   assert.equal(result.replayed, false);
+});
+
+test('approveNotaryCdd rejects when explicit assessmentId does not match workspace assessment', async () => {
+  const service = createPhase2IntegrationService(createMockGateway(ADVOCATE_NOTARY));
+  await assert.rejects(
+    async () => service.approveNotaryCdd({
+      caseId: CASE_ID_1,
+      assessmentId: OTHER_ASSESSMENT_ID, // Mismatched assessmentId
+      rulesVersion: 'PMPJ-2026.1',
+      idempotencyKey: '88888888-8888-4888-8888-888888888888',
+    }),
+    (err: Error) => err instanceof Phase2IntegrationError && err.code === 'INVALID_PAYLOAD',
+  );
+});
+
+test('approveNotaryCdd rejects malformed assessmentId', async () => {
+  const service = createPhase2IntegrationService(createMockGateway(ADVOCATE_NOTARY));
+  await assert.rejects(
+    async () => service.approveNotaryCdd({
+      caseId: CASE_ID_1,
+      assessmentId: 'invalid-not-a-uuid',
+      rulesVersion: 'PMPJ-2026.1',
+      idempotencyKey: '88888888-8888-4888-8888-888888888888',
+    }),
+    (err: Error) => err instanceof Phase2IntegrationError && err.code === 'INVALID_PAYLOAD',
+  );
 });
 
 test('submitNotaryStamping remains honestly blocked as future work', async () => {
@@ -237,6 +268,7 @@ test('approveNotaryCdd always calls gateway and never synthesizes local replay',
   const service = createPhase2IntegrationService(gateway);
   const input = {
     caseId: CASE_ID_1,
+    assessmentId: ASSESSMENT_ID,
     rulesVersion: 'PMPJ-2026.1',
     idempotencyKey: '88888888-8888-4888-8888-888888888888',
   };

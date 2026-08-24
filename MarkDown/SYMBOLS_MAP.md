@@ -5,8 +5,8 @@
 
 ## Cakupan
 
-- 239 source files dipindai.
-- 386 exported TypeScript symbols dalam 196 files.
+- 229 source files dipindai.
+- 375 exported TypeScript symbols dalam 185 files.
 - 131 core PostgreSQL objects dari 408 deklarasi migrasi.
 - 160 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
@@ -40,17 +40,10 @@
 | components/admin/AdminNotaryAssignmentPanel.tsx | 13f AdminNotaryAssignmentPanel |
 | components/admin/AdminSettingsPanel.tsx | 8f AdminSettingsPanel |
 | components/admin/AdminVerificationQueueTab.tsx | 11f AdminVerificationQueueTab |
-| components/advocate/AdvocateDashboardController.tsx | 5f AdvocateDashboardController |
-| components/advocate/AdvocateDashboardTabs.tsx | 23f AdvocateDashboardTabs |
-| components/advocate/AdvocateDeliverablePanel.tsx | 12f AdvocateDeliverablePanel |
 | components/advocate/AdvocateE2EEChatPanel.tsx | 16f AdvocateE2EEChatPanel |
 | components/advocate/AdvocateE2EEHeaderAndSla.tsx | 13f AdvocateE2EEHeaderAndSla |
-| components/advocate/AdvocateE2EERoomController.tsx | 16f AdvocateE2EERoomController |
 | components/advocate/AdvocateGreetingCard.tsx | 13f AdvocateGreetingCard |
 | components/advocate/AdvocateHeaderAndTabs.tsx | 8t AdvocateTabKey, 33f AdvocateHeaderAndTabs |
-| components/advocate/AdvocateProBonoPanel.tsx | 12f AdvocateProBonoPanel |
-| components/advocate/AdvocateSettingsPanel.tsx | 8f AdvocateSettingsPanel |
-| components/advocate/AdvocateWalletPanel.tsx | 12f AdvocateWalletPanel |
 | components/advocate/CommandCenterActiveCasesTable.tsx | 13f CommandCenterActiveCasesTable |
 | components/advocate/ScheduleManagementCard.tsx | 6t ScheduleDayKey, 7t ScheduleSlots, 20f ScheduleManagementCard |
 | components/auth/AdvocateAuthIntro.tsx | 7f AdvocateAuthIntro |
@@ -78,7 +71,6 @@
 | components/client/ClientActiveConsultationsTable.tsx | 9v ClientActiveConsultationsTable |
 | components/client/ClientCatalogFilterBar.tsx | 5i ClientCatalogFilterBarProps, 12v ClientCatalogFilterBar |
 | components/client/ClientCatalogTab.tsx | 6i ClientCatalogTabProps, 14v ClientCatalogTab |
-| components/client/ClientDisputeCenterTab.tsx | 16f ClientDisputeCenterTab |
 | components/client/ClientGreetingCard.tsx | 12v ClientGreetingCard |
 | components/client/ClientHeaderAndTabs.tsx | 16f ClientHeaderAndTabs |
 | components/client/ClientHistoryDocumentsTable.tsx | 8v ClientHistoryDocumentsTable |
@@ -87,7 +79,6 @@
 | components/client/ClientOverviewTab.tsx | 7i ClientOverviewTabProps, 15v ClientOverviewTab |
 | components/client/ClientOverviewTables.tsx | 15v ClientOverviewTables |
 | components/client/ClientTabNav.tsx | 17f ClientTabNav |
-| components/client/ClientWhistleblowingModal.tsx | 19f ClientWhistleblowingModal |
 | components/client/EscrowPaymentForm.tsx | 13v EscrowPaymentForm |
 | components/client/EscrowStatusBanner.tsx | 7i EscrowStatusBannerProps, 12v EscrowStatusBanner |
 | components/client/ProBonoApplicationForm.tsx | 6v ProBonoApplicationForm |
@@ -133,7 +124,6 @@
 | components/document/DocumentDraftPreview.tsx | 6f DocumentDraftPreview |
 | components/document/DocumentDraftingForm.tsx | 18f DocumentDraftingForm |
 | components/gateway/AdvocateQuickProfile.tsx | 11v AdvocateQuickProfile |
-| components/gateway/AdvocateQuickStats.tsx | 3f AdvocateQuickStats |
 | components/gateway/HeroSearchSection.tsx | 21v HeroSearchSection |
 | components/gateway/NavbarGateway.tsx | 15v NavbarGateway |
 | components/gateway/PortalCardItem.tsx | 20v PortalCardItem |
@@ -170,7 +160,6 @@
 | hooks/useCorporateEvidenceUploads.ts | 11t AttemptCheckpoint, 13t CorporateEvidenceAttempt, 26t CorporateEvidenceTaskView, 31t CorporateEvidenceAdapter, 84f useCorporateEvidenceUploads |
 | hooks/useDocumentDrafting.ts | 7f useDocumentDrafting |
 | hooks/useEkycIntegration.ts | 5f useEkycIntegration |
-| hooks/useModalLifecycle.ts | 3f useModalLifecycle |
 | hooks/useNotaryWorkspaceIntegration.ts | 9t CddAttempt, 16f useNotaryWorkspaceIntegration |
 | hooks/usePhase2Mutation.ts | 13f usePhase2Mutation |
 | hooks/usePhase2Query.ts | 4f usePhase2Query |

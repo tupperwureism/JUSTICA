@@ -5,9 +5,10 @@
 > **Base Fixed Point (HEAD)**: `63766fea107f2cd3e3af3c56bb7d247dfdec5ea4`
 > **Parent Commit**: `3e5e4a705241a82ef9b669892cd4dd2230fc0033`
 > **Target Scope**: Forward Migration Search Path Hardening, Physical Disposable DB Execution, Real Concurrency Probe, Schema-Valid SQL Runtime, Official Type Generation, Stable Frontend Attempt Identity
-> **Status**: `IN_PROGRESS`
-> **Current Checkpoint**: `CP-01`
-> **Next Exact Action**: Establish real RED evidence and disposable DB setup (CP-01)
+> **Status**: `FAILED_EXTERNAL_AUDIT; SUPERSEDED BY 3.C.4`
+> **External Audit Failure Reason**: Database proof executed against main local DB instead of isolated disposable Supabase stack; direct service_role permissions granted on idempotency records; SQL runtime missing full error/ACL/DML matrix; fake 14 UI test count; activeWorkspace fallback bug; typegen written directly without isolated candidate.
+> **Current Checkpoint**: `SUPERSEDED`
+> **Next Exact Action**: Execute Batch 3.C.4 forward migration, genuine disposable Supabase stack, and full regression matrix.
 
 ---
 

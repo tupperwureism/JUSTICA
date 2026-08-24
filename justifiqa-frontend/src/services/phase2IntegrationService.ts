@@ -429,9 +429,17 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
       return single ? [single] : [];
     },
 
-    async approveNotaryCdd(input: { caseId: string; rulesVersion: string; idempotencyKey?: string }) {
+    async approveNotaryCdd(input: {
+      caseId: string;
+      assessmentId?: string;
+      rulesVersion: string;
+      idempotencyKey?: string;
+    }) {
       const actor = await requireActor(gateway, ['ADVOCATE']);
       if (!UUID_PATTERN.test(input.caseId)) throw new Phase2IntegrationError('INVALID_PAYLOAD');
+      if (input.assessmentId !== undefined && !UUID_PATTERN.test(input.assessmentId)) {
+        throw new Phase2IntegrationError('INVALID_PAYLOAD');
+      }
       const rulesVersion = requireText(input.rulesVersion, 32);
       let workspace: NotaryWorkspace | null = null;
       if (typeof gateway.listNotaryWorkspaces === 'function') {
@@ -451,13 +459,14 @@ export function createPhase2IntegrationService(gateway: Phase2IntegrationGateway
       }
       const assessment = workspace.cddAssessment;
       if (!assessment
+        || (input.assessmentId && assessment.assessmentId !== input.assessmentId)
         || assessment.rulesVersion !== rulesVersion
         || !['NO_MATCH', 'NOT_APPLICABLE'].includes(assessment.pepStatus)
         || !['NO_MATCH', 'NOT_APPLICABLE'].includes(assessment.sanctionsStatus)) {
         throw new Phase2IntegrationError('INVALID_PAYLOAD');
       }
       return gateway.approveCddAssessment({
-        assessmentId: assessment.assessmentId,
+        assessmentId: input.assessmentId || assessment.assessmentId,
         caseId: input.caseId,
         rulesVersion,
         idempotencyKey: input.idempotencyKey,

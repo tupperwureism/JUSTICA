@@ -25,7 +25,7 @@ export function useNotaryWorkspaceIntegration() {
     const list = workspacesQuery.data ?? [];
     if (!list.length) return null;
     if (selectedCaseId) {
-      return list.find((w) => w.caseId === selectedCaseId) ?? list[0];
+      return list.find((w) => w.caseId === selectedCaseId) ?? null;
     }
     return list[0];
   }, [workspacesQuery.data, selectedCaseId]);
@@ -39,12 +39,15 @@ export function useNotaryWorkspaceIntegration() {
 
   const cddApproval = usePhase2Mutation(
     async (input: { caseId: string; rulesVersion: string; idempotencyKey?: string }) => {
-      const assessmentId = activeWorkspace?.cddAssessment?.assessmentId || '';
+      const assessmentId = activeWorkspace?.cddAssessment?.assessmentId;
+      if (!activeWorkspace || activeWorkspace.caseId !== input.caseId || !assessmentId) {
+        throw new Error('Case atau CDD Assessment tidak ditemukan.');
+      }
       const isMatchingAttempt =
         currentAttempt &&
         currentAttempt.caseId === input.caseId &&
         currentAttempt.rulesVersion === input.rulesVersion &&
-        (!assessmentId || currentAttempt.assessmentId === assessmentId);
+        currentAttempt.assessmentId === assessmentId;
 
       const attempt: CddAttempt = isMatchingAttempt
         ? currentAttempt!
@@ -59,6 +62,7 @@ export function useNotaryWorkspaceIntegration() {
 
       return phase2IntegrationService.approveNotaryCdd({
         caseId: attempt.caseId,
+        assessmentId: attempt.assessmentId,
         rulesVersion: attempt.rulesVersion,
         idempotencyKey: attempt.idempotencyKey,
       });
