@@ -6,7 +6,9 @@
 - **Branch**: `batch-3c-notary-workspace`
 - **Base Fixed-Point HEAD**: `304c4d6ce7f6e53578e2e285e287fb7061188f30`
 - **Required Parent**: `63766fea107f2cd3e3af3c56bb7d247dfdec5ea4`
-- **Status Akhir**: `READY FOR EXTERNAL RE-AUDIT`
+- **Status Akhir**: `FAILED_EXTERNAL_AUDIT` — superseded by Batch 3.C.5
+
+> External audit berikutnya menemukan bahwa proof konkurensi berbasis `execSync` + `Promise.all` tidak menghasilkan overlap nyata dan test hook belum mengeksekusi hook produksi melalui boundary terinjeksi. Batch 3.C.5 mengganti kedua proof false-green tersebut. Record 3.C.4 ini dipertahankan sebagai provenance.
 
 ---
 
@@ -46,4 +48,4 @@
 
 ## 4. Status Akhir
 
-`READY FOR EXTERNAL RE-AUDIT`
+`FAILED_EXTERNAL_AUDIT` — superseded by Batch 3.C.5.

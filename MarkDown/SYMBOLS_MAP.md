@@ -6,7 +6,7 @@
 ## Cakupan
 
 - 229 source files dipindai.
-- 375 exported TypeScript symbols dalam 185 files.
+- 376 exported TypeScript symbols dalam 185 files.
 - 131 core PostgreSQL objects dari 408 deklarasi migrasi.
 - 160 policies/triggers tersedia on-demand di `MarkDown/SQL_SECURITY_SYMBOLS.md`.
 - Lokasi SQL memakai `S/` = `supabase/migrations/` dan `D/` = `database/migrations/`; `+N` berarti ada N deklarasi lama.
@@ -160,7 +160,7 @@
 | hooks/useCorporateEvidenceUploads.ts | 11t AttemptCheckpoint, 13t CorporateEvidenceAttempt, 26t CorporateEvidenceTaskView, 31t CorporateEvidenceAdapter, 84f useCorporateEvidenceUploads |
 | hooks/useDocumentDrafting.ts | 7f useDocumentDrafting |
 | hooks/useEkycIntegration.ts | 5f useEkycIntegration |
-| hooks/useNotaryWorkspaceIntegration.ts | 9t CddAttempt, 16f useNotaryWorkspaceIntegration |
+| hooks/useNotaryWorkspaceIntegration.ts | 9t CddAttempt, 23t NotaryWorkspaceService, 28f useNotaryWorkspaceIntegration |
 | hooks/usePhase2Mutation.ts | 13f usePhase2Mutation |
 | hooks/usePhase2Query.ts | 4f usePhase2Query |
 | hooks/usePortalSession.ts | 4f usePortalSession |

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { phase2IntegrationService } from '@/services/phase2SupabaseGateway';
 import type { NotaryStampingRequest } from '@/components/corporate/notary/KemenkumhamStampingModal';
 import { usePhase2Mutation } from './usePhase2Mutation';
@@ -13,12 +13,26 @@ export type CddAttempt = {
   idempotencyKey: string;
 };
 
-export function useNotaryWorkspaceIntegration() {
+/**
+ * Narrow injection seam for behavioral tests (Batch 3.C.5).
+ * Production callers keep calling useNotaryWorkspaceIntegration() with no
+ * argument and receive the real phase2IntegrationService. Tests may inject
+ * only the methods this hook actually uses; no hook logic is duplicated and
+ * no privileged browser access is exposed.
+ */
+export type NotaryWorkspaceService = Pick<
+  typeof phase2IntegrationService,
+  'loadNotaryWorkspaces' | 'approveNotaryCdd' | 'submitNotaryStamping'
+>;
+
+export function useNotaryWorkspaceIntegration(
+  service: NotaryWorkspaceService = phase2IntegrationService,
+) {
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [currentAttempt, setCurrentAttempt] = useState<CddAttempt | null>(null);
 
   const workspacesQuery = usePhase2Query(
-    () => phase2IntegrationService.loadNotaryWorkspaces(),
+    () => service.loadNotaryWorkspaces(),
   );
 
   const activeWorkspace = useMemo(() => {
@@ -29,13 +43,6 @@ export function useNotaryWorkspaceIntegration() {
     }
     return list[0];
   }, [workspacesQuery.data, selectedCaseId]);
-
-  const selectCase = (caseId: string | null) => {
-    setSelectedCaseId(caseId);
-    if (currentAttempt && currentAttempt.caseId !== caseId) {
-      setCurrentAttempt(null);
-    }
-  };
 
   const cddApproval = usePhase2Mutation(
     async (input: { caseId: string; rulesVersion: string; idempotencyKey?: string }) => {
@@ -49,6 +56,14 @@ export function useNotaryWorkspaceIntegration() {
         currentAttempt.rulesVersion === input.rulesVersion &&
         currentAttempt.assessmentId === assessmentId;
 
+      if (currentAttempt && !isMatchingAttempt) {
+        // A stored attempt no longer matches the server-side identity
+        // (assessment/rules changed for the selected case). Fail closed
+        // locally — the eager invalidation effect should already have cleared
+        // it — and never let a mismatched attempt reach the gateway.
+        throw new Error('Percobaan CDD sebelumnya sudah tidak valid. Buat permintaan approval baru.');
+      }
+
       const attempt: CddAttempt = isMatchingAttempt
         ? currentAttempt!
         : {
@@ -60,7 +75,7 @@ export function useNotaryWorkspaceIntegration() {
 
       setCurrentAttempt(attempt);
 
-      return phase2IntegrationService.approveNotaryCdd({
+      return service.approveNotaryCdd({
         caseId: attempt.caseId,
         assessmentId: attempt.assessmentId,
         rulesVersion: attempt.rulesVersion,
@@ -85,7 +100,7 @@ export function useNotaryWorkspaceIntegration() {
   );
 
   const stamping = usePhase2Mutation((input: StampingInput) => (
-    phase2IntegrationService.submitNotaryStamping({
+    service.submitNotaryStamping({
       caseId: input.caseId,
       fileName: input.file.name,
       fileType: input.file.type,
@@ -94,6 +109,34 @@ export function useNotaryWorkspaceIntegration() {
       nibNumber: input.nibNumber,
     })
   ));
+
+  // Eager invalidation (3.C.5): when a canonical refresh changes the
+  // assessment identity or rules version of the selected case, invalidate the
+  // stored CDD attempt immediately and clear the retry buffer. A fresh execute
+  // is then required, which generates a new idempotency key.
+  const activeAssessment = activeWorkspace?.cddAssessment;
+  useEffect(() => {
+    if (!currentAttempt || !activeWorkspace) return;
+    if (activeWorkspace.caseId !== currentAttempt.caseId) return;
+    const assessmentChanged = currentAttempt.assessmentId !== activeAssessment?.assessmentId;
+    const rulesChanged = currentAttempt.rulesVersion !== activeAssessment?.rulesVersion;
+    if (assessmentChanged || rulesChanged) {
+      setCurrentAttempt(null);
+      cddApproval.reset();
+    }
+  }, [currentAttempt, activeWorkspace, activeAssessment, cddApproval]);
+
+  // Selecting another case invalidates the old CDD attempt. Repair (3.C.5):
+  // clear both the CddAttempt tuple AND the underlying usePhase2Mutation
+  // retry buffer via its existing reset boundary, so a stale retry rejects
+  // locally and never reaches the gateway.
+  const selectCase = (caseId: string | null) => {
+    setSelectedCaseId(caseId);
+    if (currentAttempt && currentAttempt.caseId !== caseId) {
+      setCurrentAttempt(null);
+      cddApproval.reset();
+    }
+  };
 
   return {
     workspaces: workspacesQuery,

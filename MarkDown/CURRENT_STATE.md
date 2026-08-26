@@ -4,9 +4,9 @@
 
 ## Snapshot
 
-- Tanggal pencatatan: 13 Agustus 2026 (Asia/Jakarta).
-- Branch aktif saat bootstrap: `batch-3b-corporate-escrow`.
-- Input fixed point dokumentasi: `985cfb83b1ea6bd23a98732c50bd1f7670a2d74b`.
+- Tanggal pencatatan: 26 Agustus 2026 (Asia/Jakarta).
+- Branch aktif: `batch-3c-notary-workspace`.
+- Input fixed point Batch 3.C.5: `1de5186127cd7aad377078632174244d8d11c1df`.
 - Scope produk aktif: **Justifiqa**. Qualifa adalah arsip/research `OUT_OF_SCOPE`.
 - Status rilis: **local implementation/demo scope**, bukan production-ready.
 
@@ -21,7 +21,8 @@
 | Batch 3.C.1 Notary workspace repair | **SUPERSEDED** | Commit `3e5e4a7`, `MarkDown/Batches/3C_1/BATCH.md` | Failed external audit karena tabel audit fiktif, in-place migration edit, missing advisory locks, dan fail-open UI refresh |
 | Batch 3.C.2 Notary Workspace & CDD Hardening | **SUPERSEDED** | `MarkDown/Batches/3C_2/BATCH.md` | Failed external audit karena unexecuted DB proof, false-green probe, invalid SQL runtime, dan unhardened search_path |
 | Batch 3.C.3 Prove & Harden Notary Workspace | **SUPERSEDED** | `MarkDown/Batches/3C_3/BATCH.md` | Failed external audit karena direct DML privilege leak, unisolated replay proof, dan dirty-tree generator |
-| Batch 3.C.4 Close Workspace Proof & Privilege Gaps | **READY_FOR_EXTERNAL_REAUDIT** | `MarkDown/Batches/3C_4/BATCH.md`, `20260824071758_close_notary_workspace_proof_and_privilege_gaps.sql`, `Tools/notary_workspace_runtime.sql` (disposable rollback pass), `Tools/notary_workspace_concurrency_probe.mjs` (disposable 5 locked scenarios pass), candidate symbol maps, 121/121 frontend tests | AHU/OSS/Stamping live connection tetap blocked/future work; bukan deployment production |
+| Batch 3.C.4 Close Workspace Proof & Privilege Gaps | **SUPERSEDED** | Commit `1de5186127cd7aad377078632174244d8d11c1df`, `MarkDown/Batches/3C_4/BATCH.md` | Failed external audit: probe `execSync` + `Promise.all` tidak membuktikan overlap dan hook proof false-green; digantikan 3.C.5 |
+| Batch 3.C.5 True Concurrency & Hook Proof | **READY_FOR_EXTERNAL_REAUDIT** | `MarkDown/Batches/3C_5/BATCH.md`; final probe 5/5 dengan `pg_stat_activity` lock barrier; 129/129 phase-2 tests; clean-candidate symbol maps | Evidence lokal, bukan external PASS atau production approval; AHU/OSS/Stamping live tetap future work |
 | Batch 3.D e-KYC/signing | **FUTURE_WORK** | Target/seam parsial pada `TRACEABILITY_MATRIX.md` | Provider liveness/storage/E2E belum lengkap; tidak boleh dipresentasikan sebagai implemented end-to-end |
 | Phase 4 E2E/security/QA | **FUTURE_WORK** | Belum ada acceptance batch kanonik | Local tests sebelumnya tidak sama dengan full production E2E |
 | Phase 5 production readiness | **NOT_STARTED** | Tidak ada production approval | Deploy, observability, provider readiness, operational runbook, dan go-live audit masih diperlukan |
@@ -38,7 +39,7 @@
 
 ## Next exact action
 
-**Stage dan commit Presentation Readiness batch bila diotorisasi, lalu susun Laporan Tugas Akhir.** Batch 3.C/3.D tidak dimulai untuk delivery presentasi ini.
+**Lakukan external physical re-audit atas commit Batch 3.C.5.** Jangan memulai Batch 3.D sebelum sign-off terpisah.
 
 ## Known documentation debt (non-blocking)
 

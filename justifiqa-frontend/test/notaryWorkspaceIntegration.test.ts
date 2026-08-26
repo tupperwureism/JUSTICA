@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { registerHooks } from 'node:module';
+import { createElement } from 'react';
+import TestRenderer, { act } from 'react-test-renderer';
 import {
   Phase2IntegrationError,
   createPhase2IntegrationService,
@@ -7,6 +10,48 @@ import {
   type Phase2Actor,
   type Phase2IntegrationGateway,
 } from '../src/services/phase2IntegrationService.ts';
+import type {
+  NotaryWorkspaceService,
+  useNotaryWorkspaceIntegration as useNotaryWorkspaceIntegrationType,
+} from '../src/hooks/useNotaryWorkspaceIntegration.ts';
+
+// The production hook module statically imports phase2SupabaseGateway, which
+// reads import.meta.env (Vite-only). Tests inject the narrow service boundary
+// and never use that default, so the gateway module is intercepted here with a
+// fail-loud stub. No production file is modified for testability.
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (specifier === '@/services/phase2SupabaseGateway') {
+      return { url: 'stub:phase2SupabaseGateway', shortCircuit: true };
+    }
+    const resolved = nextResolve(specifier, context);
+    if (resolved?.url?.replace(/\\/g, '/').endsWith('/src/services/phase2SupabaseGateway.ts')) {
+      return { url: 'stub:phase2SupabaseGateway', shortCircuit: true };
+    }
+    return resolved;
+  },
+  load(url, context, nextLoad) {
+    if (url === 'stub:phase2SupabaseGateway') {
+      return {
+        format: 'module',
+        shortCircuit: true,
+        source: [
+          'export const phase2IntegrationService = {',
+          "  loadNotaryWorkspaces: async () => { throw new Error('stub gateway: inject NotaryWorkspaceService in hook tests'); },",
+          "  approveNotaryCdd: async () => { throw new Error('stub gateway: inject NotaryWorkspaceService in hook tests'); },",
+          "  submitNotaryStamping: async () => { throw new Error('stub gateway: inject NotaryWorkspaceService in hook tests'); },",
+          '};',
+          'export default {};',
+        ].join('\n'),
+      };
+    }
+    return nextLoad(url, context);
+  },
+});
+
+const hookModule = await import('../src/hooks/useNotaryWorkspaceIntegration.ts');
+const useNotaryWorkspaceIntegration =
+  hookModule.useNotaryWorkspaceIntegration as typeof useNotaryWorkspaceIntegrationType;
 
 const ADMIN: Phase2Actor = { userId: '11111111-1111-4111-8111-111111111111', role: 'ADMIN' };
 const ADVOCATE_NOTARY: Phase2Actor = { userId: '22222222-2222-4222-8222-222222222222', role: 'ADVOCATE' };
@@ -283,83 +328,426 @@ test('approveNotaryCdd always calls gateway and never synthesizes local replay',
   assert.equal(callCount, 2);
 });
 
-test('assignment refresh missing case fails closed and rejects stale mutation substitution', async () => {
-  const gateway = createMockGateway(ADMIN, {
-    listAssignmentContext: async () => ({
-      cases: [], // Case missing in refresh
-      notaries: [
-        {
-          notaryId: NOTARY_ID,
-          fullName: 'Notaris 1',
-          licenseNumber: 'SK-01',
-          jurisdictionCity: 'Jakarta',
-          jurisdictionProvince: 'DKI Jakarta',
-          status: 'VERIFIED_ACTIVE',
-        },
-      ],
-    }),
-  });
-  const service = createPhase2IntegrationService(gateway);
+// ============================================================================
+// BEHAVIORAL HOOK TESTS (Batch 3.C.5)
+//
+// The three audit-identified projection-only tests were REMOVED. They only
+// inspected mock data returned by query methods and never executed the
+// production hook. The tests below render the REAL useNotaryWorkspaceIntegration
+// hook through react-test-renderer with a narrow legitimately-injected service
+// boundary (NotaryWorkspaceService). No hook logic is duplicated here.
+// ============================================================================
 
-  // When client refreshes context after mutation, missing case in refreshed context fails validation
-  const refreshed = await service.listAssignmentContext();
-  const verifiedCase = refreshed.cases.find((c) => c.caseId === CASE_ID_1);
-  assert.equal(verifiedCase, undefined);
+const HOOK_RULES_VERSION = 'PMPJ-2026.1';
+
+const pendingCddWorkspace: NotaryWorkspace = {
+  ...sampleWorkspace1,
+  currentStage: 'CDD_REVIEW',
+  cddAssessment: {
+    assessmentId: ASSESSMENT_ID,
+    pepStatus: 'NO_MATCH',
+    sanctionsStatus: 'NO_MATCH',
+    decision: 'PENDING',
+    rulesVersion: HOOK_RULES_VERSION,
+  },
+};
+
+const confirmedCddWorkspace: NotaryWorkspace = {
+  ...pendingCddWorkspace,
+  currentStage: 'DOCUMENTS_PENDING',
+  cddAssessment: { ...pendingCddWorkspace.cddAssessment!, decision: 'APPROVED' },
+};
+
+const OTHER_ASSESSMENT_ID_2 = '44444444-4444-4444-8444-666666666666';
+
+const pendingCddWorkspaceV2: NotaryWorkspace = {
+  ...pendingCddWorkspace,
+  cddAssessment: { ...pendingCddWorkspace.cddAssessment!, assessmentId: OTHER_ASSESSMENT_ID_2 },
+};
+
+const confirmedCddWorkspaceV2: NotaryWorkspace = {
+  ...pendingCddWorkspaceV2,
+  currentStage: 'DOCUMENTS_PENDING',
+  cddAssessment: { ...pendingCddWorkspaceV2.cddAssessment!, decision: 'APPROVED' },
+};
+
+type ApproveCddInput = Parameters<NotaryWorkspaceService['approveNotaryCdd']>[0];
+
+function createHookService(options: {
+  loads: Array<() => Promise<NotaryWorkspace[]>>;
+  approve: (input: ApproveCddInput) => Promise<{ caseId: string; assessmentId: string; currentStage: string; replayed: boolean }>;
+}): { service: NotaryWorkspaceService; approveCalls: ApproveCddInput[] } {
+  const approveCalls: ApproveCddInput[] = [];
+  let loadIndex = 0;
+  const service: NotaryWorkspaceService = {
+    loadNotaryWorkspaces: async () => {
+      const loader = options.loads[Math.min(loadIndex, options.loads.length - 1)];
+      loadIndex += 1;
+      return loader();
+    },
+    approveNotaryCdd: async (input) => {
+      approveCalls.push(input);
+      return options.approve(input);
+    },
+    submitNotaryStamping: (async () => {
+      throw new Phase2IntegrationError('BROWSER_BOUNDARY_UNAVAILABLE');
+    }) as NotaryWorkspaceService['submitNotaryStamping'],
+  };
+  return { service, approveCalls };
+}
+
+function successfulApprove(resultCaseId: string, resultAssessmentId: string) {
+  return async (_input: ApproveCddInput) => ({
+    caseId: resultCaseId,
+    assessmentId: resultAssessmentId,
+    currentStage: 'DOCUMENTS_PENDING',
+    replayed: false,
+  });
+}
+
+async function renderNotaryHook(service: NotaryWorkspaceService) {
+  const rendered: {
+    view?: ReturnType<typeof useNotaryWorkspaceIntegrationType>;
+    renderer?: TestRenderer.ReactTestRenderer;
+  } = {};
+  const Harness = () => {
+    rendered.view = useNotaryWorkspaceIntegration(service);
+    return null;
+  };
+  await act(async () => {
+    rendered.renderer = TestRenderer.create(createElement(Harness));
+  });
+  assert(rendered.view, 'hook harus ter-render');
+  return {
+    get view() {
+      return rendered.view!;
+    },
+    async unmount() {
+      await act(async () => {
+        rendered.renderer?.unmount();
+      });
+    },
+  };
+}
+
+test('hook loads canonical workspaces and exposes the selected workspace', async () => {
+  const { service } = createHookService({
+    loads: [async () => [structuredClone(pendingCddWorkspace), structuredClone(sampleWorkspace2)]],
+    approve: successfulApprove(CASE_ID_1, ASSESSMENT_ID),
+  });
+  const hook = await renderNotaryHook(service);
+  try {
+    assert.equal(hook.view.workspace.data?.caseId, CASE_ID_1);
+    assert.equal(hook.view.workspaces.data?.length, 2);
+    await act(async () => {
+      hook.view.setSelectedCaseId(CASE_ID_2);
+    });
+    assert.equal(hook.view.workspace.data?.caseId, CASE_ID_2);
+    assert.equal(hook.view.selectedCaseId, CASE_ID_2);
+  } finally {
+    await hook.unmount();
+  }
 });
 
-test('assignment refresh with mismatched notary or wrong stage fails validation', async () => {
-  const gateway = createMockGateway(ADMIN, {
-    listAssignmentContext: async () => ({
-      cases: [
-        {
-          caseId: CASE_ID_1,
-          orderId: '11111111-1111-4111-8111-111111111111',
-          proposedName: 'PT Test',
-          entityType: 'PT_ORDINARY',
-          domicileCity: 'Jakarta',
-          domicileProvince: 'DKI Jakarta',
-          currentStage: 'DOCUMENTS_PENDING', // Wrong stage (expected ESCROW_LOCKED)
-          escrowStatus: 'HELD_IN_ESCROW',
-          fundsLockedAt: '2026-08-20T00:00:00Z',
-          assignedNotaryId: '99999999-9999-4999-8999-999999999999', // Mismatched notary
-        },
-      ],
-      notaries: [],
-    }),
-  });
-  const service = createPhase2IntegrationService(gateway);
-  const refreshed = await service.listAssignmentContext();
-  const verifiedCase = refreshed.cases.find((c) => c.caseId === CASE_ID_1);
-  assert.notEqual(verifiedCase?.assignedNotaryId, NOTARY_ID);
-  assert.notEqual(verifiedCase?.currentStage, 'ESCROW_LOCKED');
-});
-
-test('CDD refresh missing case or wrong stage/decision fails validation', async () => {
-  const gateway = createMockGateway(ADVOCATE_NOTARY, {
-    listNotaryWorkspaces: async () => [
-      {
-        caseId: CASE_ID_1,
-        caseCode: 'CASE-01',
-        entityName: 'PT Test',
-        entityType: 'PT_ORDINARY',
-        currentStage: 'CDD_REVIEW', // Not yet DOCUMENTS_PENDING
-        domicile: 'Jakarta Selatan, DKI Jakarta',
-        kbliLabel: '62019',
-        cddAssessment: {
-          assessmentId: '33333333-3333-4333-8333-333333333333',
-          rulesVersion: 'PMPJ-2026.1',
-          decision: 'PENDING', // Not yet APPROVED
-          pepStatus: 'NO_MATCH',
-          sanctionsStatus: 'NO_MATCH',
-        },
-        beneficialOwners: [],
-        submissions: [],
-      },
+test('hook returns null workspace and never list[0] when the selected case disappears after refresh', async () => {
+  const { service } = createHookService({
+    loads: [
+      async () => [structuredClone(pendingCddWorkspace), structuredClone(sampleWorkspace2)],
+      async () => [structuredClone(sampleWorkspace2)], // case 1 removed server-side
     ],
+    approve: successfulApprove(CASE_ID_1, ASSESSMENT_ID),
   });
-  const service = createPhase2IntegrationService(gateway);
-  const workspaces = await service.loadNotaryWorkspaces();
-  const verified = workspaces.find((w) => w.caseId === CASE_ID_1);
-  assert.notEqual(verified?.currentStage, 'DOCUMENTS_PENDING');
-  assert.notEqual(verified?.cddAssessment?.decision, 'APPROVED');
+  const hook = await renderNotaryHook(service);
+  try {
+    await act(async () => {
+      hook.view.setSelectedCaseId(CASE_ID_1);
+    });
+    assert.equal(hook.view.workspace.data?.caseId, CASE_ID_1);
+
+    await act(async () => {
+      await hook.view.workspaces.refresh();
+    });
+    assert.equal(hook.view.workspace.data, null, 'workspace harus null; fallback list[0] dilarang');
+    assert.equal(hook.view.workspaces.data?.length, 1, 'daftar server tetap memuat case lain');
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test('CDD retry reuses the exact attempt tuple (caseId, assessmentId, rulesVersion, idempotencyKey)', async () => {
+  let attempt = 0;
+  const { service, approveCalls } = createHookService({
+    loads: [
+      async () => [structuredClone(pendingCddWorkspace)],
+      async () => [structuredClone(confirmedCddWorkspace)],
+    ],
+    approve: async (input) => {
+      attempt += 1;
+      if (attempt === 1) throw new Error('jaringan terputus');
+      return { caseId: input.caseId, assessmentId: input.assessmentId ?? '', currentStage: 'DOCUMENTS_PENDING', replayed: false };
+    },
+  });
+  const hook = await renderNotaryHook(service);
+  try {
+    await act(async () => {
+      await assert.rejects(hook.view.cddApproval.execute({ caseId: CASE_ID_1, rulesVersion: HOOK_RULES_VERSION }));
+    });
+    assert.equal(hook.view.cddApproval.status, 'error');
+    assert.equal(approveCalls.length, 1);
+
+    await act(async () => {
+      await hook.view.cddApproval.retry();
+    });
+    assert.equal(hook.view.cddApproval.status, 'success');
+    assert.equal(approveCalls.length, 2);
+    assert.deepEqual(approveCalls[1], approveCalls[0], 'retry harus memakai tuple identik');
+    assert(approveCalls[0].idempotencyKey, 'attempt harus memiliki idempotency key');
+    assert.equal(approveCalls[0].assessmentId, ASSESSMENT_ID);
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test('selecting another case invalidates the attempt and a stale retry makes zero gateway calls', async () => {
+  const { service, approveCalls } = createHookService({
+    loads: [async () => [structuredClone(pendingCddWorkspace), structuredClone(sampleWorkspace2)]],
+    approve: async () => {
+      throw new Error('jaringan terputus');
+    },
+  });
+  const hook = await renderNotaryHook(service);
+  try {
+    await act(async () => {
+      await assert.rejects(hook.view.cddApproval.execute({ caseId: CASE_ID_1, rulesVersion: HOOK_RULES_VERSION }));
+    });
+    assert.equal(approveCalls.length, 1);
+
+    await act(async () => {
+      hook.view.setSelectedCaseId(CASE_ID_2);
+    });
+    await act(async () => {
+      await assert.rejects(hook.view.cddApproval.retry(), /Tidak ada permintaan untuk diulang/);
+    });
+    assert.equal(approveCalls.length, 1, 'retry attempt usang tidak boleh memanggil gateway');
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test('assessment change invalidates the attempt; only a fresh execute creates a new idempotency key', async () => {
+  let approveRun = 0;
+  const { service, approveCalls } = createHookService({
+    loads: [
+      async () => [structuredClone(pendingCddWorkspace)], // initial load, assessment A1
+      async () => [structuredClone(pendingCddWorkspaceV2)], // refresh: assessment berubah ke A2
+      async () => [structuredClone(confirmedCddWorkspaceV2)], // refresh sukses untuk A2
+    ],
+    approve: async (input) => {
+      approveRun += 1;
+      if (approveRun === 1) throw new Error('jaringan terputus');
+      return { caseId: input.caseId, assessmentId: input.assessmentId ?? '', currentStage: 'DOCUMENTS_PENDING', replayed: false };
+    },
+  });
+  const hook = await renderNotaryHook(service);
+  try {
+    await act(async () => {
+      await assert.rejects(hook.view.cddApproval.execute({ caseId: CASE_ID_1, rulesVersion: HOOK_RULES_VERSION }));
+    });
+    assert.equal(approveCalls.length, 1);
+    const firstKey = approveCalls[0].idempotencyKey;
+    assert(firstKey);
+
+    await act(async () => {
+      await hook.view.workspaces.refresh();
+    });
+    await act(async () => {
+      await assert.rejects(hook.view.cddApproval.retry(), /Tidak ada permintaan untuk diulang/);
+    });
+    assert.equal(approveCalls.length, 1, 'retry assessment usang tidak boleh memanggil gateway');
+
+    await act(async () => {
+      await hook.view.cddApproval.execute({ caseId: CASE_ID_1, rulesVersion: HOOK_RULES_VERSION });
+    });
+    assert.equal(approveCalls.length, 2);
+    assert.notEqual(approveCalls[1].idempotencyKey, firstKey, 'execute baru harus membuat idempotency key baru');
+    assert.equal(approveCalls[1].assessmentId, OTHER_ASSESSMENT_ID_2, 'execute baru memakai assessment kanonik terbaru');
+    assert.equal(hook.view.cddApproval.status, 'success');
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test('refresh rejection keeps the hook in error and retains the identical retry tuple', async () => {
+  const { service, approveCalls } = createHookService({
+    loads: [
+      async () => [structuredClone(pendingCddWorkspace)],
+      async () => { throw new Error('refresh gagal'); },
+      async () => [structuredClone(confirmedCddWorkspace)],
+    ],
+    approve: successfulApprove(CASE_ID_1, ASSESSMENT_ID),
+  });
+  const hook = await renderNotaryHook(service);
+  try {
+    await act(async () => {
+      await assert.rejects(hook.view.cddApproval.execute({ caseId: CASE_ID_1, rulesVersion: HOOK_RULES_VERSION }));
+    });
+    assert.equal(hook.view.cddApproval.status, 'error');
+    assert.equal(approveCalls.length, 1);
+
+    await act(async () => {
+      await hook.view.cddApproval.retry();
+    });
+    assert.equal(hook.view.cddApproval.status, 'success');
+    assert.equal(approveCalls.length, 2);
+    assert.deepEqual(approveCalls[1], approveCalls[0], 'retry setelah refresh gagal memakai tuple identik');
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test('refresh returning wrong stage/decision rejects success', async () => {
+  const { service, approveCalls } = createHookService({
+    loads: [
+      async () => [structuredClone(pendingCddWorkspace)],
+      async () => [structuredClone(pendingCddWorkspace)], // refresh belum mengonfirmasi (stage CDD_REVIEW, decision PENDING)
+    ],
+    approve: successfulApprove(CASE_ID_1, ASSESSMENT_ID),
+  });
+  const hook = await renderNotaryHook(service);
+  try {
+    await act(async () => {
+      await assert.rejects(hook.view.cddApproval.execute({ caseId: CASE_ID_1, rulesVersion: HOOK_RULES_VERSION }));
+    });
+    assert.equal(hook.view.cddApproval.status, 'error');
+    assert.equal(hook.view.cddApproval.data, null, 'tidak boleh melaporkan sukses tanpa konfirmasi kanonik');
+    assert.equal(approveCalls.length, 1);
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test('refresh missing the exact case rejects success and the workspace stays fail-closed null', async () => {
+  const { service, approveCalls } = createHookService({
+    loads: [
+      async () => [structuredClone(pendingCddWorkspace), structuredClone(sampleWorkspace2)],
+      async () => [structuredClone(sampleWorkspace2)], // case yang di-approve hilang dari refresh
+    ],
+    approve: successfulApprove(CASE_ID_1, ASSESSMENT_ID),
+  });
+  const hook = await renderNotaryHook(service);
+  try {
+    await act(async () => {
+      hook.view.setSelectedCaseId(CASE_ID_1);
+    });
+    await act(async () => {
+      await assert.rejects(hook.view.cddApproval.execute({ caseId: CASE_ID_1, rulesVersion: HOOK_RULES_VERSION }));
+    });
+    assert.equal(hook.view.cddApproval.status, 'error');
+    assert.equal(hook.view.cddApproval.data, null);
+    assert.equal(hook.view.workspace.data, null, 'case terpilih hilang → workspace null, bukan list[0]');
+    assert.equal(approveCalls.length, 1);
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test('exact confirmed refresh yields success and clears the completed attempt', async () => {
+  const { service, approveCalls } = createHookService({
+    loads: [
+      async () => [structuredClone(pendingCddWorkspace)],
+      async () => [structuredClone(confirmedCddWorkspace)],
+      async () => [structuredClone(pendingCddWorkspace)],
+      async () => [structuredClone(confirmedCddWorkspace)],
+    ],
+    approve: successfulApprove(CASE_ID_1, ASSESSMENT_ID),
+  });
+  const hook = await renderNotaryHook(service);
+  try {
+    await act(async () => {
+      await hook.view.cddApproval.execute({ caseId: CASE_ID_1, rulesVersion: HOOK_RULES_VERSION });
+    });
+    assert.equal(hook.view.cddApproval.status, 'success');
+    assert.equal(approveCalls.length, 1);
+    const firstKey = approveCalls[0].idempotencyKey;
+    assert(firstKey);
+
+    await act(async () => {
+      await hook.view.workspaces.refresh();
+    });
+    await act(async () => {
+      await hook.view.cddApproval.execute({ caseId: CASE_ID_1, rulesVersion: HOOK_RULES_VERSION });
+    });
+    assert.equal(approveCalls.length, 2);
+    assert(
+      approveCalls[1].idempotencyKey && approveCalls[1].idempotencyKey !== firstKey,
+      'attempt yang selesai harus dibersihkan — execute berikutnya membuat key baru',
+    );
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test('two concurrent identical submissions hit the gateway exactly once (single-flight)', async () => {
+  let release!: () => void;
+  const { service, approveCalls } = createHookService({
+    loads: [
+      async () => [structuredClone(pendingCddWorkspace)],
+      async () => [structuredClone(confirmedCddWorkspace)],
+    ],
+    approve: async (input) => {
+      await new Promise<void>((resolve) => { release = resolve; });
+      return { caseId: input.caseId, assessmentId: input.assessmentId ?? '', currentStage: 'DOCUMENTS_PENDING', replayed: false };
+    },
+  });
+  const hook = await renderNotaryHook(service);
+  try {
+    let first!: Promise<unknown>;
+    let second!: Promise<unknown>;
+    await act(async () => {
+      first = hook.view.cddApproval.execute({ caseId: CASE_ID_1, rulesVersion: HOOK_RULES_VERSION });
+      second = hook.view.cddApproval.execute({ caseId: CASE_ID_1, rulesVersion: HOOK_RULES_VERSION });
+      await Promise.resolve();
+    });
+    assert.equal(first === second, true, 'single-flight harus mengembalikan promise yang sama');
+    assert.equal(approveCalls.length, 1, 'gateway hanya boleh dipanggil sekali');
+    await act(async () => {
+      release();
+      await first;
+    });
+    assert.equal(hook.view.cddApproval.status, 'success');
+  } finally {
+    await hook.unmount();
+  }
+});
+
+test('loading state is observable while the approval request is in flight', async () => {
+  let release!: () => void;
+  const { service } = createHookService({
+    loads: [
+      async () => [structuredClone(pendingCddWorkspace)],
+      async () => [structuredClone(confirmedCddWorkspace)],
+    ],
+    approve: async (input) => {
+      await new Promise<void>((resolve) => { release = resolve; });
+      return { caseId: input.caseId, assessmentId: input.assessmentId ?? '', currentStage: 'DOCUMENTS_PENDING', replayed: false };
+    },
+  });
+  const hook = await renderNotaryHook(service);
+  try {
+    let pending!: Promise<unknown>;
+    await act(async () => {
+      pending = hook.view.cddApproval.execute({ caseId: CASE_ID_1, rulesVersion: HOOK_RULES_VERSION });
+      await Promise.resolve();
+    });
+    assert.equal(hook.view.cddApproval.isLoading, true, 'loading harus tampak selama in-flight');
+    assert.equal(hook.view.cddApproval.status, 'loading');
+    await act(async () => {
+      release();
+      await pending;
+    });
+    assert.equal(hook.view.cddApproval.isLoading, false);
+    assert.equal(hook.view.cddApproval.status, 'success');
+  } finally {
+    await hook.unmount();
+  }
 });
