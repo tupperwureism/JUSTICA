@@ -4,7 +4,7 @@
 
 ## Snapshot
 
-- Tanggal pencatatan: 26 Agustus 2026 (Asia/Jakarta).
+- Tanggal pencatatan: 27 Agustus 2026 (Asia/Jakarta).
 - Branch aktif: `batch-3c-notary-workspace`.
 - Input fixed point Batch 3.C.5: `1de5186127cd7aad377078632174244d8d11c1df`.
 - Scope produk aktif: **Justifiqa**. Qualifa adalah arsip/research `OUT_OF_SCOPE`.
@@ -22,7 +22,7 @@
 | Batch 3.C.2 Notary Workspace & CDD Hardening | **SUPERSEDED** | `MarkDown/Batches/3C_2/BATCH.md` | Failed external audit karena unexecuted DB proof, false-green probe, invalid SQL runtime, dan unhardened search_path |
 | Batch 3.C.3 Prove & Harden Notary Workspace | **SUPERSEDED** | `MarkDown/Batches/3C_3/BATCH.md` | Failed external audit karena direct DML privilege leak, unisolated replay proof, dan dirty-tree generator |
 | Batch 3.C.4 Close Workspace Proof & Privilege Gaps | **SUPERSEDED** | Commit `1de5186127cd7aad377078632174244d8d11c1df`, `MarkDown/Batches/3C_4/BATCH.md` | Failed external audit: probe `execSync` + `Promise.all` tidak membuktikan overlap dan hook proof false-green; digantikan 3.C.5 |
-| Batch 3.C.5 True Concurrency & Hook Proof | **READY_FOR_EXTERNAL_REAUDIT** | `MarkDown/Batches/3C_5/BATCH.md`; final probe 5/5 dengan `pg_stat_activity` lock barrier; 129/129 phase-2 tests; clean-candidate symbol maps | Evidence lokal, bukan external PASS atau production approval; AHU/OSS/Stamping live tetap future work |
+| Batch 3.C.5 True Concurrency & Hook Proof | **ACCEPTED_LOCAL** | Commit `ccbb2fdfd40d89d519f1e06b6abbd3436dac9d1f`; `MarkDown/Batches/3C_5/BATCH.md`; final probe 5/5 dengan `pg_stat_activity` lock barrier; 129/129 phase-2 tests; clean-candidate symbol maps; external audit `P0=0`, `P1=0` | Diterima untuk scope lokal, bukan production approval; AHU/OSS/Stamping live tetap future work |
 | Batch 3.D e-KYC/signing | **FUTURE_WORK** | Target/seam parsial pada `TRACEABILITY_MATRIX.md` | Provider liveness/storage/E2E belum lengkap; tidak boleh dipresentasikan sebagai implemented end-to-end |
 | Phase 4 E2E/security/QA | **FUTURE_WORK** | Belum ada acceptance batch kanonik | Local tests sebelumnya tidak sama dengan full production E2E |
 | Phase 5 production readiness | **NOT_STARTED** | Tidak ada production approval | Deploy, observability, provider readiness, operational runbook, dan go-live audit masih diperlukan |
@@ -39,7 +39,7 @@
 
 ## Next exact action
 
-**Lakukan external physical re-audit atas commit Batch 3.C.5.** Jangan memulai Batch 3.D sebelum sign-off terpisah.
+**Siapkan Prompt Master Batch 3.D e-KYC/signing dari commit control-plane hasil acceptance 3.C.5.** Gunakan fresh executor session. Sebelum gate database/runtime, stabilkan Docker atau gunakan disposable stack terisolasi tanpa menyentuh resource main/recovery sebagai fallback.
 
 ## Known documentation debt (non-blocking)
 

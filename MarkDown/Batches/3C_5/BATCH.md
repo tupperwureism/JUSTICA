@@ -6,8 +6,9 @@
 - **Branch**: `batch-3c-notary-workspace`
 - **Input fixed point**: `1de5186127cd7aad377078632174244d8d11c1df`
 - **Fixed-point parent**: `304c4d6ce7f6e53578e2e285e287fb7061188f30`
-- **Status executor**: `READY_FOR_EXTERNAL_REAUDIT`
-- **Batas status**: belum lulus audit eksternal dan bukan production-readiness approval.
+- **Status executor saat commit**: `READY_FOR_EXTERNAL_REAUDIT`
+- **Status kanonik setelah audit eksternal 27 Agustus 2026**: `ACCEPTED_LOCAL`
+- **Batas status**: diterima untuk scope implementasi dan pengujian lokal; bukan production-readiness approval.
 
 ## 2. Alasan batch
 
@@ -102,8 +103,10 @@ Post-teardown: nol container dan nol volume 3.C.5 tersisa. Dua puluh dua pasanga
 - React test renderer mengeluarkan warning deprecation; ini P2 tooling debt dan tidak mengubah hasil 22/22.
 - AHU/OSS/Stamping live provider, deployment, observability produksi, dan production E2E tidak dibuktikan dalam batch ini.
 - Main stack tetap exited setelah insiden Docker OOM; tidak ada repair/restart, query, atau mutation terhadap main/recovery database.
-- Status ini adalah permintaan audit ulang eksternal, bukan sertifikasi PASS atau production-ready.
+- Acceptance ini hanya berlaku untuk scope lokal yang dibuktikan; bukan sertifikasi production-ready.
 
-## 8. Next exact action
+## 8. Hasil audit eksternal dan next exact action
 
-Lakukan external physical re-audit atas commit hasil Batch 3.C.5. Jangan memulai Batch 3.D sebelum sign-off terpisah.
+Audit fisik eksternal atas commit `ccbb2fdfd40d89d519f1e06b6abbd3436dac9d1f` memverifikasi parent dan exact 10-file allowlist, true-concurrency barrier, behavioral production-hook tests, `129/129` Phase 2 tests, symbol-map candidate, serta teardown disposable tanpa perubahan identity resource main/recovery. Hasil dua sumbu: `P0=0`, `P1=0`; warning deprecation `react-test-renderer` tetap P2 non-blocking.
+
+**Next exact action:** siapkan Batch 3.D e-KYC/signing dari commit control-plane penerus record ini. Sebelum verifikasi database/runtime 3.D, pulihkan lingkungan Docker secara terkontrol atau gunakan disposable stack terisolasi; jangan memakai main/recovery database sebagai fallback.
