@@ -1,0 +1,8 @@
+| Dokumen | Menjawab |
+|---|---|
+| ADR | “Mengapa proyek memilih keputusan ini?” |
+| DBB / `BATCH.md` | “Batch ini mengerjakan apa dan hasilnya apa?” |
+| DBS / `LEARNING.md` | “Konsep teknis apa yang perlu dipahami?” |
+| `PROMPT_MASTER.md` | “Instruksi persis kepada executor apa?” |
+| `CURRENT_STATE.md` | “Sekarang proyek berada di mana?” |
+| `BATCH_INDEX.md` | “Bagaimana urutan dan status seluruh batch?” |
