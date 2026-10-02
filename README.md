@@ -7,6 +7,7 @@
 [![Deno](https://img.shields.io/badge/Deno_Runtime-Edge_Functions-white.svg?logo=deno)](https://deno.land/)
 [![Tests](https://img.shields.io/badge/Tests-129%2F129_Passing-brightgreen.svg)]()
 [![Status](https://img.shields.io/badge/Status-ACCEPTED__LOCAL-success.svg)]()
+[![Architect & Creator](https://img.shields.io/badge/Architect%20%26%20Creator-Shalom%20Kurniawan-ff69b4.svg?logo=github)](https://github.com/tupperwureism)
 
 > **Platform LegalTech & Notary Workspace Terintegrasi** dengan jaminan kepatuhan regulasi Indonesia, audit trail nir-ubah (*WORM vault*), isolasi keamanan multi-penyewa berbasis PostgreSQL RLS, serta transaksi escrow bergaransi ACID mutex.
 
@@ -22,6 +23,7 @@
 7. [Panduan Instalasi & Menjalankan Proyek](#-panduan-instalasi--menjalankan-proyek)
 8. [Verifikasi Kualitas & Test Suite](#-verifikasi-kualitas--test-suite)
 9. [Status Pengembangan & Batasan (Honesty Boundary)](#-status-pengembangan--batasan-honesty-boundary)
+10. [Creator & Lead System Architect](#-creator--lead-system-architect)
 
 ---
 
@@ -203,6 +205,17 @@ Sesuai prinsip kejujuran rekayasa teknis:
 - **Status Kanonik Saat Ini:** **`ACCEPTED_LOCAL`** (Lulus audit komprehensif 360° pada lingkungan lokal).
 - **Integrasi Live Gateway:** Penyedia pembayaran (Midtrans) dan verifikasi identitas e-KYC/Tanda Tangan Digital (Privy/Peruri) berjalan menggunakan **mock gateway simulasi lokal** (`BLOCKED_BY_PROVIDER_SELECTION`). Arsitektur webhook, verifikasi signature kriptografis, dan alur idempotensi telah selesai diuji dan siap dihubungkan dengan API key produksi.
 - **Arsip Qualifa:** Komponen Qualifa berstatus **`OUT_OF_SCOPE`** dan tidak menghalangi rilis atau audit Justifiqa.
+
+---
+
+## 👑 Creator & Lead System Architect
+
+Proyek ini dikonsep, dirancang arsitekturnya, dan dibangun pertama kali oleh:
+
+- **Shalom Kurniawan** ([@tupperwureism](https://github.com/tupperwureism))
+  - **Peran:** Founding Creator, Lead System Architect & Protocol Designer
+  - **Kontak:** [trusukkendal@gmail.com](mailto:trusukkendal@gmail.com)
+  - **Karya Inti:** Perancangan arsitektur BCE, WORM Audit Vault, ACID Row-Mutex Escrow, dan Spesifikasi Kepatuhan Notary Workspace.
 
 ---
 *Dikelola dengan standar ketat rekayasa perangkat lunak Justifiqa Core Engineering.*

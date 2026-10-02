@@ -1,4 +1,9 @@
-ALTER TABLE realtime.messages ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+    ALTER TABLE realtime.messages ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN insufficient_privilege THEN NULL;
+END $$;
 
 DROP POLICY IF EXISTS "consultation participants receive broadcasts" ON realtime.messages;
 CREATE POLICY "consultation participants receive broadcasts"

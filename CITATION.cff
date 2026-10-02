@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use, build upon, or adapt this software, please cite it as below."
+authors:
+  - family-names: "Kurniawan"
+    given-names: "Shalom"
+    email: "trusukkendal@gmail.com"
+title: "Justifiqa: Enterprise LegalTech & Notary Workspace Architecture"
+version: "1.0.0"
+date-released: "2026-10-02"
+url: "https://github.com/tupperwureism/SuperApp-Gagal"
+license: "MIT"
+abstract: "Integrated Indonesian LegalTech platform featuring WORM audit ledgers, ACID row-mutex escrow settlement, and browser-safe notary compliance workspaces."
+keywords:
+  - legaltech
+  - notary
+  - escrow
+  - postgresql
+  - rls
+  - react
+  - supabase
